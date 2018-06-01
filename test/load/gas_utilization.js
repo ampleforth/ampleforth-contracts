@@ -5,7 +5,7 @@
   npm run truffle exec test/load/gas_utilization.js verify
     => Verifies if the gas amounts in logs/gas-utilization.yaml is consistent with the computed values
 */
-const MicroFragments = artifacts.require('MicroFragments.sol');
+const uFragments = artifacts.require('UFragments.sol');
 
 const yaml = require('js-yaml');
 const fs = require('fs');
@@ -61,7 +61,7 @@ async function computeGasUtilization () {
   const deployer = accounts[0];
   const user = accounts[1];
 
-  const mFragments = MicroFragments.at(chainConfig.microFragments);
+  const mFragments = uFragments.at(chainConfig.uFragments);
 
   const callerConfig = {
     from: deployer,
@@ -76,24 +76,24 @@ async function computeGasUtilization () {
   console.log('CONTRACT DEPLOYMENT GAS UTILIZATION');
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('MicroMicroFragments:DEPLOYMENT', () => chainConfig.microFragmentsTx);
+  await cleanRoomTx('uFragments:DEPLOYMENT', () => chainConfig.uFragmentsTx);
   console.log('**************************************************************');
 
   console.log('FRAGMENTS ERC20 CONTRACT FUNCTIONS');
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('MicroFragments:rebase(+100)', async () => {
+  await cleanRoomTx('uFragments:rebase(+100)', async () => {
     return mFragments.rebase(100, callerConfig);
   });
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('MicroFragments:transfer(user, 10)', async () => {
+  await cleanRoomTx('uFragments:transfer(user, 10)', async () => {
     await mFragments.rebase(100, callerConfig);
     return mFragments.transfer(user, 10, callerConfig);
   });
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('MicroFragments:transferFrom(user, 10)', async () => {
+  await cleanRoomTx('uFragments:transferFrom(user, 10)', async () => {
     await mFragments.rebase(100, callerConfig);
     await mFragments.approve(user, 10, callerConfig);
     return mFragments.transferFrom(deployer, user, 10, {

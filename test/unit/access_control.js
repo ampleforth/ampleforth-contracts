@@ -1,15 +1,15 @@
-const MicroFragments = artifacts.require('MicroFragments.sol');
+const uFragments = artifacts.require('UFragments.sol');
 
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
-contract('MicroFragments', async accounts => {
-  let fragments, proxy;
+contract('uFragments', async accounts => {
+  let fragments;
   const deployer = accounts[0];
 
   before(async function () {
-    fragments = await MicroFragments.deployed();
+    fragments = await uFragments.deployed();
   });
 
   describe('rebase', () => {

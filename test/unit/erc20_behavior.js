@@ -1,16 +1,16 @@
-const MicroFragments = artifacts.require('MicroFragments.sol');
+const uFragments = artifacts.require('UFragments.sol');
 
 const _require = require('app-root-path').require;
 const { StandardTokenBehavior } = _require('/test/behavior/erc20');
 
-contract('MicroFragments', async accounts => {
+contract('uFragments', async accounts => {
   let mFragments;
 
   before(async function () {
-    mFragments = await MicroFragments.deployed();
+    mFragments = await uFragments.deployed();
   });
 
-  describe('MicroFragments as ERC20', () => {
+  describe('uFragments as ERC20', () => {
     it('should confirm to the specification', () => {
       const owner = accounts[0];
       const anotherAccount = accounts[8];
