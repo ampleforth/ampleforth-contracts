@@ -1,0 +1,15 @@
+dist: trusty
+sudo: false
+language: node_js
+node_js:
+  - "8"
+cache:
+  directories:
+    - node_modules
+script:
+  - npm run lint
+  - npm run test
+notifications:
+  email:
+    - eng@fragments.org
+  slack: fragmentsorg:2bN0L0FCZZ0illBRyPucRZkV
