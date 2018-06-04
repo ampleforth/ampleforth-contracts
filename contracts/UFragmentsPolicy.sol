@@ -28,7 +28,7 @@ contract UFragmentsPolicy is Ownable {
     uint256 public lastRebaseTimestamp;
 
     // At least this much time must pass between rebase operations.
-    uint256 constant public MIN_REBASE_TIME_INTERVAL = 1 days;
+    uint256 public minRebaseTimeIntervalSec = 1 days;
 
     // The number of rebase cycles we keep supply deltas for.
     uint32 constant private HISTORY_LENGTH = 30;
@@ -39,7 +39,7 @@ contract UFragmentsPolicy is Ownable {
 
     // If the current exchange rate is within this tolerance, no supply update is performed.
     // 18 decimal fixed point format
-    uint128 constant private DEVIATION_THRESHOLD = 0.05 * 10**18;  // 5%
+    uint128 public deviationThreshold = 0.05 * 10**18;  // 5%
 
     uint256 private epoch = 0;
 
@@ -53,7 +53,7 @@ contract UFragmentsPolicy is Ownable {
      *         minimum time period has elapsed.
      */
     function rebase() public {
-        require(lastRebaseTimestamp + MIN_REBASE_TIME_INTERVAL <= now);
+        require(lastRebaseTimestamp + minRebaseTimeIntervalSec <= now);
         epoch++;
 
         int256 supplyDelta = calcSupplyDelta();
@@ -66,25 +66,44 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
+     * @notice Allows setting the Deviation Threshold. If the exchange rate given by the exchange
+     *         rate aggregator is within this threshold, then no supply modifications are made.
+     * @param _deviationThreshold The new exchange rate threshold.
+     * TODO(iles): This should only be modified through distributed governance. #158010389
+     */
+    function setDeviationThreshold(uint128 _deviationThreshold) public onlyOwner {
+        deviationThreshold = _deviationThreshold;
+    }
+
+    /**
+     * @notice Allows setting the minimum time period that must elapse between rebase cycles.
+     * @param _minRebaseTimeIntervalSec The new minimum time interval, in seconds.
+     * TODO(iles): This should only be modified through distributed governance. #158010389
+     */
+    function setMinRebaseTimeIntervallSec(uint128 _minRebaseTimeIntervalSec) public onlyOwner {
+        minRebaseTimeIntervalSec = _minRebaseTimeIntervalSec;
+    }
+
+    /**
      * @return The total supply adjustment that should be made in response to the exchange
      *         rate, as read from the aggregator.
      */
-    function calcSupplyDelta() private view returns (int256) {
-        uint128 rate = rateAggregator.aggregateExchangeRates();
+    function calcSupplyDelta() private returns (int256) {
+        uint256 rate = uint256(rateAggregator.aggregateExchangeRates());
         if (withinDeviationThreshold(rate)) {
             return 0;
         }
 
-        uint128 target = 10**18;
-        return int256(((rate - target) / target) * uFrags.totalSupply());
+        uint256 target = 10**18;
+        return int256(rate.sub(target).div(target).mul(uFrags.totalSupply()));
     }
 
     /**
-     * @return The supplyDelta we should enact right now, as a function of the history of exchange
+     * @return The full supplyDelta we should apply, as a function of the history of exchange
      *         rates up until now.
      */
     function calcSmoothedSupplyDelta() private view returns (int256) {
-        // TODO(iles): Actually compute this
+        // TODO(iles): Update this, pending simulation results.
         return supplyDeltaHistory[historyIndex] / HISTORY_LENGTH;
     }
 
@@ -92,9 +111,9 @@ contract UFragmentsPolicy is Ownable {
      * @param rate The current exchange rate, in 18 decimal fixed point format.
      * @return True if the rate is within the deviation threshold and false otherwise.
      */
-    function withinDeviationThreshold(uint128 rate) private pure returns (bool) {
-        uint128 target = 10**18;
-        return (rate > target && rate - target < DEVIATION_THRESHOLD)
-            || (rate < target && target - rate < DEVIATION_THRESHOLD);
+    function withinDeviationThreshold(uint256 rate) private view returns (bool) {
+        uint256 target = 10**18;
+        return (rate > target && rate - target < deviationThreshold)
+            || (rate < target && target - rate < deviationThreshold);
     }
 }

@@ -67,37 +67,73 @@ contract('uFragments', async accounts => {
     });
   });
 
-  describe('Rebase', function () {
-    let rebaseSpy;
-    // Rebase +500 (50%), with starting balances deployer:750 and A:250.
-    before(async () => {
-      snapshot = await chain.snapshotChain();
-      await uFragments.transfer(A, 250, { from: deployer });
-      rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
-      rebaseSpy.watch();
-      await uFragments.rebase(500, {from: deployer});
-    });
-    after(async () => {
-      rebaseSpy.stopWatching();
-      await chain.revertToSnapshot(snapshot);
+  describe('Rebase', async () => {
+    describe('Expansion', function () {
+      let rebaseSpy;
+      // Rebase +500 (50%), with starting balances deployer:750 and A:250.
+      before(async () => {
+        snapshot = await chain.snapshotChain();
+        await uFragments.transfer(A, 250, { from: deployer });
+        rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
+        rebaseSpy.watch();
+        await uFragments.rebase(500, {from: deployer});
+      });
+      after(async () => {
+        rebaseSpy.stopWatching();
+        await chain.revertToSnapshot(snapshot);
+      });
+
+      it('should increase the totalSupply', async () => {
+        b = await uFragments.totalSupply.call();
+        expect(b.toNumber()).to.eq(1500);
+      });
+      it('should increase individual balances', async () => {
+        b = await uFragments.balanceOf.call(deployer);
+        expect(b.toNumber()).to.be.above(750).and.at.most(1125);
+
+        b = await uFragments.balanceOf.call(A);
+        expect(b.toNumber()).to.be.above(250).and.at.most(375);
+      });
+      it('should emit Rebase', async () => {
+        const rebaseEvent = rebaseSpy.getEventByName('Rebase');
+        expect(rebaseEvent).to.exist;
+        expect(rebaseEvent.args.epoch.toNumber()).to.eq(1);
+        expect(rebaseEvent.args.totalSupply.toNumber()).to.eq(1500);
+      });
     });
 
-    it('should increase the totalSupply', async () => {
-      b = await uFragments.totalSupply.call();
-      expect(b.toNumber()).to.eq(1500);
-    });
-    it('should increase individual balances', async () => {
-      b = await uFragments.balanceOf.call(deployer);
-      expect(b.toNumber()).to.be.above(750).and.at.most(1125);
+    describe('Contraction', function () {
+      let rebaseSpy;
+      // Rebase -500 (-50%), with starting balances deployer:750 and A:250.
+      before(async () => {
+        snapshot = await chain.snapshotChain();
+        await uFragments.transfer(A, 250, { from: deployer });
+        rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
+        rebaseSpy.watch();
+        await uFragments.rebase(-500, {from: deployer});
+      });
+      after(async () => {
+        rebaseSpy.stopWatching();
+        await chain.revertToSnapshot(snapshot);
+      });
 
-      b = await uFragments.balanceOf.call(A);
-      expect(b.toNumber()).to.be.above(250).and.at.most(375);
-    });
-    it('should emit Rebase', async () => {
-      const rebaseEvent = rebaseSpy.getEventByName('Rebase');
-      expect(rebaseEvent).to.exist;
-      expect(rebaseEvent.args.epoch.toNumber()).to.eq(1);
-      expect(rebaseEvent.args.totalSupply.toNumber()).to.eq(1500);
+      it('should decrease the totalSupply', async () => {
+        b = await uFragments.totalSupply.call();
+        expect(b.toNumber()).to.eq(500);
+      });
+      it('should decrease individual balances', async () => {
+        b = await uFragments.balanceOf.call(deployer);
+        expect(b.toNumber()).to.at.least(374).and.at.most(375);
+
+        b = await uFragments.balanceOf.call(A);
+        expect(b.toNumber()).to.at.least(124).and.at.most(125);
+      });
+      it('should emit Rebase', async () => {
+        const rebaseEvent = rebaseSpy.getEventByName('Rebase');
+        expect(rebaseEvent).to.exist;
+        expect(rebaseEvent.args.epoch.toNumber()).to.eq(1);
+        expect(rebaseEvent.args.totalSupply.toNumber()).to.eq(500);
+      });
     });
   });
 });
