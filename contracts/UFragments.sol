@@ -4,21 +4,24 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
 
+
 /**
- * @title Micro Fragments ERC20 token
- * @notice https://www.fragments.org/protocol/
+ * @title uFragments ERC20 price-stable token
+ * @notice This is a simplified implementation of the full protocol @ https://fragments.org/protocol
+ *         uFragments operates symmetrically on expansion and contraction. It will both split and
+ *         combine coins to maintain a stable unit price.
  *
- * @dev Fragment balances are internally represented with a hidden denomination, 'gons'. We support
- *      splitting the currency in expansion by changing the exchange rate between the hidden 'gon'
- *      currency and the public 'fragments' currency. This exchange rate is determined by the
- *      internal properties 'maxTotalGons' and 'totalSupply_'.
+ * @dev uFragment balances are internally represented with a hidden denomination, 'gons'. We support
+ *      splitting the currency in expansion and combining the currency on contraction by changing
+ *      the exchange rate between the hidden 'gons' and the public 'fragments'. This exchange rate
+ *      is determined by the internal properties 'GONS' and 'totalSupply_'.
  *
  *      Anytime there is division, there is a risk of numerical instability from rounding errors. In
  *      order to minimize this risk, we adhere to the following guidelines:
  *      - The conversion rate adopted is the number of gons that equals 1 fragment. The inverse
- *        rate must not be used--maxTotalGons is always the numerator and totalSupply_ is
- *        always the denominator. (i.e. If you want to convert gons to fragments instead of
- *        multiplying by the inverse rate, you should divide by the normal rate)
+ *        rate must not be used--GONS is always the numerator and totalSupply_ is always the
+ *        denominator. (i.e. If you want to convert gons to fragments instead of multiplying by the
+ *        inverse rate, you should divide by the normal rate)
  *      - Gon balances converted into fragments are always rounded down (truncated).
  *      - Fragment values converted to gon values (such as in transfers) are chosen such at the
  *        below guarantees are upheld.
@@ -33,46 +36,43 @@ import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
  *     f(x0) + f(x1) + ... + f(xn) is not always equal to f(x0 + x1 + ... xn).
  *
  *     'The Introduction of the Euro and the Rounding of Currency Amounts (1999)' is a good starting
- *      reference for practices related to currency conversions.
+ *     reference for practices related to currency conversions.
  *     http://ec.europa.eu/economy_finance/publications/pages/publication1224_en.pdf
  */
-contract MicroFragments is DetailedERC20("Fragments", "mFRGD", 2), Ownable {
+contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     using SafeMath for uint256;
 
-    event Rebase(uint256 indexed epoch, int256 supplyDelta);
-
-    uint256 private totalSupply_ = 1000;
+    event Rebase(uint256 indexed epoch, uint256 totalSupply);
 
     mapping(address => uint256) private gonBalances;
 
     // These two numbers determine the gons-fragments exchange rate. (numerator and denominator,
-    //respectively). The effective exchange rate ONLY changes on expansion.
-    uint256 private maxTotalGons = 1 << 170;
+    //respectively).
+    uint256 private constant GONS = 1 << 256 - 1;
+    uint256 private totalSupply_ = 1000;
 
-    // This is denominated in Fragments, because the gons-fragments conversion might change before
+    // This is denominated in uFragments, because the gons-fragments conversion might change before
     // it's fully paid.
-    mapping (address => mapping (address => uint256)) internal allowedFragments;
+    mapping (address => mapping (address => uint256)) private allowedFragments;
 
-    uint256 public epoch = 0;
+    uint256 private epoch = 0;
 
     constructor() public {
-        gonBalances[msg.sender] = maxTotalGons;
+        gonBalances[msg.sender] = GONS;
     }
 
     /**
      * @dev Notifies Fragments contract about a new rebase cycle.
-     * @param supplyDelta The number of new fragment tokens to add into circulation/remove from circulation.
+     * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
      */
     function rebase(int256 supplyDelta) public onlyOwner {
         if (supplyDelta < 0) {
-            totalSupply_ = totalSupply_.sub(uint256(supplyDelta));
-            require(totalSupply_ > 0);
+            totalSupply_ = totalSupply_.sub(uint256(-supplyDelta));
         } else {
             totalSupply_ = totalSupply_.add(uint256(supplyDelta));
         }
-
         epoch++;
-        emit Rebase(epoch, supplyDelta);
+        emit Rebase(epoch, totalSupply_);
     }
 
     /**
@@ -87,7 +87,7 @@ contract MicroFragments is DetailedERC20("Fragments", "mFRGD", 2), Ownable {
      * @return The balance of the specified address.
      */
     function balanceOf(address who) public view returns (uint256) {
-        return gonBalances[who].div(maxTotalGons.div(totalSupply_));
+        return gonBalances[who].div(GONS.div(totalSupply_));
     }
 
     /**
@@ -184,7 +184,7 @@ contract MicroFragments is DetailedERC20("Fragments", "mFRGD", 2), Ownable {
     function transferHelper(address from, address to, uint256 value) private {
         require(to != address(0));
 
-        uint256 gonsPerFragment = maxTotalGons.div(totalSupply_);
+        uint256 gonsPerFragment = GONS.div(totalSupply_);
         uint256 senderMod = gonBalances[from] % gonsPerFragment;
         uint256 receiverMod = gonBalances[to] % gonsPerFragment;
         uint256 baseAmt = value.mul(gonsPerFragment);

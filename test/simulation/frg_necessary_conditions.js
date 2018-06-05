@@ -10,7 +10,7 @@
   increased by x fragments.
 */
 
-const MicroFragments = artifacts.require('MicroFragments.sol');
+const uFragments = artifacts.require('UFragments.sol');
 
 const Stochasm = require('stochasm');
 
@@ -18,7 +18,7 @@ const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
-contract('MicroFragments', async accounts => {
+contract('uFragments', async accounts => {
   let fragments, snapshot, rebaseAmt, inflation;
   const deployer = accounts[0];
   const A = accounts[1];
@@ -28,7 +28,7 @@ contract('MicroFragments', async accounts => {
   const fragmentsGrowth = new Stochasm({ min: -0.5, max: 2.5, seed: 'fragments.org' });
 
   before(async function () {
-    fragments = await MicroFragments.deployed();
+    fragments = await uFragments.deployed();
     snapshot = await chain.snapshotChain();
 
     await fragments.transfer(A, 3);
@@ -40,11 +40,11 @@ contract('MicroFragments', async accounts => {
   });
 
   function printSupply (supply) {
-    console.log('Total supply is now', supply.toString(), 'FRGC');
+    console.log('Total supply is now', supply.toString(), 'UFRG');
   }
 
   function printRebaseAmt (rebaseAmt) {
-    console.log('Rebased by', (rebaseAmt.toString()), 'FRGC');
+    console.log('Rebased by', (rebaseAmt.toString()), 'UFRG');
   }
 
   async function checkBalancesAfterOperation (users, op, chk) {
@@ -92,14 +92,14 @@ contract('MicroFragments', async accounts => {
       });
 
       describe('transfer precision', () => {
-        describe('0.01 FRGD transaction', () => {
+        describe('0.01 UFRG transaction', () => {
           it('should be precise', async () => {
             await checkBalancesAfterTransfer([deployer, D], 1);
             await checkBalancesAfterTransfer([D, deployer], 1);
           });
         });
 
-        describe('near max denomination FRGD transaction', () => {
+        describe('near max denomination UFRG transaction', () => {
           it('should be precise', async () => {
             const tAmt = (await fragments.balanceOf.call(deployer)).minus(1);
             await checkBalancesAfterTransfer([deployer, D], tAmt);

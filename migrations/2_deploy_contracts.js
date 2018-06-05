@@ -1,4 +1,4 @@
-const MicroFragments = artifacts.require('MicroFragments.sol');
+const uFragments = artifacts.require('UFragments.sol');
 
 const APP_ROOT_PATH = require('app-root-path');
 const _require = APP_ROOT_PATH.require;
@@ -14,7 +14,7 @@ module.exports = function (deployer, network, accounts) {
 
   async function deployFragmentsContracts (deployer) {
     deployer.logger.log('Deploying core contracts');
-    await deployer.deploy(MicroFragments, deploymentConfig);
+    await deployer.deploy(uFragments, deploymentConfig);
   }
 
   async function saveDeploymentData () {
@@ -24,8 +24,8 @@ module.exports = function (deployer, network, accounts) {
       rpcHttpClient: `http://${config.host}:${config.port}`,
       rpcWsClient: `ws://${config.host}:${config.wsPort}`,
       deployer: deployerAccount,
-      microFragments: MicroFragments.address,
-      microFragmentsTx: MicroFragments.transactionHash,
+      uFragments: uFragments.address,
+      uFragmentsTx: uFragments.transactionHash
     }, `${APP_ROOT_PATH}/migrations/deployments/${config.ref}.yaml`);
   }
 
