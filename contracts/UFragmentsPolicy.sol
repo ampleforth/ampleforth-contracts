@@ -7,7 +7,7 @@ import "./UFragments.sol";
 
 
 interface ExchangeRateAggregator {
-    function aggregateExchangeRates() external returns (uint128);
+    function aggregate() external returns (uint128, uint256);
 }
 
 
@@ -19,7 +19,7 @@ interface ExchangeRateAggregator {
 contract UFragmentsPolicy is Ownable {
     using SafeMath for uint256;
 
-    event Rebase(uint256 indexed epoch, int256 appliedSupplyAdjustment);
+    event Rebase(uint256 indexed epoch, uint128 exchangeRate, uint256 volume, int256 appliedSupplyAdjustment);
 
     UFragments private uFrags;
     ExchangeRateAggregator private rateAggregator;
@@ -42,7 +42,7 @@ contract UFragmentsPolicy is Ownable {
     // 18 decimal fixed point format
     uint128 public deviationThreshold = 0.05 * 10**18;  // 5%
 
-    uint256 private epoch = 0;
+    uint256 public epoch = 0;
 
     constructor(UFragments _uFrags, ExchangeRateAggregator _rateAggregator) public {
         uFrags = _uFrags;
@@ -56,11 +56,14 @@ contract UFragmentsPolicy is Ownable {
     function rebase() public {
         require(lastRebaseTimestamp + minRebaseTimeIntervalSec <= now);
         epoch++;
+        lastRebaseTimestamp = now;
 
-        int256 supplyDelta = calcSupplyDelta();
+        (uint128 exchangeRate, uint256 volume) = rateAggregator.aggregate();
+        int256 supplyDelta = calcSupplyDelta(exchangeRate);
         int256 dampenedSupplyDelta = calcDampenedSupplyDelta(supplyDelta);
-        uFrags.rebase(dampenedSupplyDelta);
-        emit Rebase(epoch, dampenedSupplyDelta);
+
+        uFrags.rebase(epoch, dampenedSupplyDelta);
+        emit Rebase(epoch, exchangeRate, volume, dampenedSupplyDelta);
     }
 
     /**
@@ -78,7 +81,7 @@ contract UFragmentsPolicy is Ownable {
      * @param _minRebaseTimeIntervalSec The new minimum time interval, in seconds.
      * TODO(iles): This should only be modified through distributed governance. #158010389
      */
-    function setMinRebaseTimeIntervallSec(uint128 _minRebaseTimeIntervalSec) public onlyOwner {
+    function setMinRebaseTimeIntervalSec(uint128 _minRebaseTimeIntervalSec) public onlyOwner {
         minRebaseTimeIntervalSec = _minRebaseTimeIntervalSec;
     }
 
@@ -101,14 +104,13 @@ contract UFragmentsPolicy is Ownable {
      * @return The total supply adjustment that should be made in response to the exchange
      *         rate, as read from the aggregator.
      */
-    function calcSupplyDelta() private returns (int256) {
-        uint256 rate = uint256(rateAggregator.aggregateExchangeRates());
+    function calcSupplyDelta(uint128 rate) private view returns (int256) {
         if (withinDeviationThreshold(rate)) {
             return 0;
         }
 
-        uint256 target = 10**18;
-        return int256(rate.sub(target).div(target).mul(uFrags.totalSupply()));
+        int256 target = 10**18;
+        return (int256(rate) - target) * int256(uFrags.totalSupply()) / target;
     }
 
     /**
@@ -123,8 +125,8 @@ contract UFragmentsPolicy is Ownable {
      * @param rate The current exchange rate, in 18 decimal fixed point format.
      * @return True if the rate is within the deviation threshold and false otherwise.
      */
-    function withinDeviationThreshold(uint256 rate) private view returns (bool) {
-        uint256 target = 10**18;
+    function withinDeviationThreshold(uint128 rate) private view returns (bool) {
+        uint128 target = 10**18;
         return (rate > target && rate - target < deviationThreshold)
             || (rate < target && target - rate < deviationThreshold);
     }

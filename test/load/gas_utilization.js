@@ -5,7 +5,9 @@
   npm run truffle exec test/load/gas_utilization.js verify
     => Verifies if the gas amounts in logs/gas-utilization.yaml is consistent with the computed values
 */
-const uFragments = artifacts.require('UFragments.sol');
+const UFragments = artifacts.require('UFragments.sol');
+const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
+const ProxyContract = artifacts.require('ProxyContract.sol');
 
 const yaml = require('js-yaml');
 const fs = require('fs');
@@ -61,7 +63,9 @@ async function computeGasUtilization () {
   const deployer = accounts[0];
   const user = accounts[1];
 
-  const mFragments = uFragments.at(chainConfig.uFragments);
+  const uFragments = UFragments.at(chainConfig.UFragments);
+  const uFragmentsPolicy = UFragmentsPolicy.at(chainConfig.UFragmentsPolicy);
+  const proxy = ProxyContract.at(chainConfig.ProxyContract);
 
   const callerConfig = {
     from: deployer,
@@ -76,30 +80,38 @@ async function computeGasUtilization () {
   console.log('CONTRACT DEPLOYMENT GAS UTILIZATION');
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('uFragments:DEPLOYMENT', () => chainConfig.uFragmentsTx);
+  await cleanRoomTx('UFragments:DEPLOYMENT', () => chainConfig.UFragmentsTx);
   console.log('**************************************************************');
 
   console.log('FRAGMENTS ERC20 CONTRACT FUNCTIONS');
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('uFragments:rebase(+100)', async () => {
-    return mFragments.rebase(100, callerConfig);
+  await cleanRoomTx('UFragments:rebase(1, +100) [VIA PROXY]', async () => {
+    return proxy.callThroughToUFRGRebase(1, 100, callerConfig);
   });
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('uFragments:transfer(user, 10)', async () => {
-    await mFragments.rebase(100, callerConfig);
-    return mFragments.transfer(user, 10, callerConfig);
+  await cleanRoomTx('UFragments:transfer(user, 10)', async () => {
+    await proxy.callThroughToUFRGRebase(1, 100, callerConfig);
+    return uFragments.transfer(user, 10, callerConfig);
   });
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('uFragments:transferFrom(user, 10)', async () => {
-    await mFragments.rebase(100, callerConfig);
-    await mFragments.approve(user, 10, callerConfig);
-    return mFragments.transferFrom(deployer, user, 10, {
+  await cleanRoomTx('UFragments:transferFrom(user, 10)', async () => {
+    await proxy.callThroughToUFRGRebase(1, 100, callerConfig);
+    await uFragments.approve(user, 10, callerConfig);
+    return uFragments.transferFrom(deployer, user, 10, {
       from: user,
       gas: callerConfig.gas
     });
+  });
+  console.log('-----------------------------------------------------');
+
+  await cleanRoomTx('UFragmentsPolicy:rebase() [WITH STUB]', async () => {
+    await proxy.storeRate(1.3e18, callerConfig);
+    await proxy.storeVolume(100, callerConfig);
+    await proxy.storeSupply(1010, callerConfig);
+    return uFragmentsPolicy.rebase(callerConfig);
   });
   console.log('**************************************************************');
 }

@@ -1,6 +1,7 @@
 # Code generated - DO NOT EDIT.
 # Any manual changes may be lost.
-'uFragments:DEPLOYMENT': 1742650
-'uFragments:rebase(+100)': 49457
-'uFragments:transfer(user, 10)': 53777
-'uFragments:transferFrom(user, 10)': 46173
+'UFragments:DEPLOYMENT': 1735084
+'UFragments:rebase(1, +100) [VIA PROXY]': 31424
+'UFragments:transfer(user, 10)': 53777
+'UFragments:transferFrom(user, 10)': 46151
+'UFragmentsPolicy:rebase() [WITH STUB]': 81972

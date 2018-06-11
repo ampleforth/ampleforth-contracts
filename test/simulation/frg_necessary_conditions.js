@@ -10,30 +10,31 @@
   increased by x fragments.
 */
 
-const uFragments = artifacts.require('UFragments.sol');
+const UFragments = artifacts.require('UFragments.sol');
+const ProxyContract = artifacts.require('ProxyContract.sol');
 
 const Stochasm = require('stochasm');
-
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
-contract('uFragments', async accounts => {
-  let fragments, snapshot, rebaseAmt, inflation;
+contract('UFragments', async accounts => {
+  let uFragments, proxy, snapshot, rebaseAmt, inflation;
   const deployer = accounts[0];
   const A = accounts[1];
   const B = accounts[2];
   const C = accounts[3];
   const D = accounts[4];
-  const fragmentsGrowth = new Stochasm({ min: -0.5, max: 2.5, seed: 'fragments.org' });
+  const uFragmentsGrowth = new Stochasm({ min: -0.5, max: 2.5, seed: 'fragments.org' });
 
   before(async function () {
-    fragments = await uFragments.deployed();
+    uFragments = await UFragments.deployed();
+    proxy = await ProxyContract.deployed();
     snapshot = await chain.snapshotChain();
 
-    await fragments.transfer(A, 3);
-    await fragments.transfer(B, 4);
-    await fragments.transfer(C, 5);
+    await uFragments.transfer(A, 3);
+    await uFragments.transfer(B, 4);
+    await uFragments.transfer(C, 5);
   });
   after(async () => {
     await chain.revertToSnapshot(snapshot);
@@ -53,15 +54,15 @@ contract('uFragments', async accounts => {
     let u;
     for (u in users) {
       if (Object.prototype.hasOwnProperty.call(users, u)) {
-        _bals.push(await fragments.balanceOf.call(users[u]));
+        _bals.push(await uFragments.balanceOf.call(users[u]));
       }
     }
-    const _supply = (await fragments.totalSupply.call());
+    const _supply = (await uFragments.totalSupply.call());
     await op();
-    const supply = (await fragments.totalSupply.call());
+    const supply = (await uFragments.totalSupply.call());
     for (u in users) {
       if (Object.prototype.hasOwnProperty.call(users, u)) {
-        bals.push(await fragments.balanceOf.call(users[u]));
+        bals.push(await uFragments.balanceOf.call(users[u]));
       }
     }
     chk(_bals, bals, [_supply, supply]);
@@ -69,7 +70,7 @@ contract('uFragments', async accounts => {
 
   async function checkBalancesAfterTransfer (users, tAmt) {
     await checkBalancesAfterOperation(users, async () => {
-      await fragments.transfer(users[1], tAmt, { from: users[0] });
+      await uFragments.transfer(users[1], tAmt, { from: users[0] });
     }, ([_u0Bal, _u1Bal], [u0Bal, u1Bal]) => {
       const _sum = _u0Bal.plus(_u1Bal);
       const sum = u0Bal.plus(u1Bal);
@@ -79,15 +80,15 @@ contract('uFragments', async accounts => {
     });
   }
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 50; i++) {
     describe('Rebase iteration (' + (parseInt(i) + 1) + ')', () => {
       before(async () => {
-        let supply = await fragments.totalSupply.call();
-        inflation = fragmentsGrowth.next().toFixed(5);
+        let supply = await uFragments.totalSupply.call();
+        inflation = uFragmentsGrowth.next().toFixed(5);
         rebaseAmt = supply.mul(inflation).dividedToIntegerBy(1);
         printRebaseAmt(rebaseAmt);
-        await fragments.rebase(rebaseAmt, {from: deployer});
-        supply = await fragments.totalSupply.call();
+        await proxy.callThroughToUFRGRebase(i + 1, rebaseAmt, {from: deployer});
+        supply = await uFragments.totalSupply.call();
         printSupply(supply);
       });
 
@@ -101,7 +102,7 @@ contract('uFragments', async accounts => {
 
         describe('near max denomination UFRG transaction', () => {
           it('should be precise', async () => {
-            const tAmt = (await fragments.balanceOf.call(deployer)).minus(1);
+            const tAmt = (await uFragments.balanceOf.call(deployer)).minus(1);
             await checkBalancesAfterTransfer([deployer, D], tAmt);
             await checkBalancesAfterTransfer([D, deployer], tAmt);
           });
