@@ -30,12 +30,13 @@ contract UFragmentsPolicy is Ownable {
     // At least this much time must pass between rebase operations.
     uint256 public minRebaseTimeIntervalSec = 1 days;
 
-    // The number of rebase cycles we keep supply deltas for.
-    uint32 constant private HISTORY_LENGTH = 30;
 
-    // Circular array of supplyDeltas. One value per rebase cycle.
-    int256[HISTORY_LENGTH] private supplyDeltaHistory;
-    uint32 private historyIndex = 0;
+    // The rebase lag parameter controls how long it takes, in cycles, to approach an absolute
+    // supply correction. If the lag equals the smallest value of 1, then we apply full
+    // supply correction at each rebase cycle. If it is greater than 1, say n, then we apply
+    // a correction of 1/n at every cycle so that by the end of n cycles we would have
+    // approached an absolute supply correction.
+    uint32 public rebaseLag = 30;
 
     // If the current exchange rate is within this tolerance, no supply update is performed.
     // 18 decimal fixed point format
@@ -57,12 +58,9 @@ contract UFragmentsPolicy is Ownable {
         epoch++;
 
         int256 supplyDelta = calcSupplyDelta();
-        historyIndex = historyIndex + 1 % HISTORY_LENGTH;
-        supplyDeltaHistory[historyIndex] = supplyDelta;
-
-        int256 smoothedSupplyDelta = calcSmoothedSupplyDelta();
-        uFrags.rebase(smoothedSupplyDelta);
-        emit Rebase(epoch, smoothedSupplyDelta);
+        int256 dampenedSupplyDelta = calcDampenedSupplyDelta(supplyDelta);
+        uFrags.rebase(dampenedSupplyDelta);
+        emit Rebase(epoch, dampenedSupplyDelta);
     }
 
     /**
@@ -85,6 +83,21 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
+     * @notice The rebase lag parameter controls how long it takes, in cycles, to approach an
+     *         absolute supply correction. If the lag equals the smallest value of 1, then we
+     *         apply full supply correction at each rebase cycle. If it is greater than 1, say n,
+     *         then we apply a correction of 1/n at every cycle so that by the end of n cycles
+     *         we would have approached an absolute supply correction.
+     * @param _rebaseLag The new lag period for rebasing.
+     * TODO: We should allow this parameter to be modified by distributed governance in the
+     * future. #158010389
+     */
+    function setRebaseLag(uint32 _rebaseLag) public onlyOwner {
+        require(_rebaseLag >= 1);
+        rebaseLag = _rebaseLag;
+    }
+
+    /**
      * @return The total supply adjustment that should be made in response to the exchange
      *         rate, as read from the aggregator.
      */
@@ -99,12 +112,11 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @return The full supplyDelta we should apply, as a function of the history of exchange
-     *         rates up until now.
+     * @return Damps the supply delta value so that only small changes to supply are made.
+     *         This is currently set to supplyDelta / rebaseLag.
      */
-    function calcSmoothedSupplyDelta() private view returns (int256) {
-        // TODO(iles): Update this, pending simulation results.
-        return supplyDeltaHistory[historyIndex] / HISTORY_LENGTH;
+    function calcDampenedSupplyDelta(int256 supplyDelta) private view returns (int256) {
+        return supplyDelta / rebaseLag;
     }
 
     /**
