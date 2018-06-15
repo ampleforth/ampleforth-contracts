@@ -1,6 +1,7 @@
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
 const ProxyContract = artifacts.require('ProxyContract.sol');
 
+const BigNumber = require('bignumber.js');
 const _require = require('app-root-path').require;
 const { ContractEventSpy, ProxyContractFunctionSpy } = _require('/util/spies');
 const BlockchainCaller = _require('/util/blockchain_caller');
@@ -41,13 +42,45 @@ contract('uFragmentsPolicy', async accounts => {
     describe('when rate is withinDeviationThreshold', () => {
       before(async () => {
         snapshot = await chain.snapshotChain();
-        await mockExternalData(1.0499e18, 100, 1001);
+        await mockExternalData(1.0499e18, 100, 1000);
       });
       after(async () => {
         await chain.revertToSnapshot(snapshot);
       });
 
       it('should return 0', async () => {
+        r = await uFragmentsPolicy.rebase();
+        expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(0);
+      });
+    });
+
+    describe('when uFragments grows beyond MAX_SUPPLY', () => {
+      before(async () => {
+        snapshot = await chain.snapshotChain();
+        await mockExternalData(2e18, 100, new BigNumber(2).pow(128).minus(2));
+      });
+      after(async () => {
+        await chain.revertToSnapshot(snapshot);
+      });
+
+      // Supply is {2^128-2}, exchangeRate is 2x; resulting in a new supply more than MAX_SUPPLY={2^128-1}
+      // Supply is increased by 1 to MAX_SUPPLY
+      it('should apply SupplyAdjustment {MAX_SUPPLY - totalSupply}', async () => {
+        r = await uFragmentsPolicy.rebase();
+        expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(1);
+      });
+    });
+
+    describe('when uFragments supply equals MAX_SUPPLY', () => {
+      before(async () => {
+        snapshot = await chain.snapshotChain();
+        await mockExternalData(2e18, 100, new BigNumber(2).pow(128).minus(1));
+      });
+      after(async () => {
+        await chain.revertToSnapshot(snapshot);
+      });
+
+      it('should apply SupplyAdjustment=0', async () => {
         r = await uFragmentsPolicy.rebase();
         expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(0);
       });
