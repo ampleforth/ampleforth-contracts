@@ -65,8 +65,8 @@ ProxyContractFunctionSpy.prototype.getCalledFunctions = function () {
     return {
       'fnName': fn.args.functionName,
       'calledBy': fn.args.caller,
-      'arguments': clean(args.args.addrs).concat(
-        toNumber(clean(args.args.vals))
+      'arguments': toNumber(clean(args.args.intVals)).concat(
+        toNumber(clean(args.args.uintVals))
       )
     };
   });

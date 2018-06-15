@@ -1,12 +1,13 @@
 const UFragments = artifacts.require('UFragments.sol');
+const ProxyContract = artifacts.require('ProxyContract.sol');
 
 const _require = require('app-root-path').require;
 const { ContractEventSpy } = _require('/util/spies');
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
-contract('uFragments', async accounts => {
-  let uFragments, snapshot, b;
+contract('UFragments', async accounts => {
+  let uFragments, snapshot, b, proxy;
   const deployer = accounts[0];
   const A = accounts[1];
   const B = accounts[2];
@@ -14,6 +15,7 @@ contract('uFragments', async accounts => {
 
   before(async function () {
     uFragments = await UFragments.deployed();
+    proxy = await ProxyContract.deployed();
   });
 
   describe('on initialization', () => {
@@ -76,7 +78,7 @@ contract('uFragments', async accounts => {
         await uFragments.transfer(A, 250, { from: deployer });
         rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
         rebaseSpy.watch();
-        await uFragments.rebase(500, {from: deployer});
+        await proxy.callThroughToUFRGRebase(1, 500);
       });
       after(async () => {
         rebaseSpy.stopWatching();
@@ -110,7 +112,7 @@ contract('uFragments', async accounts => {
         await uFragments.transfer(A, 250, { from: deployer });
         rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
         rebaseSpy.watch();
-        await uFragments.rebase(-500, {from: deployer});
+        await proxy.callThroughToUFRGRebase(1, -500);
       });
       after(async () => {
         rebaseSpy.stopWatching();

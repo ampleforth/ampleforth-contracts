@@ -55,8 +55,6 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     // it's fully paid.
     mapping (address => mapping (address => uint256)) private allowedFragments;
 
-    uint256 private epoch = 0;
-
     constructor() public {
         gonBalances[msg.sender] = GONS;
     }
@@ -65,13 +63,12 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @dev Notifies Fragments contract about a new rebase cycle.
      * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
      */
-    function rebase(int256 supplyDelta) public onlyOwner {
+    function rebase(uint256 epoch, int256 supplyDelta) public onlyOwner {
         if (supplyDelta < 0) {
             totalSupply_ = totalSupply_.sub(uint256(-supplyDelta));
         } else {
             totalSupply_ = totalSupply_.add(uint256(supplyDelta));
         }
-        epoch++;
         emit Rebase(epoch, totalSupply_);
     }
 
