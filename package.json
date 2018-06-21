@@ -1,21 +1,21 @@
 {
-  "name": "exchange_rate_contracts",
+  "name": "uFragments",
   "version": "0.0.1",
-  "description": "Ethereum smart contracts to aggregate exchange rates from various sources",
+  "description": "μFragments protocol smart contracts on Ethereum.",
   "keywords": [
     "etheruem",
     "smart-contracts",
     "solidity"
   ],
-  "homepage": "https://github.com/frgprotocol/exchange_rate_contracts#readme",
+  "homepage": "https://github.com/frgprotocol/uFragments#readme",
   "bugs": {
-    "url": "https://github.com/frgprotocol/exchange_rate_contracts/issues"
+    "url": "https://github.com/frgprotocol/uFragments/issues"
   },
   "license": "ISC",
   "author": "team@fragments.org",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/frgprotocol/exchange_rate_contracts.git"
+    "url": "git+https://github.com/frgprotocol/uFragments.git"
   },
   "scripts": {
     "blockchain:start": "scripts/blockchain/runner.sh 1",
@@ -24,6 +24,7 @@
     "lint": "npm run lint:js && npm run lint:sol",
     "lint:js": "node_modules/eslint/bin/eslint.js ./ --cache --fix",
     "lint:sol": "node_modules/solhint/solhint.js contracts/*.sol",
+    "genDummyData": "node_modules/truffle/build/cli.bundled.js --network gethDev exec scripts/gen_dummy_data.js",
     "test": "scripts/test.sh ganacheUnitTest",
     "trackGasUtilization": "npm run blockchain:start && npm run truffle exec test/load/gas_utilization.js save",
     "truffle": "node_modules/truffle/build/cli.bundled.js --network ganacheUnitTest"

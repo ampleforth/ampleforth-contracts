@@ -26,7 +26,6 @@ module.exports = {
       gas: 7989556,
       gasPrice: 9000000000,
       network_id: '1234',
-      from: '0x727f09e28c2ffc752e0b0fb4b785d2d53793a9f0',
       passcode: 'fragments'
     },
     gethUnitTest: {
@@ -37,7 +36,6 @@ module.exports = {
       gas: 7989556,
       gasPrice: 9000000000,
       network_id: '1234',
-      from: '0x727f09e28c2ffc752e0b0fb4b785d2d53793a9f0',
       passcode: 'fragments'
     }
   }

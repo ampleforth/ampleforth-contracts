@@ -1,5 +1,5 @@
-# Micro Fragments
-Micro Fragments protocol smart contracts on Ethereum.
+# μFragments
+The μFragments protocol smart contracts on Ethereum.
 
 # Getting started
 ```bash
