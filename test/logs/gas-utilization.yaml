@@ -4,4 +4,4 @@
 'UFragments:rebase(1, +100) [VIA PROXY]': 31424
 'UFragments:transfer(user, 10)': 53777
 'UFragments:transferFrom(user, 10)': 46151
-'UFragmentsPolicy:rebase() [WITH STUB]': 81972
+'UFragmentsPolicy:rebase() [WITH STUB]': 84377

@@ -30,7 +30,6 @@ contract UFragmentsPolicy is Ownable {
     // At least this much time must pass between rebase operations.
     uint256 public minRebaseTimeIntervalSec = 1 days;
 
-
     // The rebase lag parameter controls how long it takes, in cycles, to approach an absolute
     // supply correction. If the lag equals the smallest value of 1, then we apply full
     // supply correction at each rebase cycle. If it is greater than 1, say n, then we apply
@@ -42,7 +41,11 @@ contract UFragmentsPolicy is Ownable {
     // 18 decimal fixed point format
     uint128 public deviationThreshold = 0.05 * 10**18;  // 5%
 
+    // Keeps track of the number of rebase cycles since inception
     uint256 public epoch = 0;
+
+    // The upper bound on uFragments' supply
+    uint256 private constant MAX_SUPPLY = 2**128 - 1;
 
     constructor(UFragments _uFrags, ExchangeRateAggregator _rateAggregator) public {
         uFrags = _uFrags;
@@ -60,10 +63,14 @@ contract UFragmentsPolicy is Ownable {
 
         (uint128 exchangeRate, uint256 volume) = rateAggregator.aggregate();
         int256 supplyDelta = calcSupplyDelta(exchangeRate);
-        int256 dampenedSupplyDelta = calcDampenedSupplyDelta(supplyDelta);
+        supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 
-        uFrags.rebase(epoch, dampenedSupplyDelta);
-        emit Rebase(epoch, exchangeRate, volume, dampenedSupplyDelta);
+        if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) >= MAX_SUPPLY) {
+            supplyDelta = int256(MAX_SUPPLY.sub(uFrags.totalSupply()));
+        }
+
+        uFrags.rebase(epoch, supplyDelta);
+        emit Rebase(epoch, exchangeRate, volume, supplyDelta);
     }
 
     /**
