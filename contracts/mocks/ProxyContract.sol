@@ -32,17 +32,17 @@ contract ProxyContract {
   }
 
   // Call through methods
-  function callThroughToUFRGRebase(uint256 epoch, int256 supplyDelta){
-    uFrag.rebase(epoch, supplyDelta);
+  function callThroughToUFRGRebase(uint256 _epoch, int256 _supplyDelta) public {
+    uFrag.rebase(_epoch, _supplyDelta);
   }
 
   // Mock methods
-  function rebase(uint256 epoch, int256 supplyDelta) public {
+  function rebase(uint256 _epoch, int256 _supplyDelta) public {
     emit FunctionCalled("UFragments:rebase", msg.sender);
     uint256[] memory uintVals = new uint256[](1);
-    uintVals[0] = epoch;
+    uintVals[0] = _epoch;
     int256[] memory intVals = new int256[](1);
-    intVals[0] = supplyDelta;
+    intVals[0] = _supplyDelta;
     emit FunctionArguments(uintVals, intVals);
   }
 
