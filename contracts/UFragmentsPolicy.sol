@@ -61,7 +61,9 @@ contract UFragmentsPolicy is Ownable {
         epoch++;
         lastRebaseTimestamp = now;
 
-        (uint128 exchangeRate, uint256 volume) = rateAggregator.aggregate();
+        uint128 exchangeRate;
+        uint256 volume;
+        (exchangeRate, volume) = rateAggregator.aggregate();
         int256 supplyDelta = calcSupplyDelta(exchangeRate);
         supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 

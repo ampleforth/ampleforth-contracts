@@ -140,7 +140,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     /**
      * @dev Increase the amount of tokens that an owner has allowed to a spender.
      *
-     * approve should be called when allowed[_spender] == 0. To increment
+     * approve should be called when allowed[spender] == 0. To increment
      * allowed value is better to use this function to avoid 2 calls (and wait until
      * the first transaction is mined)
      * From MonolithDAO Token.sol
@@ -156,7 +156,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     /**
      * @dev Decrease the amount of tokens that an owner has allowed to a spender.
      *
-     * approve should be called when allowed[_spender] == 0. To decrement
+     * approve should be called when allowed[spender] == 0. To decrement
      * allowed value is better to use this function to avoid 2 calls (and wait until
      * the first transaction is mined)
      * From MonolithDAO Token.sol

@@ -42,8 +42,8 @@
     "ganache-cli": "^6.1.0",
     "js-yaml": "^3.11.0",
     "lodash": "^4.17.5",
-    "openzeppelin-solidity": "1.9.0",
-    "truffle": "4.1.11",
+    "openzeppelin-solidity": "1.10.0",
+    "truffle": "4.1.13",
     "web3": "github:ethereum/web3.js"
   },
   "devDependencies": {
@@ -66,7 +66,7 @@
     "request": "^2.87.0",
     "request-promise": "^4.2.2",
     "sinon": "^4.5.0",
-    "solhint": "^1.1.1",
+    "solhint": "^1.1.10",
     "stochasm": "^0.5.0",
     "webpack": "^4.10.2"
   }
