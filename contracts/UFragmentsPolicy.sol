@@ -6,23 +6,23 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./UFragments.sol";
 
 
-interface ExchangeRateAggregator {
-    function aggregate() external returns (uint128, uint256);
+interface MarketOracle {
+    function getPriceAndVolume() external returns (uint128, uint128);
 }
 
 
 /**
  * @title uFragments Monetary Supply Policy
  * @notice This component regulates the token supply of the uFragments ERC20 token in response to
- *         price-feed oracles.
+ *         market oracles.
  */
 contract UFragmentsPolicy is Ownable {
     using SafeMath for uint256;
 
-    event Rebase(uint256 indexed epoch, uint128 exchangeRate, uint256 volume, int256 appliedSupplyAdjustment);
+    event Rebase(uint256 indexed epoch, uint128 exchangeRate, uint128 volume, int256 appliedSupplyAdjustment);
 
     UFragments private uFrags;
-    ExchangeRateAggregator private rateAggregator;
+    MarketOracle private marketOracle;
 
     // Timestamp of last rebase operation
     uint256 public lastRebaseTimestamp;
@@ -47,9 +47,9 @@ contract UFragmentsPolicy is Ownable {
     // The upper bound on uFragments' supply
     uint256 private constant MAX_SUPPLY = 2**128 - 1;
 
-    constructor(UFragments _uFrags, ExchangeRateAggregator _rateAggregator) public {
+    constructor(UFragments _uFrags, MarketOracle _marketOracle) public {
         uFrags = _uFrags;
-        rateAggregator = _rateAggregator;
+        marketOracle = _marketOracle;
     }
 
     /**
@@ -62,8 +62,8 @@ contract UFragmentsPolicy is Ownable {
         lastRebaseTimestamp = now;
 
         uint128 exchangeRate;
-        uint256 volume;
-        (exchangeRate, volume) = rateAggregator.aggregate();
+        uint128 volume;
+        (exchangeRate, volume) = marketOracle.getPriceAndVolume();
         int256 supplyDelta = calcSupplyDelta(exchangeRate);
         supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 
@@ -76,8 +76,8 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice Allows setting the Deviation Threshold. If the exchange rate given by the exchange
-     *         rate aggregator is within this threshold, then no supply modifications are made.
+     * @notice Allows setting the Deviation Threshold. If the exchange rate given by the market
+     *         oracle is within this threshold, then no supply modifications are made.
      * @param _deviationThreshold The new exchange rate threshold.
      * TODO(iles): This should only be modified through distributed governance. #158010389
      */
@@ -111,7 +111,7 @@ contract UFragmentsPolicy is Ownable {
 
     /**
      * @return The total supply adjustment that should be made in response to the exchange
-     *         rate, as read from the aggregator.
+     *         rate, as provided by the market oracle.
      */
     function calcSupplyDelta(uint128 rate) private view returns (int256) {
         if (withinDeviationThreshold(rate)) {

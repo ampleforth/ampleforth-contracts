@@ -43,7 +43,7 @@ async function mockData () {
     supply = await uFragments.totalSupply.call();
     supply = new BigNumber(supply);
 
-    // Mocking policy interactions with aggregator and uFragments
+    // Mocking policy interactions with oracle and uFragments
     await proxy.storeRate(rate, txConfig);
     await proxy.storeSupply(supply, txConfig);
     await proxy.storeVolume(volume, txConfig);

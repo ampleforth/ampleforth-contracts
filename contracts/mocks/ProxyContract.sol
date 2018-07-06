@@ -46,8 +46,8 @@ contract ProxyContract {
     emit FunctionArguments(uintVals, intVals);
   }
 
-  function aggregate() external returns (uint128, uint256) {
-    emit FunctionCalled("ExchangeRateAggregator:aggregate", msg.sender);
+  function getPriceAndVolume() external view returns (uint128, uint256) {
+    emit FunctionCalled("MarketOracle:getPriceAndVolume", msg.sender);
     uint256[] memory uintVals = new uint256[](0);
     int256[] memory intVals = new int256[](0);
     emit FunctionArguments(uintVals, intVals);

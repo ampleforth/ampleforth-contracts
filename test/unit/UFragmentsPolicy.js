@@ -121,9 +121,9 @@ contract('uFragmentsPolicy', async accounts => {
           expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(20);
           expect(log.args.volume.toNumber()).to.eq(100);
         });
-        it('should call aggregate from the exchange rate aggregator', async () => {
+        it('should call getPriceAndVolume from the market oracle', async () => {
           const fnCalls = new ProxyContractFunctionSpy(uFragSpy).getCalledFunctions();
-          expect(fnCalls[0].fnName).to.eq('ExchangeRateAggregator:aggregate');
+          expect(fnCalls[0].fnName).to.eq('MarketOracle:getPriceAndVolume');
           expect(fnCalls[0].calledBy).to.eq(uFragmentsPolicy.address);
           expect(fnCalls[0].arguments).to.be.empty;
         });

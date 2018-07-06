@@ -36,7 +36,7 @@ module.exports = {
               "deployer", "http", "https", "github", "chai", "argv", "evm",
               "jsonrpc", "timestamp", "uint256", "erc20", "bignumber", "lodash",
               "arg", "npm", "seedrandom", "eql", "sinon", "yaml", "promisify",
-              "passcode", "geth", "rpc", "rpcmsg","stdev",  "stochasm", "aggregator",
+              "passcode", "geth", "rpc", "rpcmsg","stdev",  "stochasm",
               "whitelist", "uint",
 
               // shorthand
