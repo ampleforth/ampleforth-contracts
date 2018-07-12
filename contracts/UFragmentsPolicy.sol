@@ -56,7 +56,7 @@ contract UFragmentsPolicy is Ownable {
      * @notice Anyone may call this function to initiate a new rebase operation, provided the
      *         minimum time period has elapsed.
      */
-    function rebase() public {
+    function rebase() external {
         require(lastRebaseTimestamp + minRebaseTimeIntervalSec <= now);
         epoch++;
         lastRebaseTimestamp = now;
@@ -81,7 +81,7 @@ contract UFragmentsPolicy is Ownable {
      * @param _deviationThreshold The new exchange rate threshold.
      * TODO(iles): This should only be modified through distributed governance. #158010389
      */
-    function setDeviationThreshold(uint128 _deviationThreshold) public onlyOwner {
+    function setDeviationThreshold(uint128 _deviationThreshold) external onlyOwner {
         deviationThreshold = _deviationThreshold;
     }
 
@@ -90,7 +90,7 @@ contract UFragmentsPolicy is Ownable {
      * @param _minRebaseTimeIntervalSec The new minimum time interval, in seconds.
      * TODO(iles): This should only be modified through distributed governance. #158010389
      */
-    function setMinRebaseTimeIntervalSec(uint128 _minRebaseTimeIntervalSec) public onlyOwner {
+    function setMinRebaseTimeIntervalSec(uint128 _minRebaseTimeIntervalSec) external onlyOwner {
         minRebaseTimeIntervalSec = _minRebaseTimeIntervalSec;
     }
 
@@ -104,7 +104,7 @@ contract UFragmentsPolicy is Ownable {
      * TODO: We should allow this parameter to be modified by distributed governance in the
      * future. #158010389
      */
-    function setRebaseLag(uint32 _rebaseLag) public onlyOwner {
+    function setRebaseLag(uint32 _rebaseLag) external onlyOwner {
         require(_rebaseLag >= 1);
         rebaseLag = _rebaseLag;
     }

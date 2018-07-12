@@ -63,7 +63,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @dev Notifies Fragments contract about a new rebase cycle.
      * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
      */
-    function rebase(uint256 epoch, int256 supplyDelta) public onlyOwner {
+    function rebase(uint256 epoch, int256 supplyDelta) external onlyOwner {
         if (supplyDelta < 0) {
             totalSupply_ = totalSupply_.sub(uint256(-supplyDelta));
         } else {
