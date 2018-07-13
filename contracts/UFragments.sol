@@ -44,6 +44,14 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
 
     event Rebase(uint256 indexed epoch, uint256 totalSupply);
 
+    // Used for basic authz.
+    address public monetaryPolicy;
+
+    modifier onlyMonetaryPolicy() {
+        require(msg.sender == monetaryPolicy);
+        _;
+    }
+    
     mapping(address => uint256) private gonBalances;
 
     // These two numbers determine the gons-fragments exchange rate. (numerator and denominator,
@@ -60,10 +68,17 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     }
 
     /**
+     * @param monetaryPolicy_ The address of the monetary policy contract to use for authz.
+     */
+    function setMonetaryPolicy(address monetaryPolicy_) public onlyOwner {
+        monetaryPolicy = monetaryPolicy_;
+    }
+    
+    /**
      * @dev Notifies Fragments contract about a new rebase cycle.
      * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
      */
-    function rebase(uint256 epoch, int256 supplyDelta) public onlyOwner {
+    function rebase(uint256 epoch, int256 supplyDelta) public onlyMonetaryPolicy {
         if (supplyDelta < 0) {
             totalSupply_ = totalSupply_.sub(uint256(-supplyDelta));
         } else {

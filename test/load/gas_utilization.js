@@ -86,19 +86,13 @@ async function computeGasUtilization () {
   console.log('FRAGMENTS ERC20 CONTRACT FUNCTIONS');
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('UFragments:rebase(1, +100) [VIA PROXY]', async () => {
-    return proxy.callThroughToUFRGRebase(1, 100, callerConfig);
-  });
-  console.log('-----------------------------------------------------');
-
   await cleanRoomTx('UFragments:transfer(user, 10)', async () => {
-    await proxy.callThroughToUFRGRebase(1, 100, callerConfig);
     return uFragments.transfer(user, 10, callerConfig);
   });
+
   console.log('-----------------------------------------------------');
 
-  await cleanRoomTx('UFragments:transferFrom(user, 10)', async () => {
-    await proxy.callThroughToUFRGRebase(1, 100, callerConfig);
+  await cleanRoomTx('UFragments: approve and transferFrom(user, 10)', async () => {
     await uFragments.approve(user, 10, callerConfig);
     return uFragments.transferFrom(deployer, user, 10, {
       from: user,
@@ -106,6 +100,11 @@ async function computeGasUtilization () {
     });
   });
   console.log('-----------------------------------------------------');
+
+  await cleanRoomTx('UFragments:rebase(1, +100)', async () => {
+    await uFragments.setMonetaryPolicy(deployer, callerConfig);
+    return uFragments.rebase(1, 100, callerConfig);
+  });
 
   await cleanRoomTx('UFragmentsPolicy:rebase() [WITH STUB]', async () => {
     await proxy.storeRate(1.3e18, callerConfig);
