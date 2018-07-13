@@ -14,31 +14,38 @@ module.exports = function (deployer, network, accounts) {
     gas: config.gas
   };
 
-  async function useProxyLinks () {
+  async function unitTestDeployment (deployer) {
+    deployer.logger.log('Deploying test environment with mocks');
+    await deployer.deploy(UFragments, deploymentConfig);
     await deployer.deploy(ProxyContract, deploymentConfig);
     await deployer.deploy(UFragmentsPolicy, ProxyContract.address, ProxyContract.address, deploymentConfig);
-    const proxy = ProxyContract.at(ProxyContract.address);
-    await proxy.setReferences(UFragments.address, deploymentConfig);
+
     const uFrag = UFragments.at(UFragments.address);
-    await uFrag.transferOwnership(ProxyContract.address, deploymentConfig);
+    await uFrag.setMonetaryPolicy(deployerAccount);
   }
 
-  async function useActualLinks () {
-    throw (new Error('Deployment logic yet to be implemented'));
-  }
-
-  // TODO: handle deployment logic for different environments
-  async function deployFragmentsContracts (deployer) {
-    deployer.logger.log('Deploying core contract(s)');
+  async function devDeployment (deployer) {
+    deployer.logger.log('Deploying dev environment (still mocking oracle for now)');
     await deployer.deploy(UFragments, deploymentConfig);
+    await deployer.deploy(UFragmentsPolicy, UFragments.address, ProxyContract.address, deploymentConfig);
 
+    const uFrag = UFragments.at(UFragments.address);
+    await uFrag.setMonetaryPolicy(UFragmentsPolicy.address);
+  }
+
+  async function liveDeployment (deployer) {
+    throw (new Error('Live deployment yet to be implemented'));
+  }
+
+  async function deployFragmentsContracts (deployer) {
     if (network === 'ganacheUnitTest' ||
-        network === 'gethUnitTest' ||
-        network === 'ganacheDev' ||
-        network === 'gethDev') {
-      await useProxyLinks(deployer);
+        network === 'gethUnitTest') {
+      await unitTestDeployment(deployer);
+    } else if (network === 'ganacheDev' ||
+               network === 'gethDev') {
+      await devDeployment(deployer);
     } else {
-      await useActualLinks(deployer);
+      await liveDeployment(deployer);
     }
   }
 

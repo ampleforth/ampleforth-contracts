@@ -1,5 +1,4 @@
 const UFragments = artifacts.require('UFragments.sol');
-const ProxyContract = artifacts.require('ProxyContract.sol');
 
 const _require = require('app-root-path').require;
 const { ContractEventSpy } = _require('/util/spies');
@@ -7,15 +6,16 @@ const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
 contract('UFragments', async accounts => {
-  let uFragments, snapshot, b, proxy;
+  let uFragments, snapshot, b;
   const deployer = accounts[0];
-  const A = accounts[1];
-  const B = accounts[2];
-  const C = accounts[3];
+  const policy = accounts[1];
+  const A = accounts[2];
+  const B = accounts[3];
+  const C = accounts[4];
 
   before(async function () {
     uFragments = await UFragments.deployed();
-    proxy = await ProxyContract.deployed();
+    await uFragments.setMonetaryPolicy(policy, {from: deployer});
   });
 
   describe('on initialization', () => {
@@ -26,6 +26,14 @@ contract('UFragments', async accounts => {
     it('should set the totalSupply to 1000', async () => {
       b = await uFragments.totalSupply.call();
       expect(b.toNumber()).to.eq(1000);
+    });
+  });
+
+  describe('Monetary Policy', () => {
+    it('should not be set-able by non-owner', async () => {
+      await chain.expectEthException(
+        uFragments.setMonetaryPolicy(A, { from: policy })
+      );
     });
   });
 
@@ -70,6 +78,31 @@ contract('UFragments', async accounts => {
   });
 
   describe('Rebase', async () => {
+    describe('Access Controls', function () {
+      let rebaseSpy;
+      before(async () => {
+        snapshot = await chain.snapshotChain();
+        await uFragments.transfer(A, 250, { from: deployer });
+        rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
+        rebaseSpy.watch();
+        await uFragments.rebase(1, 500, {from: policy});
+      });
+      after(async () => {
+        rebaseSpy.stopWatching();
+        await chain.revertToSnapshot(snapshot);
+      });
+
+      it('should be callable by monetary policy', async () => {
+        await uFragments.rebase(1, 10, {from: policy});
+      });
+
+      it('should not be callable by others', async () => {
+        await chain.expectEthException(
+          uFragments.rebase(1, 500, { from: deployer })
+        );
+      });
+    });
+
     describe('Expansion', function () {
       let rebaseSpy;
       // Rebase +500 (50%), with starting balances deployer:750 and A:250.
@@ -78,7 +111,7 @@ contract('UFragments', async accounts => {
         await uFragments.transfer(A, 250, { from: deployer });
         rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
         rebaseSpy.watch();
-        await proxy.callThroughToUFRGRebase(1, 500);
+        await uFragments.rebase(1, 500, {from: policy});
       });
       after(async () => {
         rebaseSpy.stopWatching();
@@ -112,7 +145,7 @@ contract('UFragments', async accounts => {
         await uFragments.transfer(A, 250, { from: deployer });
         rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
         rebaseSpy.watch();
-        await proxy.callThroughToUFRGRebase(1, -500);
+        await uFragments.rebase(1, -500, {from: policy});
       });
       after(async () => {
         rebaseSpy.stopWatching();
