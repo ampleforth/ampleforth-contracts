@@ -1,6 +1,8 @@
 # μFragments
 The μFragments protocol smart contracts on Ethereum.
 
+[![Build Status](https://travis-ci.com/frgprotocol/uFragments.svg?token=xxNsLhLrTiyG3pc78i5v&branch=master)](https://travis-ci.com/frgprotocol/uFragments)
+
 # Getting started
 ```bash
 # Install dependencies
