@@ -1,6 +1,7 @@
 const UFragments = artifacts.require('UFragments.sol');
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
-const ProxyContract = artifacts.require('ProxyContract.sol');
+const MockUFragments = artifacts.require('MockUFragments.sol');
+const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
 const APP_ROOT_PATH = require('app-root-path');
 const _require = APP_ROOT_PATH.require;
@@ -17,8 +18,9 @@ module.exports = function (deployer, network, accounts) {
   async function unitTestDeployment (deployer) {
     deployer.logger.log('Deploying test environment with mocks');
     await deployer.deploy(UFragments, deploymentConfig);
-    await deployer.deploy(ProxyContract, deploymentConfig);
-    await deployer.deploy(UFragmentsPolicy, ProxyContract.address, ProxyContract.address, deploymentConfig);
+    await deployer.deploy(MockUFragments, deploymentConfig);
+    await deployer.deploy(MockMarketOracle, deploymentConfig);
+    await deployer.deploy(UFragmentsPolicy, MockUFragments.address, MockMarketOracle.address, deploymentConfig);
 
     const uFrag = UFragments.at(UFragments.address);
     await uFrag.setMonetaryPolicy(deployerAccount);
@@ -27,7 +29,7 @@ module.exports = function (deployer, network, accounts) {
   async function devDeployment (deployer) {
     deployer.logger.log('Deploying dev environment (still mocking oracle for now)');
     await deployer.deploy(UFragments, deploymentConfig);
-    await deployer.deploy(UFragmentsPolicy, UFragments.address, ProxyContract.address, deploymentConfig);
+    await deployer.deploy(UFragmentsPolicy, UFragments.address, MockMarketOracle.address, deploymentConfig);
 
     const uFrag = UFragments.at(UFragments.address);
     await uFrag.setMonetaryPolicy(UFragmentsPolicy.address);
@@ -60,8 +62,10 @@ module.exports = function (deployer, network, accounts) {
       UFragmentsTx: UFragments.transactionHash,
       UFragmentsPolicy: UFragmentsPolicy.address,
       UFragmentsPolicyTx: UFragmentsPolicy.transactionHash,
-      ProxyContract: ProxyContract.address,
-      ProxyContractTx: ProxyContract.transactionHash
+      MockUFragments: MockUFragments.address,
+      MockUFragmentsTx: MockUFragments.transactionHash,
+      MockMarketOracle: MockMarketOracle.address,
+      MockMarketOracleTx: MockMarketOracle.transactionHash
     }, `${APP_ROOT_PATH}/migrations/deployments/${config.ref}.yaml`);
   }
 

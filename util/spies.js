@@ -48,14 +48,14 @@ ContractEventSpy.prototype.stopWatching = function () {
   });
 };
 
-// ProxyContract Function Spy, parses spied events to specifically look for,
+// Mock Function Spy, parses spied events to specifically look for,
 // 'FunctionCalled', 'FunctionArgumentAddress', 'FunctionArgumentInteger'
-// emitted out by function stubs in 'ProxyContract'
-function ProxyContractFunctionSpy (contractEventSpy) {
+// emitted out by function stubs in 'Mock'
+function MockFunctionSpy (contractEventSpy) {
   this.spy = contractEventSpy;
 }
 
-ProxyContractFunctionSpy.prototype.getCalledFunctions = function () {
+MockFunctionSpy.prototype.getCalledFunctions = function () {
   const fns = this.spy.getAllEventsByName('FunctionCalled');
   const fnArgs = this.spy.getAllEventsByName('FunctionArguments');
   const fnCalls = _.zip(fns, fnArgs);
@@ -74,5 +74,5 @@ ProxyContractFunctionSpy.prototype.getCalledFunctions = function () {
 
 module.exports = {
   ContractEventSpy,
-  ProxyContractFunctionSpy
+  MockFunctionSpy
 };
