@@ -11,7 +11,6 @@
 */
 
 const UFragments = artifacts.require('UFragments.sol');
-const ProxyContract = artifacts.require('ProxyContract.sol');
 
 const Stochasm = require('stochasm');
 const _require = require('app-root-path').require;
@@ -19,7 +18,7 @@ const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
 contract('UFragments', async accounts => {
-  let uFragments, proxy, snapshot, rebaseAmt, inflation;
+  let uFragments, snapshot, rebaseAmt, inflation;
   const deployer = accounts[0];
   const A = accounts[1];
   const B = accounts[2];
@@ -29,7 +28,6 @@ contract('UFragments', async accounts => {
 
   before(async function () {
     uFragments = await UFragments.deployed();
-    proxy = await ProxyContract.deployed();
     snapshot = await chain.snapshotChain();
 
     await uFragments.transfer(A, 3);
@@ -87,7 +85,7 @@ contract('UFragments', async accounts => {
         inflation = uFragmentsGrowth.next().toFixed(5);
         rebaseAmt = supply.mul(inflation).dividedToIntegerBy(1);
         printRebaseAmt(rebaseAmt);
-        await proxy.callThroughToUFRGRebase(i + 1, rebaseAmt, {from: deployer});
+        await uFragments.rebase(i + 1, rebaseAmt, {from: deployer});
         supply = await uFragments.totalSupply.call();
         printSupply(supply);
       });

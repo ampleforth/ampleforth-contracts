@@ -7,7 +7,8 @@
 */
 const UFragments = artifacts.require('UFragments.sol');
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
-const ProxyContract = artifacts.require('ProxyContract.sol');
+const MockUFragments = artifacts.require('MockUFragments.sol');
+const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
 const yaml = require('js-yaml');
 const fs = require('fs');
@@ -65,7 +66,8 @@ async function computeGasUtilization () {
 
   const uFragments = UFragments.at(chainConfig.UFragments);
   const uFragmentsPolicy = UFragmentsPolicy.at(chainConfig.UFragmentsPolicy);
-  const proxy = ProxyContract.at(chainConfig.ProxyContract);
+  const mockUFragments = MockUFragments.at(chainConfig.MockUFragments);
+  const mockMarketOracle = MockMarketOracle.at(chainConfig.MockMarketOracle);
 
   const callerConfig = {
     from: deployer,
@@ -107,9 +109,9 @@ async function computeGasUtilization () {
   });
 
   await cleanRoomTx('UFragmentsPolicy:rebase() [WITH STUB]', async () => {
-    await proxy.storeRate(1.3e18, callerConfig);
-    await proxy.storeVolume(100, callerConfig);
-    await proxy.storeSupply(1010, callerConfig);
+    await mockMarketOracle.storeRate(1.3e18, callerConfig);
+    await mockMarketOracle.storeVolume(100, callerConfig);
+    await mockUFragments.storeSupply(1010, callerConfig);
     return uFragmentsPolicy.rebase(callerConfig);
   });
   console.log('**************************************************************');

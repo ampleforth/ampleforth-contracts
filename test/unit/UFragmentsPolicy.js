@@ -1,24 +1,26 @@
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
-const ProxyContract = artifacts.require('ProxyContract.sol');
+const MockUFragments = artifacts.require('MockUFragments.sol');
+const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
 const BigNumber = require('bignumber.js');
 const _require = require('app-root-path').require;
-const { ContractEventSpy, ProxyContractFunctionSpy } = _require('/util/spies');
+const { ContractEventSpy, MockFunctionSpy } = _require('/util/spies');
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
 contract('uFragmentsPolicy', async accounts => {
-  let uFragmentsPolicy, proxy, snapshot;
+  let uFragmentsPolicy, mockUFragments, mockMarketOracle, snapshot;
 
   before(async function () {
     uFragmentsPolicy = await UFragmentsPolicy.deployed();
-    proxy = await ProxyContract.deployed();
+    mockUFragments = await MockUFragments.deployed();
+    mockMarketOracle = await MockMarketOracle.deployed();
   });
 
   async function mockExternalData (exchangeRate, volume, uFragSupply) {
-    await proxy.storeRate(exchangeRate);
-    await proxy.storeVolume(volume);
-    await proxy.storeSupply(uFragSupply);
+    await mockMarketOracle.storeRate(exchangeRate);
+    await mockMarketOracle.storeVolume(volume);
+    await mockUFragments.storeSupply(uFragSupply);
   }
 
   describe('Rebase', function () {
@@ -88,7 +90,7 @@ contract('uFragmentsPolicy', async accounts => {
 
     describe('when minRebaseTimeIntervalSec has passed since the previous rebase', function () {
       describe('positive rate', function () {
-        let uFragSpy;
+        let uFragSpy, oracleSpy;
         before(async function () {
           snapshot = await chain.snapshotChain();
           await mockExternalData(1.3e18, 100, 1000);
@@ -97,12 +99,15 @@ contract('uFragmentsPolicy', async accounts => {
           _epoch = await uFragmentsPolicy.epoch.call();
           _time = await uFragmentsPolicy.lastRebaseTimestamp.call();
           await mockExternalData(1.6e18, 100, 1010);
-          uFragSpy = new ContractEventSpy([proxy.FunctionCalled, proxy.FunctionArguments]);
+          uFragSpy = new ContractEventSpy([mockUFragments.FunctionCalled, mockUFragments.FunctionArguments]);
           uFragSpy.watch();
+          oracleSpy = new ContractEventSpy([mockMarketOracle.FunctionCalled, mockMarketOracle.FunctionArguments]);
+          oracleSpy.watch();
           r = await uFragmentsPolicy.rebase();
         });
         after(async function () {
           uFragSpy.stopWatching();
+          oracleSpy.stopWatching();
           await chain.revertToSnapshot(snapshot);
         });
 
@@ -122,17 +127,17 @@ contract('uFragmentsPolicy', async accounts => {
           expect(log.args.volume.toNumber()).to.eq(100);
         });
         it('should call getPriceAndVolume from the market oracle', async function () {
-          const fnCalls = new ProxyContractFunctionSpy(uFragSpy).getCalledFunctions();
+          const fnCalls = new MockFunctionSpy(oracleSpy).getCalledFunctions();
           expect(fnCalls[0].fnName).to.eq('MarketOracle:getPriceAndVolume');
           expect(fnCalls[0].calledBy).to.eq(uFragmentsPolicy.address);
           expect(fnCalls[0].arguments).to.be.empty;
         });
         it('should call uFrag Rebase', async function () {
-          const fnCalls = new ProxyContractFunctionSpy(uFragSpy).getCalledFunctions();
+          const fnCalls = new MockFunctionSpy(uFragSpy).getCalledFunctions();
           const epoch = await uFragmentsPolicy.epoch.call();
-          expect(fnCalls[1].fnName).to.eq('UFragments:rebase');
-          expect(fnCalls[1].calledBy).to.eq(uFragmentsPolicy.address);
-          expect(fnCalls[1].arguments).to.include.members([epoch.toNumber(), 20]);
+          expect(fnCalls[0].fnName).to.eq('UFragments:rebase');
+          expect(fnCalls[0].calledBy).to.eq(uFragmentsPolicy.address);
+          expect(fnCalls[0].arguments).to.include.members([epoch.toNumber(), 20]);
         });
       });
 
@@ -140,7 +145,7 @@ contract('uFragmentsPolicy', async accounts => {
         let uFragSpy;
         before(async function () {
           snapshot = await chain.snapshotChain();
-          uFragSpy = new ContractEventSpy([proxy.FunctionCalled, proxy.FunctionArguments]);
+          uFragSpy = new ContractEventSpy([mockUFragments.FunctionCalled, mockUFragments.FunctionArguments]);
           uFragSpy.watch();
           await mockExternalData(0.7e18, 100, 1000);
           r = await uFragmentsPolicy.rebase();
