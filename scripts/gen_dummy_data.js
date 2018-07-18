@@ -1,11 +1,19 @@
-/*
-  This truffle script generates dummy data. It generates a history of
-  exchange rate reports and rebase events on the blockchain which are useful in
-  integration testing or bootstrapping dependent components.
-*/
+/**
+ * This truffle script generates dummy data. It generates a history of
+ * exchange rate reports and rebase events on the blockchain which are useful in
+ * integration testing or bootstrapping dependent components.
+ *
+ * Example usage:
+ * $ npm run blockchain:start gethDev
+ * $ npm run genDummyData
+ */
+const yaml = require('js-yaml');
+const fs = require('fs');
+const APP_ROOT_PATH = require('app-root-path');
+
 const UFragments = artifacts.require('UFragments.sol');
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
-const ProxyContract = artifacts.require('ProxyContract.sol');
+const MarketSource = artifacts.require('market-oracle/MarketSource.sol');
 
 const Stochasm = require('stochasm');
 const BigNumber = require('bignumber.js');
@@ -16,6 +24,7 @@ const chain = new BlockchainCaller(web3);
 const network = artifacts.options._values.network;
 const truffleConfig = _require('/truffle.js');
 const config = truffleConfig.networks[network];
+const chainConfig = yaml.safeLoad(fs.readFileSync(`${APP_ROOT_PATH}/migrations/deployments/${config.ref}.yaml`));
 
 async function mockData () {
   const accounts = await chain.getUserAccounts();
@@ -25,9 +34,9 @@ async function mockData () {
     from: deployer
   };
 
-  const uFragments = await UFragments.deployed();
-  const policy = await UFragmentsPolicy.deployed();
-  const proxy = await ProxyContract.deployed();
+  const uFragments = UFragments.at(chainConfig.UFragments);
+  const policy = UFragmentsPolicy.at(chainConfig.UFragmentsPolicy);
+  const marketSource = await MarketSource.at(chainConfig.MarketSource);
   await policy.setMinRebaseTimeIntervalSec(1);
 
   const rateGen = new Stochasm({ mean: 1.75, stdev: 0.5, min: 0.5, max: 5, seed: 'fragments.org' });
@@ -43,18 +52,14 @@ async function mockData () {
     supply = await uFragments.totalSupply.call();
     supply = new BigNumber(supply);
 
-    // Mocking policy interactions with oracle and uFragments
-    await proxy.storeRate(rate, txConfig);
-    await proxy.storeSupply(supply, txConfig);
-    await proxy.storeVolume(volume, txConfig);
+    // Report data through market oracle
+    await marketSource.reportRate(rate, volume, txConfig);
 
     // Calling policy rebase
     r = await policy.rebase(txConfig);
 
-    // Calling uFragments rebase
     const epoch = await policy.epoch.call();
     const supplyDelta = r.logs[0].args.appliedSupplyAdjustment;
-    await proxy.callThroughToUFRGRebase(epoch, supplyDelta, txConfig);
     const supply_ = await uFragments.totalSupply.call();
     console.log(`Rebase: SupplyDelta=${supplyDelta} Supply_=${supply_} Epoch=${epoch}`);
     await new Promise(resolve => setTimeout(resolve, 1000));
