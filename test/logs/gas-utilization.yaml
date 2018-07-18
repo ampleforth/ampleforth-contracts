@@ -1,7 +1,7 @@
 # Code generated - DO NOT EDIT.
 # Any manual changes may be lost.
-'UFragments:DEPLOYMENT': 1916646
-'UFragments:transfer(user, 10)': 53843
-'UFragments: approve and transferFrom(user, 10)': 46151
-'UFragments:rebase(1, +100)': 29323
+'UFragments:DEPLOYMENT': 2111678
+'UFragments:transfer(user, 10)': 54243
+'UFragments: approve and transferFrom(user, 10)': 46485
+'UFragments:rebase(1, +100)': 29701
 'UFragmentsPolicy:rebase() [WITH STUB]': 84329

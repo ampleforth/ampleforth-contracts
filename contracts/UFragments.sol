@@ -51,6 +51,20 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
         require(msg.sender == monetaryPolicy);
         _;
     }
+
+    // Emergency admin controls to bridge until decentralized governance
+    bool public rebasePaused = false;
+    bool public tokenPaused = false;
+
+    modifier whenRebaseNotPaused() {
+        require(!rebasePaused);
+        _;
+    }
+
+    modifier whenTokenNotPaused() {
+        require(!tokenPaused);
+        _;
+    }
     
     mapping(address => uint256) private gonBalances;
 
@@ -73,12 +87,28 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     function setMonetaryPolicy(address monetaryPolicy_) external onlyOwner {
         monetaryPolicy = monetaryPolicy_;
     }
+
+    /**
+     * @dev Pauses or unpauses the execution of rebase operations.
+     * @param paused Pauses rebase operations if this is true.
+     */
+    function setRebasePaused(bool paused) external onlyOwner {
+        rebasePaused = paused;
+    }
+
+    /**
+     * @dev Pauses or unpauses execution of ERC-20 transactions.
+     * @param paused Pauses ERC-20 transactions if this is true.
+     */
+    function setTokenPaused(bool paused) external onlyOwner {
+        tokenPaused = paused;
+    }
     
     /**
      * @dev Notifies Fragments contract about a new rebase cycle.
      * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
      */
-    function rebase(uint256 epoch, int256 supplyDelta) external onlyMonetaryPolicy {
+    function rebase(uint256 epoch, int256 supplyDelta) external onlyMonetaryPolicy whenRebaseNotPaused {
         if (supplyDelta < 0) {
             totalSupply_ = totalSupply_.sub(uint256(-supplyDelta));
         } else {
@@ -108,7 +138,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @param value The amount to be transferred.
      * @return True on success, false otherwise.
      */
-    function transfer(address to, uint256 value) public returns (bool) {
+    function transfer(address to, uint256 value) public whenTokenNotPaused returns (bool) {
         transferHelper(msg.sender, to, value);
         return true;
     }
@@ -129,7 +159,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @param to The address you want to transfer to.
      * @param value The amount of tokens to be transferred.
      */
-    function transferFrom(address from, address to, uint256 value) public returns (bool) {
+    function transferFrom(address from, address to, uint256 value) public whenTokenNotPaused returns (bool) {
         require(value <= allowedFragments[from][msg.sender]);
         allowedFragments[from][msg.sender] = allowedFragments[from][msg.sender].sub(value);
         transferHelper(from, to, value);
@@ -146,7 +176,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @param spender The address which will spend the funds.
      * @param value The amount of tokens to be spent.
      */
-    function approve(address spender, uint256 value) public returns (bool) {
+    function approve(address spender, uint256 value) public whenTokenNotPaused returns (bool) {
         allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;
@@ -162,7 +192,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @param spender The address which will spend the funds.
      * @param addedValue The amount of tokens to increase the allowance by.
      */
-    function increaseApproval(address spender, uint addedValue) public returns (bool) {
+    function increaseApproval(address spender, uint addedValue) public whenTokenNotPaused returns (bool) {
         allowedFragments[msg.sender][spender] = allowedFragments[msg.sender][spender].add(addedValue);
         emit Approval(msg.sender, spender, allowedFragments[msg.sender][spender]);
         return true;
@@ -178,7 +208,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @param spender The address which will spend the funds.
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
-    function decreaseApproval(address spender, uint subtractedValue) public returns (bool) {
+    function decreaseApproval(address spender, uint subtractedValue) public whenTokenNotPaused returns (bool) {
         uint oldValue = allowedFragments[msg.sender][spender];
         if (subtractedValue > oldValue) {
             allowedFragments[msg.sender][spender] = 0;

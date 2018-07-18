@@ -45,6 +45,14 @@ contract('UFragments', function (accounts) {
       await chain.revertToSnapshot(snapshot);
     });
 
+    it('should not be callable while paused', async function () {
+      await uFragments.setTokenPaused(true);
+      await chain.expectEthException(
+        uFragments.rebase(1, 500, { from: deployer })
+      );
+      await uFragments.setTokenPaused(false);
+    });
+
     describe('deployer transfers 12 to A', function () {
       it('should have balances [988,12]', async function () {
         await uFragments.transfer(A, 12, { from: deployer });
@@ -97,6 +105,12 @@ contract('UFragments', function (accounts) {
       });
 
       it('should not be callable by others', async function () {
+        await chain.expectEthException(
+          uFragments.rebase(1, 500, { from: deployer })
+        );
+      });
+      it('should not be callable while paused', async function () {
+        await uFragments.setRebasePaused(true);
         await chain.expectEthException(
           uFragments.rebase(1, 500, { from: deployer })
         );
