@@ -73,10 +73,18 @@ stop-chain(){
 }
 
 deploy-contracts(){
+  read NETWORK_REF PORT CHAIN_RNR < <(get-network-config $1)
+
   echo "Removing previous builds"
   rm -rf $DIR/build
+  rm -rf $PROJECT_DIR/node_modules/market-oracle/build
 
-  echo "Deploying contracts onto the blockchain"
-  read NETWORK_REF PORT CHAIN_RNR < <(get-network-config $1)
-  frg-truffle --network $NETWORK_REF migrate --reset
+  echo "Compiling contracts"
+  $PROJECT_DIR/node_modules/truffle/build/cli.bundled.js \
+    --working-directory $PROJECT_DIR/node_modules/market-oracle \
+    --network $NETWORK_REF compile
+  frg-truffle --network $NETWORK_REF compile
+
+  echo "Deploying contracts"
+  frg-truffle --network $NETWORK_REF migrate
 }

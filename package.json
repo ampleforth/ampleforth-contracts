@@ -42,6 +42,7 @@
     "ganache-cli": "^6.1.0",
     "js-yaml": "^3.11.0",
     "lodash": "^4.17.5",
+    "market-oracle": "git+ssh://git@github.com/frgprotocol/market-oracle.git",
     "openzeppelin-solidity": "1.10.0",
     "truffle": "4.1.13",
     "web3": "github:ethereum/web3.js"

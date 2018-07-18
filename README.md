@@ -5,6 +5,12 @@ The μFragments protocol smart contracts on Ethereum.
 
 # Getting started
 ```bash
+
+# (TEMPORARY) To use other private uFragments github repository dependencies
+# Generate a github token {https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/}
+# https://stackoverflow.com/questions/23210437/npm-install-private-github-repositories-by-dependency-in-package-json
+git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf git@github.com:
+
 # Install dependencies
 npm install
 ```
