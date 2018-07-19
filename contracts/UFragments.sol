@@ -52,7 +52,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
         _;
     }
 
-    // Emergency admin controls to bridge until decentralized governance
+    // Emergency controls to bridge until system stability
     bool public rebasePaused = false;
     bool public tokenPaused = false;
 
