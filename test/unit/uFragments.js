@@ -170,4 +170,92 @@ contract('UFragments', function (accounts) {
       });
     });
   });
+
+  describe('Pausing Rebase', function () {
+    before(async function () {
+      snapshot = await chain.snapshotChain();
+      await uFragments.setRebasePaused(true);
+    });
+    after(async function () {
+      await chain.revertToSnapshot(snapshot);
+    });
+
+    it('should not allow calling rebase', async function () {
+      await chain.expectEthException(
+        uFragments.rebase(1, 500, { from: policy })
+      );
+    });
+    it('should allow calling transfer', async function () {
+      await uFragments.transfer(A, 10, { from: deployer });
+    });
+    it('should allow calling approve', async function () {
+      await uFragments.approve(A, 10, { from: deployer });
+    });
+    it('should allow calling allowance', async function () {
+      await uFragments.allowance.call(deployer, A);
+    });
+    it('should allow calling transferFrom', async function () {
+      await uFragments.transferFrom(deployer, B, 10, {from: A});
+    });
+    it('should allow calling increaseApproval', async function () {
+      await uFragments.increaseApproval(A, 10, {from: deployer});
+    });
+    it('should allow calling decreaseApproval', async function () {
+      await uFragments.decreaseApproval(A, 10, {from: deployer});
+    });
+    it('should allow calling balanceOf', async function () {
+      await uFragments.balanceOf.call(deployer);
+    });
+    it('should allow calling totalSupply', async function () {
+      await uFragments.totalSupply.call();
+    });
+  });
+
+  describe('Pausing Token', function () {
+    before(async function () {
+      snapshot = await chain.snapshotChain();
+      await uFragments.setTokenPaused(true);
+    });
+    after(async function () {
+      await chain.revertToSnapshot(snapshot);
+    });
+
+    it('should allow calling rebase', async function () {
+      await uFragments.rebase(1, 500, { from: policy });
+    });
+    it('should not allow calling transfer', async function () {
+      await chain.expectEthException(
+        uFragments.transfer(A, 10, { from: deployer })
+      );
+    });
+    it('should not allow calling approve', async function () {
+      await chain.expectEthException(
+        uFragments.approve(A, 10, { from: deployer })
+      );
+    });
+    it('should allow calling allowance', async function () {
+      await uFragments.allowance.call(deployer, A);
+    });
+    it('should not allow calling transferFrom', async function () {
+      await chain.expectEthException(
+        uFragments.transferFrom(deployer, B, 10, {from: A})
+      );
+    });
+    it('should not allow calling increaseApproval', async function () {
+      await chain.expectEthException(
+        uFragments.increaseApproval(A, 10, {from: deployer})
+      );
+    });
+    it('should not allow calling decreaseApproval', async function () {
+      await chain.expectEthException(
+        uFragments.decreaseApproval(A, 10, {from: deployer})
+      );
+    });
+    it('should allow calling balanceOf', async function () {
+      await uFragments.balanceOf.call(deployer);
+    });
+    it('should allow calling totalSupply', async function () {
+      await uFragments.totalSupply.call();
+    });
+  });
 });
