@@ -77,12 +77,8 @@ deploy-contracts(){
 
   echo "Removing previous builds"
   rm -rf $DIR/build
-  rm -rf $PROJECT_DIR/node_modules/market-oracle/build
 
   echo "Compiling contracts"
-  $PROJECT_DIR/node_modules/truffle/build/cli.bundled.js \
-    --working-directory $PROJECT_DIR/node_modules/market-oracle \
-    --network $NETWORK_REF compile
   frg-truffle --network $NETWORK_REF compile
 
   echo "Deploying contracts"

@@ -4,7 +4,7 @@
  * integration testing or bootstrapping dependent components.
  *
  * Example usage:
- * $ npm run blockchain:start gethDev
+ * $ npm run blockchain:start gethUnitTest
  * $ npm run genDummyData
  */
 const yaml = require('js-yaml');
@@ -13,7 +13,7 @@ const APP_ROOT_PATH = require('app-root-path');
 
 const UFragments = artifacts.require('UFragments.sol');
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
-const MarketSource = artifacts.require('market-oracle/MarketSource.sol');
+const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
 const Stochasm = require('stochasm');
 const BigNumber = require('bignumber.js');
@@ -36,7 +36,7 @@ async function mockData () {
 
   const uFragments = UFragments.at(chainConfig.UFragments);
   const policy = UFragmentsPolicy.at(chainConfig.UFragmentsPolicy);
-  const marketSource = await MarketSource.at(chainConfig.MarketSource);
+  const oracle = await MockMarketOracle.at(chainConfig.MockMarketOracle);
   await policy.setMinRebaseTimeIntervalSec(1);
 
   const rateGen = new Stochasm({ mean: 1.75, stdev: 0.5, min: 0.5, max: 5, seed: 'fragments.org' });
@@ -53,7 +53,8 @@ async function mockData () {
     supply = new BigNumber(supply);
 
     // Report data through market oracle
-    await marketSource.reportRate(rate, volume, txConfig);
+    await oracle.storeRate(rate, txConfig);
+    await oracle.storeVolume(volume, txConfig);
 
     // Calling policy rebase
     r = await policy.rebase(txConfig);

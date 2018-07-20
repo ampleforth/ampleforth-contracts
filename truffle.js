@@ -2,14 +2,6 @@ module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
   // for more about customizing your Truffle configuration!
   networks: {
-    ganacheDev: {
-      ref: 'ganache-dev',
-      host: '127.0.0.1',
-      port: 7545,
-      gas: 7989556,
-      gasPrice: 9000000000,
-      network_id: '*'
-    },
     ganacheUnitTest: {
       ref: 'ganache-unit-test',
       host: '127.0.0.1',
@@ -17,16 +9,6 @@ module.exports = {
       gas: 7989556,
       gasPrice: 9000000000,
       network_id: '*'
-    },
-    gethDev: {
-      ref: 'geth-dev',
-      host: '127.0.0.1',
-      port: 7550,
-      wsPort: 7551,
-      gas: 7989556,
-      gasPrice: 9000000000,
-      network_id: '1234',
-      passcode: 'fragments'
     },
     gethUnitTest: {
       ref: 'geth-unit-test',

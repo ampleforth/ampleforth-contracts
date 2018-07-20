@@ -11,20 +11,20 @@
   "bugs": {
     "url": "https://github.com/frgprotocol/uFragments/issues"
   },
-  "license": "ISC",
-  "author": "team@fragments.org",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/frgprotocol/uFragments.git"
   },
+  "license": "ISC",
+  "author": "eng@fragments.org",
   "scripts": {
     "blockchain:start": "scripts/blockchain/runner.sh 1",
     "blockchain:stop": "scripts/blockchain/runner.sh 0",
     "precommit": "scripts/pre-commit.sh",
+    "genDummyData": "node_modules/truffle/build/cli.bundled.js --network gethUnitTest exec scripts/gen_dummy_data.js",
     "lint": "npm run lint:js && npm run lint:sol",
     "lint:js": "node_modules/eslint/bin/eslint.js ./ --cache --fix",
     "lint:sol": "node_modules/solhint/solhint.js contracts/*.sol",
-    "genDummyData": "node_modules/truffle/build/cli.bundled.js --network gethDev exec scripts/gen_dummy_data.js",
     "test": "scripts/test.sh ganacheUnitTest",
     "trackGasUtilization": "npm run blockchain:start && npm run truffle exec test/load/gas_utilization.js save",
     "truffle": "node_modules/truffle/build/cli.bundled.js --network ganacheUnitTest"
@@ -42,7 +42,6 @@
     "ganache-cli": "^6.1.0",
     "js-yaml": "^3.11.0",
     "lodash": "^4.17.5",
-    "market-oracle": "git+ssh://git@github.com/frgprotocol/market-oracle.git",
     "openzeppelin-solidity": "1.10.0",
     "truffle": "4.1.13",
     "web3": "github:ethereum/web3.js"
