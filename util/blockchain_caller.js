@@ -27,8 +27,14 @@ BlockchainCaller.prototype.sendRawToBlockchain = function (method, params) {
   });
 };
 
-BlockchainCaller.prototype.waitForSomeTime = function (duration) {
-  return this.sendRawToBlockchain('evm_increaseTime', [duration]);
+BlockchainCaller.prototype.waitForSomeTime = function (durationInSec) {
+  try {
+    return this.sendRawToBlockchain('evm_increaseTime', [durationInSec]);
+  } catch (e) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => resolve(), durationInSec * 1000);
+    });
+  }
 };
 
 BlockchainCaller.prototype.waitForOneBlock = function () {
@@ -70,7 +76,10 @@ BlockchainCaller.prototype.expectEthException = async function (promise) {
   } catch (e) {
     msg = e.message;
   }
-  expect(msg).to.eq('VM Exception while processing transaction: revert');
+  expect(
+    msg.includes('VM Exception while processing transaction: revert') ||
+    msg.includes('exited with an error (status 0)')
+  ).to.be.true;
 };
 
 BlockchainCaller.prototype.getBlockGasLimit = async function () {
