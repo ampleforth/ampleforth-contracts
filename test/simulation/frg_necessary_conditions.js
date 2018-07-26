@@ -27,7 +27,7 @@ contract('UFragments', async accounts => {
   const uFragmentsGrowth = new Stochasm({ min: -0.5, max: 2.5, seed: 'fragments.org' });
 
   before(async function () {
-    uFragments = await UFragments.deployed();
+    uFragments = await UFragments.new();
     snapshot = await chain.snapshotChain();
 
     await uFragments.transfer(A, 3);

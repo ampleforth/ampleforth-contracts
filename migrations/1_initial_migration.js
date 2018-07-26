@@ -10,11 +10,13 @@ module.exports = function (deployer, network, addresses) {
   };
 
   async function preDeploymentCalls () {
-    const deployerAccount = addresses[0];
-    // Requires the deployer account to be unlocked
     if (config.passcode) {
-      await web3.personal.unlockAccount(deployerAccount, config.passcode, 0);
-      deployer.logger.log('Unlocked account: ' + deployerAccount);
+      for (const account in config.passcode) {
+        if (Object.prototype.hasOwnProperty.call(config.passcode, account)) {
+          await web3.personal.unlockAccount(account, config.passcode[account], 0);
+          deployer.logger.log('Unlocked account: ' + account);
+        }
+      }
     }
   }
 

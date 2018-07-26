@@ -12,8 +12,8 @@ frg-geth(){
    --wsorigins "*" \
    --nat "any"  \
    --verbosity 2 \
-   --rpcapi="db,eth,net,web3,personal" \
-   --wsapi="db,eth,net,web3,personal" \
+   --rpcapi="db,eth,net,web3,personal,test" \
+   --wsapi="db,eth,net,web3,personal,test" \
    "$@"
 }
 

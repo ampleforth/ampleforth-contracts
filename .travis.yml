@@ -6,6 +6,8 @@ node_js:
 cache:
   directories:
     - node_modules
+before_install:
+  - ./scripts/setup_ci_env.sh
 script:
   - npm run lint
   - npm run test

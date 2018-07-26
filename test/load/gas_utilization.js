@@ -124,7 +124,7 @@ function verifyGasUtilization (gasUtilization, _gasUtilization) {
       const utilization = new BigNumber(gasUtilization[k]);
       const _utilization = new BigNumber(_gasUtilization[k]);
       if (!utilization.minus(_utilization).eq(0)) {
-        throw new Error(`Gas utilization increased significantly for fn ${k}`);
+        throw new Error(`Gas utilization changed significantly for fn ${k}`);
       }
     }
   }
