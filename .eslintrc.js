@@ -37,18 +37,18 @@ module.exports = {
               "jsonrpc", "timestamp", "uint256", "erc20", "bignumber", "lodash",
               "arg", "npm", "seedrandom", "eql", "sinon", "yaml", "promisify",
               "passcode", "geth", "rpc", "rpcmsg","stdev",  "stochasm",
-              "whitelist", "uint",
+              "whitelist", "uint", "passcodes", "keystore", "hdwallet",
 
               // shorthand
               "eth", "args", "util", "utils", "msg", "prev", "bal",
               "init", "params", "mul", "async", "vals", "fns", "addrs",
               "fns", "num", "dev", "pre","abi", "gte","rnd", "chk", "bals", "lte",
-              "addr",
+              "addr", "conf",
 
               // project-specific
               "rebase", "gons", "frg", "rng", "blockchain", "minlot",
               "redemptions", "rebased", "ganache", "ethclient",
-              "bytecode", "Binance",
+              "bytecode", "Binance", "ethereum",
 
               // names
               "nithin",
