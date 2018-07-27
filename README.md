@@ -5,17 +5,21 @@ The μFragments protocol smart contracts on Ethereum.
 
 # Getting started
 ```bash
-# Install dependencies
+# Install ethereum local blockchain(s) and associated dependencies
+./scripts/frg-ethereum-runners/dep-install.sh
+
+# Install project dependencies
 npm install
 ```
 
 # Useful scripts
 ``` bash
-# You can use the following commands to start/stop local ganache chain
-npm run blockchain:start
-npm run blockchain:stop
+# You can use the following commands to start/stop local chain
+npm run blockchain:[start|stop] [ganacheUnitTest|gethUnitTest]
+
 # Lint code
 npm run lint
+
 # track gas utilization
 npm run trackGasUtilization
 ```

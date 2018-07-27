@@ -1,24 +1,14 @@
 const Migrations = artifacts.require('./Migrations.sol');
 const _require = require('app-root-path').require;
 const truffleConfig = _require('/truffle.js');
+const accounts = truffleConfig.accounts;
 
-module.exports = function (deployer, network, addresses) {
+module.exports = function (deployer, network) {
+  const deployerAccount = accounts[0];
   const config = truffleConfig.networks[network];
-
   const deploymentConfig = {
-    gas: config.gas
+    gas: config.gas,
+    from: deployerAccount
   };
-
-  async function preDeploymentCalls () {
-    if (config.passcode) {
-      for (const account in config.passcode) {
-        if (Object.prototype.hasOwnProperty.call(config.passcode, account)) {
-          await web3.personal.unlockAccount(account, config.passcode[account], 0);
-          deployer.logger.log('Unlocked account: ' + account);
-        }
-      }
-    }
-  }
-
-  deployer.then(preDeploymentCalls).then(() => deployer.deploy(Migrations, deploymentConfig));
+  deployer.deploy(Migrations, deploymentConfig);
 };

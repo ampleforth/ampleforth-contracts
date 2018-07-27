@@ -3,14 +3,30 @@ sudo: false
 language: node_js
 node_js:
   - "8"
+
 cache:
   directories:
     - node_modules
+
+git:
+  submodules:
+    false
+
+addons:
+  apt:
+    sources:
+    - sourceline: 'ppa:ethereum/ethereum'
+    packages:
+    - ethereum
+
 before_install:
-  - ./scripts/setup_ci_env.sh
+  - git submodule update --init --recursive
+  - ./scripts/frg-ethereum-runners/ci-dep-install.sh
+
 script:
   - npm run lint
-  - npm run test
+  - ./scripts/test.sh
+
 notifications:
   email:
     - eng@fragments.org

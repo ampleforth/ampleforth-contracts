@@ -8,7 +8,10 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const transferAmount = 10;
 const erroneousAmount = 1001;
 
-contract('UFragments:ERC20', function (accounts) {
+const truffleConfig = _require('/truffle.js');
+const accounts = truffleConfig.accounts;
+
+contract('UFragments:ERC20', function () {
   let token;
   before('setup UFragments contract', async function () {
     token = await UFragments.new();

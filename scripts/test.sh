@@ -5,7 +5,13 @@ PROJECT_DIR=$DIR/../
 # Exit script as soon as a command fails.
 set -o errexit
 
-source $DIR/blockchain/index.sh
+source $DIR/frg-ethereum-runners/base-runner.sh
+
+frg-truffle(){
+  truffle \
+    --working-directory $PROJECT_DIR \
+    "$@"
+}
 
 run-unit-tests(){
   frg-truffle \
@@ -29,6 +35,10 @@ run-load-tests(){
     $PROJECT_DIR/test/load/gas_utilization.js verify
 }
 
+deploy-contracts(){
+  truffle migrate --reset --network $1
+}
+
 read REF GANACHE_PORT < <(get-network-config ganacheUnitTest)
 read REF GETH_PORT < <(get-network-config gethUnitTest)
 
@@ -45,44 +55,48 @@ else
 fi
 
 echo "------Start blockchain(s)"
-start-chain ganacheUnitTest
-deploy-contracts ganacheUnitTest
+start-chain "ganacheUnitTest"
 if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
-  start-chain gethUnitTest
-  deploy-contracts gethUnitTest
+  start-chain "gethUnitTest"
+fi
+
+echo "------Deploying contracts"
+deploy-contracts "ganacheUnitTest"
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
+  deploy-contracts "gethUnitTest"
+fi
+
+echo "------Running unit tests"
+run-unit-tests "ganacheUnitTest"
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
+  run-unit-tests "gethUnitTest"
 fi
 
 echo "------Running gas utilization test"
-run-load-tests ganacheUnitTest
-
-echo "------Running unit tests"
-run-unit-tests ganacheUnitTest
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
-  run-unit-tests gethUnitTest
-fi
+run-load-tests "ganacheUnitTest"
 
 if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
   echo "------Running simulation tests"
-  run-simulation-tests ganacheUnitTest
-  run-simulation-tests gethUnitTest
+  run-simulation-tests "ganacheUnitTest"
+  run-simulation-tests "gethUnitTest"
 fi
 
 # Stop chain
 cleanupGanache(){
   if [ "$REFRESH_GANACHE" == "1" ]; then
-    stop-chain ganacheUnitTest
+    stop-chain "ganacheUnitTest"
   fi
-  exit 0
 }
 
 cleanupGeth(){
   if [ "$REFRESH_GETH" == "1" ]; then
-    stop-chain gethUnitTest
+    stop-chain "gethUnitTest"
   fi
-  exit 0
 }
 
 trap cleanupGanache EXIT
 if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
   trap cleanupGeth EXIT
 fi
+
+exit 0

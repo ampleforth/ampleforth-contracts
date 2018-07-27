@@ -7,8 +7,9 @@ const APP_ROOT_PATH = require('app-root-path');
 const _require = APP_ROOT_PATH.require;
 const generateYaml = _require('/util/yaml_generator');
 const truffleConfig = _require('/truffle.js');
+const accounts = truffleConfig.accounts;
 
-module.exports = function (deployer, network, accounts) {
+module.exports = function (deployer, network) {
   const deployerAccount = accounts[0];
   const config = truffleConfig.networks[network];
   const deploymentConfig = {

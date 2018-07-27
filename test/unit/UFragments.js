@@ -4,13 +4,16 @@ const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 const { ContractEventSpy } = _require('/util/spies');
 
+const truffleConfig = _require('/truffle.js');
+const accounts = truffleConfig.accounts;
+
 let uFragments, b, rebaseSpy;
 
 async function setContractReferences () {
   uFragments = await UFragments.new();
 }
 
-contract('UFragments:Initialization', function (accounts) {
+contract('UFragments:Initialization', function () {
   const deployer = accounts[0];
 
   before('setup UFragments contract', setContractReferences);
@@ -25,7 +28,7 @@ contract('UFragments:Initialization', function (accounts) {
   });
 });
 
-contract('UFragments:MonetaryPolicy', function (accounts) {
+contract('UFragments:MonetaryPolicy', function () {
   const deployer = accounts[0];
   const policy = accounts[1];
   const A = accounts[2];
@@ -42,7 +45,7 @@ contract('UFragments:MonetaryPolicy', function (accounts) {
   });
 });
 
-contract('UFragments:PauseRebase', function (accounts) {
+contract('UFragments:PauseRebase', function () {
   const deployer = accounts[0];
   const policy = accounts[1];
   const A = accounts[2];
@@ -93,7 +96,7 @@ contract('UFragments:PauseRebase', function (accounts) {
   });
 });
 
-contract('UFragments:PauseToken', function (accounts) {
+contract('UFragments:PauseToken', function () {
   const deployer = accounts[0];
   const policy = accounts[1];
   const A = accounts[2];
@@ -152,7 +155,7 @@ contract('UFragments:PauseToken', function (accounts) {
   });
 });
 
-contract('UFragments:Rebase:Access Controls', function (accounts) {
+contract('UFragments:Rebase:Access Controls', function () {
   const deployer = accounts[0];
   const A = accounts[2];
   const policy = accounts[1];
@@ -181,7 +184,7 @@ contract('UFragments:Rebase:Access Controls', function (accounts) {
   });
 });
 
-contract('UFragments:Rebase:Expansion', function (accounts) {
+contract('UFragments:Rebase:Expansion', function () {
   // Rebase +500 (50%), with starting balances deployer:750 and A:250.
   const deployer = accounts[0];
   const A = accounts[2];
@@ -221,7 +224,7 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
   });
 });
 
-contract('UFragments:Rebase:Contraction', function (accounts) {
+contract('UFragments:Rebase:Contraction', function () {
   // Rebase -500 (-50%), with starting balances deployer:750 and A:250.
   const deployer = accounts[0];
   const A = accounts[2];
@@ -261,7 +264,7 @@ contract('UFragments:Rebase:Contraction', function (accounts) {
   });
 });
 
-contract('UFragments:Transfer', function (accounts) {
+contract('UFragments:Transfer', function () {
   const deployer = accounts[0];
   const A = accounts[2];
   const B = accounts[3];

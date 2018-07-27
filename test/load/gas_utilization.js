@@ -1,4 +1,5 @@
 /*
+  TODO: move to integration test REPO
   npm run truffle exec test/load/gas_utilization.js save
     => Computes the gas used by various contract functions and writes it to a logs/gas-utilization.yaml
 
