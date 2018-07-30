@@ -68,17 +68,18 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     
     mapping(address => uint256) private gonBalances;
 
-    // These two numbers determine the gons-fragments exchange rate. (numerator and denominator,
-    //respectively).
     uint256 private constant GONS = 1 << 256 - 1;
-    uint256 private totalSupply_ = 1000;
+    uint256 private totalSupply_;
+    uint256 private gonsPerFragment;
 
     // This is denominated in uFragments, because the gons-fragments conversion might change before
     // it's fully paid.
     mapping (address => mapping (address => uint256)) private allowedFragments;
 
     constructor() public {
+        totalSupply_ = 1000;
         gonBalances[msg.sender] = GONS;
+        gonsPerFragment = GONS.div(totalSupply_);
     }
 
     /**
@@ -114,6 +115,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
         } else {
             totalSupply_ = totalSupply_.add(uint256(supplyDelta));
         }
+        gonsPerFragment = GONS.div(totalSupply_);
         emit Rebase(epoch, totalSupply_);
     }
 
@@ -129,7 +131,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @return The balance of the specified address.
      */
     function balanceOf(address who) public view returns (uint256) {
-        return gonBalances[who].div(GONS.div(totalSupply_));
+        return gonBalances[who].div(gonsPerFragment);
     }
 
     /**
@@ -192,7 +194,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @param spender The address which will spend the funds.
      * @param addedValue The amount of tokens to increase the allowance by.
      */
-    function increaseApproval(address spender, uint addedValue) public whenTokenNotPaused returns (bool) {
+    function increaseApproval(address spender, uint256 addedValue) public whenTokenNotPaused returns (bool) {
         allowedFragments[msg.sender][spender] = allowedFragments[msg.sender][spender].add(addedValue);
         emit Approval(msg.sender, spender, allowedFragments[msg.sender][spender]);
         return true;
@@ -208,9 +210,9 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      * @param spender The address which will spend the funds.
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
-    function decreaseApproval(address spender, uint subtractedValue) public whenTokenNotPaused returns (bool) {
-        uint oldValue = allowedFragments[msg.sender][spender];
-        if (subtractedValue > oldValue) {
+    function decreaseApproval(address spender, uint256 subtractedValue) public whenTokenNotPaused returns (bool) {
+        uint256 oldValue = allowedFragments[msg.sender][spender];
+        if (subtractedValue >= oldValue) {
             allowedFragments[msg.sender][spender] = 0;
         } else {
             allowedFragments[msg.sender][spender] = oldValue.sub(subtractedValue);
@@ -226,21 +228,15 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     function transferHelper(address from, address to, uint256 value) private {
         require(to != address(0));
 
-        uint256 gonsPerFragment = GONS.div(totalSupply_);
         uint256 senderMod = gonBalances[from] % gonsPerFragment;
         uint256 receiverMod = gonBalances[to] % gonsPerFragment;
         uint256 baseAmt = value.mul(gonsPerFragment);
 
         uint256 senderGonMinAmt = baseAmt.sub(gonsPerFragment.sub(senderMod).sub(1));
-        uint256 senderGonMaxAmt = baseAmt.add(senderMod);
         uint256 receiverGonMinAmt = baseAmt.sub(receiverMod);
-        uint256 receiverGonMaxAmt = baseAmt.add(gonsPerFragment.sub(receiverMod).sub(1));
 
         // Choose the max of the minimum viable transfer amounts on each side.
         uint256 gonValue = (senderGonMinAmt >= receiverGonMinAmt) ? senderGonMinAmt : receiverGonMinAmt;
-
-        assert(gonValue <= senderGonMaxAmt);
-        assert(gonValue <= receiverGonMaxAmt);
 
         require(gonValue <= gonBalances[from]);
         gonBalances[from] = gonBalances[from].sub(gonValue);

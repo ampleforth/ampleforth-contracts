@@ -24,7 +24,7 @@ contract UFragmentsPolicy is Ownable {
     UFragments private uFrags;
     MarketOracle private marketOracle;
 
-    // Timestamp of last rebase operation
+    // Block timestamp of last rebase operation
     uint256 public lastRebaseTimestamp;
 
     // At least this much time must pass between rebase operations.
@@ -44,7 +44,8 @@ contract UFragmentsPolicy is Ownable {
     // Keeps track of the number of rebase cycles since inception
     uint256 public epoch = 0;
 
-    // The upper bound on uFragments' supply
+    // The upper bound on uFragments' supply.
+    // Due to the math in rebase(), this must fit within an int256.
     uint256 private constant MAX_SUPPLY = 2**128 - 1;
 
     constructor(UFragments _uFrags, MarketOracle _marketOracle) public {
@@ -67,11 +68,13 @@ contract UFragmentsPolicy is Ownable {
         int256 supplyDelta = calcSupplyDelta(exchangeRate);
         supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 
-        if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) >= MAX_SUPPLY) {
+        if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
+            // This cast is safe because we enforce that MAX_SUPPLY and totalSupply each fit into an int256.
             supplyDelta = int256(MAX_SUPPLY.sub(uFrags.totalSupply()));
         }
 
         uFrags.rebase(epoch, supplyDelta);
+        assert(uFrags.totalSupply() <= MAX_SUPPLY);
         emit Rebase(epoch, exchangeRate, volume, supplyDelta);
     }
 
@@ -79,7 +82,6 @@ contract UFragmentsPolicy is Ownable {
      * @notice Allows setting the Deviation Threshold. If the exchange rate given by the market
      *         oracle is within this threshold, then no supply modifications are made.
      * @param _deviationThreshold The new exchange rate threshold.
-     * TODO(iles): This should only be modified through distributed governance. #158010389
      */
     function setDeviationThreshold(uint128 _deviationThreshold) external onlyOwner {
         deviationThreshold = _deviationThreshold;
@@ -88,7 +90,6 @@ contract UFragmentsPolicy is Ownable {
     /**
      * @notice Allows setting the minimum time period that must elapse between rebase cycles.
      * @param _minRebaseTimeIntervalSec The new minimum time interval, in seconds.
-     * TODO(iles): This should only be modified through distributed governance. #158010389
      */
     function setMinRebaseTimeIntervalSec(uint128 _minRebaseTimeIntervalSec) external onlyOwner {
         minRebaseTimeIntervalSec = _minRebaseTimeIntervalSec;
@@ -101,11 +102,9 @@ contract UFragmentsPolicy is Ownable {
      *         then we apply a correction of 1/n at every cycle so that by the end of n cycles
      *         we would have approached an absolute supply correction.
      * @param _rebaseLag The new lag period for rebasing.
-     * TODO: We should allow this parameter to be modified by distributed governance in the
-     * future. #158010389
      */
     function setRebaseLag(uint32 _rebaseLag) external onlyOwner {
-        require(_rebaseLag >= 1);
+        require(_rebaseLag > 0);
         rebaseLag = _rebaseLag;
     }
 
@@ -119,6 +118,8 @@ contract UFragmentsPolicy is Ownable {
         }
 
         int256 target = 10**18;
+        // The cast of totalSupply is safe because we enforce it fits into int256 in each rebase().
+        // TODO(iles): This multiplication (and maybe sub, div) is still not safe.
         return (int256(rate) - target) * int256(uFrags.totalSupply()) / target;
     }
 
@@ -136,7 +137,7 @@ contract UFragmentsPolicy is Ownable {
      */
     function withinDeviationThreshold(uint128 rate) private view returns (bool) {
         uint128 target = 10**18;
-        return (rate > target && rate - target < deviationThreshold)
+        return (rate >= target && rate - target < deviationThreshold)
             || (rate < target && target - rate < deviationThreshold);
     }
 }
