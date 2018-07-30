@@ -14,14 +14,12 @@ const UFragments = artifacts.require('UFragments.sol');
 
 const Stochasm = require('stochasm');
 const _require = require('app-root-path').require;
-const BlockchainCaller = _require('/util/blockchain_caller');
-const chain = new BlockchainCaller(web3);
 
 const truffleConfig = _require('/truffle.js');
 const accounts = truffleConfig.accounts;
 
 contract('UFragments', async function () {
-  let uFragments, snapshot, rebaseAmt, inflation;
+  let uFragments, rebaseAmt, inflation;
   const deployer = accounts[0];
   const A = accounts[1];
   const B = accounts[2];
@@ -32,13 +30,9 @@ contract('UFragments', async function () {
   before(async function () {
     uFragments = await UFragments.new();
     await uFragments.setMonetaryPolicy(deployer, { from: deployer });
-    snapshot = await chain.snapshotChain();
     await uFragments.transfer(A, 3, {from: deployer});
     await uFragments.transfer(B, 4, {from: deployer});
     await uFragments.transfer(C, 5, {from: deployer});
-  });
-  after(async () => {
-    await chain.revertToSnapshot(snapshot);
   });
 
   function printSupply (supply) {

@@ -2,9 +2,9 @@ const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
 const MockUFragments = artifacts.require('MockUFragments.sol');
 const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
+const _ = require('lodash');
 const BigNumber = require('bignumber.js');
 const _require = require('app-root-path').require;
-const { ContractEventSpy, MockFunctionSpy } = _require('/util/spies');
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
@@ -90,7 +90,6 @@ contract('UFragmentsPolicy:Rebase', async function () {
 
   describe('when minRebaseTimeIntervalSec has passed since the previous rebase', function () {
     describe('positive rate', function () {
-      let uFragSpy, oracleSpy;
       before(async function () {
         await mockExternalData(1.3e18, 100, 1000);
         await uFragmentsPolicy.setMinRebaseTimeIntervalSec(5); // 5 sec
@@ -99,15 +98,7 @@ contract('UFragmentsPolicy:Rebase', async function () {
         _epoch = await uFragmentsPolicy.epoch.call();
         _time = await uFragmentsPolicy.lastRebaseTimestamp.call();
         await mockExternalData(1.6e18, 100, 1010);
-        uFragSpy = new ContractEventSpy([mockUFragments.FunctionCalled, mockUFragments.FunctionArguments]);
-        uFragSpy.watch();
-        oracleSpy = new ContractEventSpy([mockMarketOracle.FunctionCalled, mockMarketOracle.FunctionArguments]);
-        oracleSpy.watch();
         r = await uFragmentsPolicy.rebase();
-      });
-      after(async function () {
-        uFragSpy.stopWatching();
-        oracleSpy.stopWatching();
       });
 
       it('should increment epoch', async function () {
@@ -126,17 +117,20 @@ contract('UFragmentsPolicy:Rebase', async function () {
         expect(log.args.volume.toNumber()).to.eq(100);
       });
       it('should call getPriceAndVolume from the market oracle', async function () {
-        const fnCalls = new MockFunctionSpy(oracleSpy).getCalledFunctions();
-        expect(fnCalls[0].fnName).to.eq('MarketOracle:getPriceAndVolume');
-        expect(fnCalls[0].calledBy).to.eq(uFragmentsPolicy.address);
-        expect(fnCalls[0].arguments).to.be.empty;
+        const fnCalled = mockUFragments.FunctionCalled().formatter(r.receipt.logs[0]);
+        expect(fnCalled.args.functionName).to.eq('MarketOracle:getPriceAndVolume');
+        expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
       });
       it('should call uFrag Rebase', async function () {
-        const fnCalls = new MockFunctionSpy(uFragSpy).getCalledFunctions();
-        const epoch = await uFragmentsPolicy.epoch.call();
-        expect(fnCalls[0].fnName).to.eq('UFragments:rebase');
-        expect(fnCalls[0].calledBy).to.eq(uFragmentsPolicy.address);
-        expect(fnCalls[0].arguments).to.include.members([epoch.toNumber(), 20]);
+        _epoch = await uFragmentsPolicy.epoch.call();
+        const fnCalled = mockUFragments.FunctionCalled().formatter(r.receipt.logs[2]);
+        expect(fnCalled.args.functionName).to.eq('UFragments:rebase');
+        expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
+        const fnArgs = mockUFragments.FunctionArguments().formatter(r.receipt.logs[3]);
+        const parsedFnArgs = _.reduce(fnArgs.args, function (m, v, k) {
+          return _.map(v, d => d.toNumber()).concat(m);
+        }, [ ]);
+        expect(parsedFnArgs).to.include.members([_epoch.toNumber(), 20]);
       });
     });
   });
@@ -146,15 +140,9 @@ contract('UFragmentsPolicy:Rebase', async function () {
   before('setup UFragmentsPolicy contract', setContractReferences);
 
   describe('negative rate', function () {
-    let uFragSpy;
     before(async function () {
-      uFragSpy = new ContractEventSpy([mockUFragments.FunctionCalled, mockUFragments.FunctionArguments]);
-      uFragSpy.watch();
       await mockExternalData(0.7e18, 100, 1000);
       r = await uFragmentsPolicy.rebase();
-    });
-    after(async function () {
-      uFragSpy.stopWatching();
     });
 
     it('should emit Rebase with negative appliedSupplyAdjustment', async function () {

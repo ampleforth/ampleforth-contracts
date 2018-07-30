@@ -27,9 +27,10 @@ BlockchainCaller.prototype.sendRawToBlockchain = function (method, params) {
   });
 };
 
-BlockchainCaller.prototype.waitForSomeTime = function (durationInSec) {
+BlockchainCaller.prototype.waitForSomeTime = async function (durationInSec) {
   try {
-    return this.sendRawToBlockchain('evm_increaseTime', [durationInSec]);
+    const r = await this.sendRawToBlockchain('evm_increaseTime', [durationInSec]);
+    return r;
   } catch (e) {
     return new Promise((resolve, reject) => {
       setTimeout(() => resolve(), durationInSec * 1000);
