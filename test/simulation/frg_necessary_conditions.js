@@ -17,7 +17,10 @@ const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
-contract('UFragments', async accounts => {
+const truffleConfig = _require('/truffle.js');
+const accounts = truffleConfig.accounts;
+
+contract('UFragments', async function () {
   let uFragments, snapshot, rebaseAmt, inflation;
   const deployer = accounts[0];
   const A = accounts[1];
@@ -28,11 +31,11 @@ contract('UFragments', async accounts => {
 
   before(async function () {
     uFragments = await UFragments.new();
+    await uFragments.setMonetaryPolicy(deployer, { from: deployer });
     snapshot = await chain.snapshotChain();
-
-    await uFragments.transfer(A, 3);
-    await uFragments.transfer(B, 4);
-    await uFragments.transfer(C, 5);
+    await uFragments.transfer(A, 3, {from: deployer});
+    await uFragments.transfer(B, 4, {from: deployer});
+    await uFragments.transfer(C, 5, {from: deployer});
   });
   after(async () => {
     await chain.revertToSnapshot(snapshot);
