@@ -16,7 +16,7 @@ module.exports = {
       gasPrice: gethUnitTestConf.gasPrice,
       provider: new HDWalletProvider(
         gethUnitTestConf.testOnlyHDWPasscode,
-        `http://${gethUnitTestConf.host}:${gethUnitTestConf.port}/`, 0)
+        `http://${gethUnitTestConf.host}:${gethUnitTestConf.port}/`, 0, 10)
     },
     ganacheUnitTest: {
       ref: ganacheUnitTestConf.ref,
