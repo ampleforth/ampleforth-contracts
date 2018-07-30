@@ -43,6 +43,8 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     using SafeMath for uint256;
 
     event Rebase(uint256 indexed epoch, uint256 totalSupply);
+    event RebasePaused(bool paused);
+    event TokenPaused(bool paused);
 
     // Used for basic authz.
     address public monetaryPolicy;
@@ -95,6 +97,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      */
     function setRebasePaused(bool paused) external onlyOwner {
         rebasePaused = paused;
+        emit RebasePaused(paused);
     }
 
     /**
@@ -103,6 +106,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
      */
     function setTokenPaused(bool paused) external onlyOwner {
         tokenPaused = paused;
+        emit TokenPaused(paused);
     }
     
     /**
