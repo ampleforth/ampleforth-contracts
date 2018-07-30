@@ -7,7 +7,7 @@ const { ContractEventSpy } = _require('/util/spies');
 const truffleConfig = _require('/truffle.js');
 const accounts = truffleConfig.accounts;
 
-let uFragments, b, rebaseSpy;
+let uFragments, b, eventSpy;
 
 async function setContractReferences () {
   uFragments = await UFragments.new();
@@ -54,7 +54,19 @@ contract('UFragments:PauseRebase', function () {
   before('setup UFragments contract', async function () {
     await setContractReferences();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
+    eventSpy = new ContractEventSpy([uFragments.RebasePaused]);
+    eventSpy.watch();
     await uFragments.setRebasePaused(true);
+  });
+
+  after(async function () {
+    eventSpy.stopWatching();
+  });
+
+  it('should emit pause event', async function () {
+    const pauseEvent = eventSpy.getEventByName('RebasePaused');
+    expect(pauseEvent).to.exist;
+    expect(pauseEvent.args.paused);
   });
 
   it('should not allow calling rebase', async function () {
@@ -105,7 +117,19 @@ contract('UFragments:PauseToken', function () {
   before('setup UFragments contract', async function () {
     await setContractReferences();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
+    eventSpy = new ContractEventSpy([uFragments.TokenPaused]);
+    eventSpy.watch();
     await uFragments.setTokenPaused(true);
+  });
+
+  after(async function () {
+    eventSpy.stopWatching();
+  });
+
+  it('should emit pause event', async function () {
+    const pauseEvent = eventSpy.getEventByName('TokenPaused');
+    expect(pauseEvent).to.exist;
+    expect(pauseEvent.args.paused);
   });
 
   it('should allow calling rebase', async function () {
@@ -164,13 +188,7 @@ contract('UFragments:Rebase:Access Controls', function () {
     await setContractReferences();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     await uFragments.transfer(A, 250, { from: deployer });
-    rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
-    rebaseSpy.watch();
     await uFragments.rebase(1, 500, {from: policy});
-  });
-
-  after(async function () {
-    rebaseSpy.stopWatching();
   });
 
   it('should be callable by monetary policy', async function () {
@@ -194,13 +212,13 @@ contract('UFragments:Rebase:Expansion', function () {
     await setContractReferences();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     await uFragments.transfer(A, 250, { from: deployer });
-    rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
-    rebaseSpy.watch();
+    eventSpy = new ContractEventSpy([uFragments.Rebase]);
+    eventSpy.watch();
     await uFragments.rebase(1, 500, {from: policy});
   });
 
   after(async function () {
-    rebaseSpy.stopWatching();
+    eventSpy.stopWatching();
   });
 
   it('should increase the totalSupply', async function () {
@@ -217,7 +235,7 @@ contract('UFragments:Rebase:Expansion', function () {
   });
 
   it('should emit Rebase', async function () {
-    const rebaseEvent = rebaseSpy.getEventByName('Rebase');
+    const rebaseEvent = eventSpy.getEventByName('Rebase');
     expect(rebaseEvent).to.exist;
     expect(rebaseEvent.args.epoch.toNumber()).to.eq(1);
     expect(rebaseEvent.args.totalSupply.toNumber()).to.eq(1500);
@@ -234,13 +252,13 @@ contract('UFragments:Rebase:Contraction', function () {
     await setContractReferences();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     await uFragments.transfer(A, 250, { from: deployer });
-    rebaseSpy = new ContractEventSpy([uFragments.Rebase]);
-    rebaseSpy.watch();
+    eventSpy = new ContractEventSpy([uFragments.Rebase]);
+    eventSpy.watch();
     await uFragments.rebase(1, -500, {from: policy});
   });
 
   after(async function () {
-    rebaseSpy.stopWatching();
+    eventSpy.stopWatching();
   });
 
   it('should decrease the totalSupply', async function () {
@@ -257,7 +275,7 @@ contract('UFragments:Rebase:Contraction', function () {
   });
 
   it('should emit Rebase', async function () {
-    const rebaseEvent = rebaseSpy.getEventByName('Rebase');
+    const rebaseEvent = eventSpy.getEventByName('Rebase');
     expect(rebaseEvent).to.exist;
     expect(rebaseEvent.args.epoch.toNumber()).to.eq(1);
     expect(rebaseEvent.args.totalSupply.toNumber()).to.eq(500);

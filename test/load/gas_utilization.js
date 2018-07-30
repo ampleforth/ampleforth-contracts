@@ -1,9 +1,9 @@
 /*
   TODO: move to integration test REPO
-  npm run truffle exec test/load/gas_utilization.js save
+  npm run truffle ganacheUnitTest exec test/load/gas_utilization.js save
     => Computes the gas used by various contract functions and writes it to a logs/gas-utilization.yaml
 
-  npm run truffle exec test/load/gas_utilization.js verify
+  npm run truffle ganacheUnitTest exec test/load/gas_utilization.js verify
     => Verifies if the gas amounts in logs/gas-utilization.yaml is consistent with the computed values
 */
 const UFragments = artifacts.require('UFragments.sol');
