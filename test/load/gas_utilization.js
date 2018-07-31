@@ -148,4 +148,5 @@ module.exports = async function (callback) {
     console.log('NO SIGNIFICANT CHANGE in gas utilization');
   }
   console.log('**************************************************************');
+  process.exit(0);
 };

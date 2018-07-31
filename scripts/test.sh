@@ -39,16 +39,26 @@ deploy-contracts(){
   truffle migrate --reset --network $1
 }
 
+deploy-all-contracts(){
+  deploy-contracts "ganacheUnitTest"
+  if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
+  then
+    deploy-contracts "gethUnitTest"
+  fi
+}
+
 read REF GANACHE_PORT < <(get-network-config ganacheUnitTest)
 read REF GETH_PORT < <(get-network-config gethUnitTest)
 
 # Is chain running?
-if [ $(process-pid $GANACHE_PORT) ]; then
+if [ $(process-pid $GANACHE_PORT) ]
+then
   REFRESH_GANACHE=0
 else
   REFRESH_GANACHE=1
 fi
-if [ $(process-pid $GETH_PORT) ]; then
+if [ $(process-pid $GETH_PORT) ]
+then
   REFRESH_GETH=0
 else
   REFRESH_GETH=1
@@ -56,26 +66,26 @@ fi
 
 echo "------Start blockchain(s)"
 start-chain "ganacheUnitTest"
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
+then
   start-chain "gethUnitTest"
 fi
 
 echo "------Deploying contracts"
-deploy-contracts "ganacheUnitTest"
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
-  deploy-contracts "gethUnitTest"
-fi
+deploy-all-contracts
 
 echo "------Running unit tests"
 run-unit-tests "ganacheUnitTest"
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
+then
   run-unit-tests "gethUnitTest"
 fi
 
 echo "------Running gas utilization test"
 run-load-tests "ganacheUnitTest"
 
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
+then
   echo "------Running simulation tests"
   run-simulation-tests "ganacheUnitTest"
   run-simulation-tests "gethUnitTest"
@@ -83,19 +93,22 @@ fi
 
 # Stop chain
 cleanupGanache(){
-  if [ "$REFRESH_GANACHE" == "1" ]; then
+  if [ "$REFRESH_GANACHE" == "1" ]
+  then
     stop-chain "ganacheUnitTest"
   fi
 }
 
 cleanupGeth(){
-  if [ "$REFRESH_GETH" == "1" ]; then
+  if [ "$REFRESH_GETH" == "1" ]
+  then
     stop-chain "gethUnitTest"
   fi
 }
 
 trap cleanupGanache EXIT
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]; then
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
+then
   trap cleanupGeth EXIT
 fi
 
