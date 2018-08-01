@@ -1,3 +1,5 @@
+const SafeMathInt = artifacts.require('lib/SafeMathInt.sol');
+const UInt256Lib = artifacts.require('lib/UInt256Lib.sol');
 const UFragments = artifacts.require('UFragments.sol');
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
 const MockUFragments = artifacts.require('MockUFragments.sol');
@@ -19,6 +21,12 @@ module.exports = function (deployer, network) {
 
   async function unitTestDeployment (deployer) {
     deployer.logger.log('Deploying test environment with mocks');
+    // deploy and link libraries
+    await deployer.deploy(UInt256Lib, deploymentConfig);
+    await deployer.link(UInt256Lib, UFragmentsPolicy, deploymentConfig);
+    await deployer.deploy(SafeMathInt, UFragmentsPolicy, deploymentConfig);
+    await deployer.link(SafeMathInt, UFragmentsPolicy, deploymentConfig);
+
     await deployer.deploy(UFragments, deploymentConfig);
     await deployer.deploy(MockUFragments, deploymentConfig);
     await deployer.deploy(MockMarketOracle, deploymentConfig);

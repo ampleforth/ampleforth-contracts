@@ -10,6 +10,7 @@ const chain = new BlockchainCaller(web3);
 
 let uFragmentsPolicy, mockUFragments, mockMarketOracle;
 let r, _epoch, _time;
+const MAX_SUPPLY = new BigNumber('578960446186580977117854925043439539266349923328202820197');
 
 async function mockExternalData (exchangeRate, volume, uFragSupply) {
   await mockMarketOracle.storeRate(exchangeRate);
@@ -58,10 +59,10 @@ contract('UFragmentsPolicy:Rebase', async function () {
 
   describe('when uFragments grows beyond MAX_SUPPLY', function () {
     before(async function () {
-      await mockExternalData(2e18, 100, new BigNumber(2).pow(128).minus(2));
+      await mockExternalData(200e18, 100, MAX_SUPPLY.minus(1));
     });
 
-    // Supply is {2^128-2}, exchangeRate is 2x; resulting in a new supply more than MAX_SUPPLY={2^128-1}
+    // Supply is MAX_SUPPLY-1, exchangeRate is 200x; resulting in a new supply more than MAX_SUPPLY
     // Supply is increased by 1 to MAX_SUPPLY
     it('should apply SupplyAdjustment {MAX_SUPPLY - totalSupply}', async function () {
       r = await uFragmentsPolicy.rebase();
@@ -75,7 +76,7 @@ contract('UFragmentsPolicy:Rebase', async function () {
 
   describe('when uFragments supply equals MAX_SUPPLY', function () {
     before(async function () {
-      await mockExternalData(2e18, 100, new BigNumber(2).pow(128).minus(1));
+      await mockExternalData(2e18, 100, MAX_SUPPLY);
     });
 
     it('should apply SupplyAdjustment=0', async function () {
@@ -123,7 +124,7 @@ contract('UFragmentsPolicy:Rebase', async function () {
         expect(log.event).to.eq('Rebase');
         expect(log.args.epoch.eq(_epoch.plus(1))).to.be.true;
         expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(20);
-        expect(log.args.volume.toNumber()).to.eq(100);
+        expect(log.args.volume24hrs.toNumber()).to.eq(100);
       });
       it('should call getPriceAndVolume from the market oracle', async function () {
         const fnCalls = new MockFunctionSpy(oracleSpy).getCalledFunctions();
