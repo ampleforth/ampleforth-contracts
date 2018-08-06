@@ -3,11 +3,13 @@ pragma solidity 0.4.24;
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
+import "./lib/SafeMathInt.sol";
+import "./lib/UInt256Lib.sol";
 import "./UFragments.sol";
 
 
 interface MarketOracle {
-    function getPriceAndVolume() external returns (uint128, uint128);
+    function getPriceAndVolume() external returns (uint256, uint256);
 }
 
 
@@ -18,8 +20,10 @@ interface MarketOracle {
  */
 contract UFragmentsPolicy is Ownable {
     using SafeMath for uint256;
+    using SafeMathInt for int256;
+    using UInt256Lib for uint256;
 
-    event Rebase(uint256 indexed epoch, uint128 exchangeRate, uint128 volume, int256 appliedSupplyAdjustment);
+    event Rebase(uint256 indexed epoch, uint256 exchangeRate, uint256 volume24hrs, int256 appliedSupplyAdjustment);
 
     UFragments private uFrags;
     MarketOracle private marketOracle;
@@ -39,14 +43,20 @@ contract UFragmentsPolicy is Ownable {
 
     // If the current exchange rate is within this tolerance, no supply update is performed.
     // 18 decimal fixed point format
-    uint128 public deviationThreshold = 0.05 * 10**18;  // 5%
+    uint256 public deviationThreshold = 0.05 * 10**18;  // 5%
 
     // Keeps track of the number of rebase cycles since inception
     uint256 public epoch = 0;
 
-    // The upper bound on uFragments' supply.
-    // Due to the math in rebase(), this must fit within an int256.
-    uint256 private constant MAX_SUPPLY = 2**128 - 1;
+    // We cap the rate to avoid overflows in computations.
+    // 18 decimal fixed point format
+    // MAX_RATE = 100 * 10**18
+    uint256 private constant MAX_RATE = 100000000000000000000;
+
+    // We cap the supply to avoid overflows in computations.
+    // Due to the signed math in rebase(), MAX_RATE x MAX_SUPPLY must fit into an int256.
+    // MAX_SUPPLY = UInt256Lib.getMaxInt256() / MAX_RATE
+    uint256 private constant MAX_SUPPLY = 578960446186580977117854925043439539266349923328202820197;
 
     constructor(UFragments _uFrags, MarketOracle _marketOracle) public {
         uFrags = _uFrags;
@@ -58,19 +68,22 @@ contract UFragmentsPolicy is Ownable {
      *         minimum time period has elapsed.
      */
     function rebase() external {
-        require(lastRebaseTimestamp + minRebaseTimeIntervalSec <= now);
-        epoch++;
+        require(lastRebaseTimestamp.add(minRebaseTimeIntervalSec) <= now);
+        epoch = epoch.add(1);
         lastRebaseTimestamp = now;
 
-        uint128 exchangeRate;
-        uint128 volume;
+        uint256 exchangeRate;
+        uint256 volume;
         (exchangeRate, volume) = marketOracle.getPriceAndVolume();
+        if (exchangeRate > MAX_RATE) {
+            exchangeRate = MAX_RATE;
+        }
+        
         int256 supplyDelta = calcSupplyDelta(exchangeRate);
         supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 
         if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
-            // This cast is safe because we enforce that MAX_SUPPLY and totalSupply each fit into an int256.
-            supplyDelta = int256(MAX_SUPPLY.sub(uFrags.totalSupply()));
+            supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256();
         }
 
         uFrags.rebase(epoch, supplyDelta);
@@ -112,15 +125,13 @@ contract UFragmentsPolicy is Ownable {
      * @return The total supply adjustment that should be made in response to the exchange
      *         rate, as provided by the market oracle.
      */
-    function calcSupplyDelta(uint128 rate) private view returns (int256) {
+    function calcSupplyDelta(uint256 rate) private view returns (int256) {
         if (withinDeviationThreshold(rate)) {
             return 0;
         }
 
         int256 target = 10**18;
-        // The cast of totalSupply is safe because we enforce it fits into int256 in each rebase().
-        // TODO(iles): This multiplication (and maybe sub, div) is still not safe.
-        return (int256(rate) - target) * int256(uFrags.totalSupply()) / target;
+        return rate.toInt256().sub(target).mul(uFrags.totalSupply().toInt256()).div(target);
     }
 
     /**
@@ -128,16 +139,16 @@ contract UFragmentsPolicy is Ownable {
      *         This is currently set to supplyDelta / rebaseLag.
      */
     function calcDampenedSupplyDelta(int256 supplyDelta) private view returns (int256) {
-        return supplyDelta / rebaseLag;
+        return supplyDelta.div(rebaseLag);
     }
 
     /**
      * @param rate The current exchange rate, in 18 decimal fixed point format.
      * @return True if the rate is within the deviation threshold and false otherwise.
      */
-    function withinDeviationThreshold(uint128 rate) private view returns (bool) {
-        uint128 target = 10**18;
-        return (rate >= target && rate - target < deviationThreshold)
-            || (rate < target && target - rate < deviationThreshold);
+    function withinDeviationThreshold(uint256 rate) private view returns (bool) {
+        uint256 target = 10**18;
+        return (rate >= target && rate.sub(target) < deviationThreshold)
+            || (rate < target && target.sub(rate) < deviationThreshold);
     }
 }
