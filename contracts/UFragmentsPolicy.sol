@@ -83,7 +83,7 @@ contract UFragmentsPolicy is Ownable {
         supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 
         if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
-            supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256();
+            supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
         }
 
         uFrags.rebase(epoch, supplyDelta);
@@ -131,7 +131,7 @@ contract UFragmentsPolicy is Ownable {
         }
 
         int256 target = 10**18;
-        return rate.toInt256().sub(target).mul(uFrags.totalSupply().toInt256()).div(target);
+        return rate.toInt256Safe().sub(target).mul(uFrags.totalSupply().toInt256Safe()).div(target);
     }
 
     /**

@@ -83,6 +83,19 @@ BlockchainCaller.prototype.expectEthException = async function (promise) {
   ).to.be.true;
 };
 
+BlockchainCaller.prototype.expectInvalidOpcode = async function (promise) {
+  let msg = 'No expected Invalid Opcode';
+  try {
+    if (promise.then) { await promise; } else { await promise(); }
+  } catch (e) {
+    msg = e.message;
+  }
+  expect(
+    msg.includes('invalid opcode') ||
+    msg.includes('exited with an error (status 0)')
+  ).to.be.true;
+};
+
 BlockchainCaller.prototype.getBlockGasLimit = async function () {
   const block = await this.web3.eth.getBlock('latest');
   return block.gasLimit;

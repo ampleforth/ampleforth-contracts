@@ -46,7 +46,8 @@
     "web3": "github:ethereum/web3.js"
   },
   "devDependencies": {
-    "bignumber.js": "git+https://github.com/frozeman/bignumber.js-nolookahead.git",
+    "chai": "^4.1.2",
+    "chai-bignumber": "^2.0.2",
     "eslint": "^4.19.1",
     "eslint-config-google": "^0.9.1",
     "eslint-config-mocha": "0.0.0",
