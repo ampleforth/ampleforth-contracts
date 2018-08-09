@@ -3,7 +3,7 @@ const MockUFragments = artifacts.require('MockUFragments.sol');
 const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
 const _ = require('lodash');
-const BigNumber = require('bignumber.js');
+const BigNumber = web3.BigNumber;
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);

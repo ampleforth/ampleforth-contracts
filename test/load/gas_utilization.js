@@ -13,7 +13,7 @@ const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
 const yaml = require('js-yaml');
 const fs = require('fs');
-const BigNumber = require('bignumber.js');
+const BigNumber = web3.BigNumber;
 const rp = require('request-promise');
 
 const APP_ROOT_PATH = require('app-root-path');
