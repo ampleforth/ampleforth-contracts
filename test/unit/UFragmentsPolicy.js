@@ -48,8 +48,8 @@ contract('UFragmentsPolicy:Rebase', async function () {
     });
 
     it('should return 0', async function () {
-      const r = await uFragmentsPolicy.rebase();
-      r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(0);
+      r = await uFragmentsPolicy.rebase();
+      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(0);
     });
   });
 });
@@ -66,7 +66,7 @@ contract('UFragmentsPolicy:Rebase', async function () {
     // Supply is increased by 1 to MAX_SUPPLY
     it('should apply SupplyAdjustment {MAX_SUPPLY - totalSupply}', async function () {
       r = await uFragmentsPolicy.rebase();
-      r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(1);
+      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(1);
     });
   });
 });
@@ -81,7 +81,7 @@ contract('UFragmentsPolicy:Rebase', async function () {
 
     it('should apply SupplyAdjustment=0', async function () {
       r = await uFragmentsPolicy.rebase();
-      r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(0);
+      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(0);
     });
   });
 });
@@ -104,34 +104,34 @@ contract('UFragmentsPolicy:Rebase', async function () {
 
       it('should increment epoch', async function () {
         const epoch = await uFragmentsPolicy.epoch.call();
-        _epoch.plus(1).should.be.bignumber.eq(epoch);
+        expect(_epoch.plus(1).eq(epoch));
       });
       it('should update lastRebaseTimestamp', async function () {
         const time = await uFragmentsPolicy.lastRebaseTimestamp.call();
-        time.minus(_time).should.be.bignumber.gte(5);
+        expect(time.minus(_time).gte(5)).to.be.true;
       });
       it('should emit Rebase with positive appliedSupplyAdjustment', async function () {
         const log = r.logs[0];
-        log.event.should.eq('Rebase');
-        log.args.epoch.should.bignumber.eq(_epoch.plus(1));
-        log.args.appliedSupplyAdjustment.should.bignumber.eq(20);
-        log.args.volume24hrs.should.bignumber.eq(100);
+        expect(log.event).to.eq('Rebase');
+        expect(log.args.epoch.eq(_epoch.plus(1))).to.be.true;
+        expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(20);
+        expect(log.args.volume24hrs.toNumber()).to.eq(100);
       });
       it('should call getPriceAndVolume from the market oracle', async function () {
         const fnCalled = mockUFragments.FunctionCalled().formatter(r.receipt.logs[0]);
-        fnCalled.args.functionName.should.eq('MarketOracle:getPriceAndVolume');
-        fnCalled.args.caller.should.eq(uFragmentsPolicy.address);
+        expect(fnCalled.args.functionName).to.eq('MarketOracle:getPriceAndVolume');
+        expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
       });
       it('should call uFrag Rebase', async function () {
         _epoch = await uFragmentsPolicy.epoch.call();
         const fnCalled = mockUFragments.FunctionCalled().formatter(r.receipt.logs[2]);
-        fnCalled.args.functionName.should.be.eq('UFragments:rebase');
-        fnCalled.args.caller.should.be.bignumber.eq(uFragmentsPolicy.address);
+        expect(fnCalled.args.functionName).to.eq('UFragments:rebase');
+        expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
         const fnArgs = mockUFragments.FunctionArguments().formatter(r.receipt.logs[3]);
         const parsedFnArgs = _.reduce(fnArgs.args, function (m, v, k) {
           return _.map(v, d => d.toNumber()).concat(m);
         }, [ ]);
-        parsedFnArgs.should.include.members([_epoch.toNumber(), 20]);
+        expect(parsedFnArgs).to.include.members([_epoch.toNumber(), 20]);
       });
     });
   });
@@ -148,8 +148,8 @@ contract('UFragmentsPolicy:Rebase', async function () {
 
     it('should emit Rebase with negative appliedSupplyAdjustment', async function () {
       const log = r.logs[0];
-      log.event.should.eq('Rebase');
-      log.args.appliedSupplyAdjustment.should.be.bignumber.eq(-10);
+      expect(log.event).to.eq('Rebase');
+      expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(-10);
     });
   });
 });

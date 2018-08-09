@@ -3,7 +3,8 @@ pragma solidity ^0.4.18;
 
 /**
  * @title SafeMathInt
- * Borrowed from RequestNetwork SafeMathInt.sol, but optimized for gas usage.
+ * Borrowed from RequestNetwork SafeMathInt.sol, but with more efficient
+ * assertion checks.
  * @dev Math operations with safety checks that throw on error
  * @dev SafeMath adapted for int256
  */

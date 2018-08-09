@@ -19,11 +19,11 @@ contract('UFragments:Initialization', function () {
 
   it('should add +1000 uFragments to the deployer', async function () {
     b = await uFragments.balanceOf.call(deployer);
-    b.toNumber().should.eq(1000);
+    expect(b.toNumber()).to.eq(1000);
   });
   it('should set the totalSupply to 1000', async function () {
     b = await uFragments.totalSupply.call();
-    b.toNumber().should.eq(1000);
+    expect(b.toNumber()).to.eq(1000);
   });
 });
 
@@ -58,9 +58,9 @@ contract('UFragments:PauseRebase', function () {
 
   it('should emit pause event', async function () {
     const log = r.logs[0];
-    log.should.exist;
-    log.event.should.eq('RebasePaused');
-    log.args.paused.should.be.true;
+    expect(log).to.exist;
+    expect(log.event).to.eq('RebasePaused');
+    expect(log.args.paused).to.be.true;
   });
 
   it('should not allow calling rebase', async function () {
@@ -116,9 +116,9 @@ contract('UFragments:PauseToken', function () {
 
   it('should emit pause event', async function () {
     const log = r.logs[0];
-    log.should.exist;
-    log.event.should.eq('TokenPaused');
-    log.args.paused.should.be.true;
+    expect(log).to.exist;
+    expect(log.event).to.eq('TokenPaused');
+    expect(log.args.paused).to.be.true;
   });
 
   it('should allow calling rebase', async function () {
@@ -206,23 +206,23 @@ contract('UFragments:Rebase:Expansion', function () {
 
   it('should increase the totalSupply', async function () {
     b = await uFragments.totalSupply.call();
-    b.toNumber().should.eq(1500);
+    expect(b.toNumber()).to.eq(1500);
   });
 
   it('should increase individual balances', async function () {
     b = await uFragments.balanceOf.call(deployer);
-    b.toNumber().should.be.above(750).and.at.most(1125);
+    expect(b.toNumber()).to.be.above(750).and.at.most(1125);
 
     b = await uFragments.balanceOf.call(A);
-    b.toNumber().should.be.above(250).and.at.most(375);
+    expect(b.toNumber()).to.be.above(250).and.at.most(375);
   });
 
   it('should emit Rebase', async function () {
     const log = r.logs[0];
-    log.should.exist;
-    log.event.should.eq('Rebase');
-    log.args.epoch.toNumber().should.eq(1);
-    log.args.totalSupply.toNumber().should.eq(1500);
+    expect(log).to.exist;
+    expect(log.event).to.eq('Rebase');
+    expect(log.args.epoch.toNumber()).to.eq(1);
+    expect(log.args.totalSupply.toNumber()).to.eq(1500);
   });
 });
 
@@ -241,23 +241,23 @@ contract('UFragments:Rebase:Contraction', function () {
 
   it('should decrease the totalSupply', async function () {
     b = await uFragments.totalSupply.call();
-    b.toNumber().should.eq(500);
+    expect(b.toNumber()).to.eq(500);
   });
 
   it('should decrease individual balances', async function () {
     b = await uFragments.balanceOf.call(deployer);
-    b.toNumber().should.be.at.least(374).and.at.most(375);
+    expect(b.toNumber()).to.at.least(374).and.at.most(375);
 
     b = await uFragments.balanceOf.call(A);
-    b.toNumber().should.be.at.least(124).and.at.most(125);
+    expect(b.toNumber()).to.at.least(124).and.at.most(125);
   });
 
   it('should emit Rebase', async function () {
     const log = r.logs[0];
-    log.should.exist;
-    log.event.should.eq('Rebase');
-    log.args.epoch.toNumber().should.eq(1);
-    log.args.totalSupply.toNumber().should.eq(500);
+    expect(log).to.exist;
+    expect(log.event).to.eq('Rebase');
+    expect(log.args.epoch.toNumber()).to.eq(1);
+    expect(log.args.totalSupply.toNumber()).to.eq(500);
   });
 });
 
@@ -273,9 +273,9 @@ contract('UFragments:Transfer', function () {
     it('should have balances [988,12]', async function () {
       await uFragments.transfer(A, 12, { from: deployer });
       b = await uFragments.balanceOf.call(deployer);
-      b.toNumber().should.eq(988);
+      expect(b.toNumber()).to.eq(988);
       b = await uFragments.balanceOf.call(A);
-      b.toNumber().should.eq(12);
+      expect(b.toNumber()).to.eq(12);
     });
   });
 
@@ -283,9 +283,9 @@ contract('UFragments:Transfer', function () {
     it('should have balances [973,15]', async function () {
       await uFragments.transfer(B, 15, { from: deployer });
       b = await uFragments.balanceOf.call(deployer);
-      b.toNumber().should.eq(973);
+      expect(b.toNumber()).to.eq(973);
       b = await uFragments.balanceOf.call(B);
-      b.toNumber().should.eq(15);
+      expect(b.toNumber()).to.eq(15);
     });
   });
 
@@ -293,9 +293,9 @@ contract('UFragments:Transfer', function () {
     it('should have balances [0,973]', async function () {
       await uFragments.transfer(C, 973, { from: deployer });
       b = await uFragments.balanceOf.call(deployer);
-      b.toNumber().should.eq(0);
+      expect(b.toNumber()).to.eq(0);
       b = await uFragments.balanceOf.call(C);
-      b.toNumber().should.eq(973);
+      expect(b.toNumber()).to.eq(973);
     });
   });
 });
