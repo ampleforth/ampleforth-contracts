@@ -1,9 +1,9 @@
 /*
   TODO: move to integration test REPO
-  npm run truffle ganacheUnitTest exec test/load/gas_utilization.js save
+  truffle --network ganacheUnitTest exec test/load/gas_utilization.js save
     => Computes the gas used by various contract functions and writes it to a logs/gas-utilization.yaml
 
-  npm run truffle ganacheUnitTest exec test/load/gas_utilization.js verify
+  truffle --network ganacheUnitTest exec test/load/gas_utilization.js verify
     => Verifies if the gas amounts in logs/gas-utilization.yaml is consistent with the computed values
 */
 const UFragments = artifacts.require('UFragments.sol');
@@ -15,6 +15,7 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const BigNumber = web3.BigNumber;
 const rp = require('request-promise');
+const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 
 const APP_ROOT_PATH = require('app-root-path');
 const _require = APP_ROOT_PATH.require;
@@ -25,7 +26,6 @@ const chain = new BlockchainCaller(web3);
 const network = artifacts.options._values.network;
 const truffleConfig = _require('/truffle.js');
 const config = truffleConfig.networks[network];
-const chainConfig = yaml.safeLoad(fs.readFileSync(`${APP_ROOT_PATH}/migrations/deployments/${config.ref}.yaml`));
 
 let gasPriceEth, ethUSDRate;
 const computedGasUtilization = {};
@@ -65,10 +65,18 @@ async function computeGasUtilization () {
   const deployer = accounts[0];
   const user = accounts[1];
 
-  const uFragments = UFragments.at(chainConfig.UFragments);
-  const uFragmentsPolicy = UFragmentsPolicy.at(chainConfig.UFragmentsPolicy);
-  const mockUFragments = MockUFragments.at(chainConfig.MockUFragments);
-  const mockMarketOracle = MockMarketOracle.at(chainConfig.MockMarketOracle);
+  const mockUFragments = await MockUFragments.new();
+  const mockMarketOracle = await MockMarketOracle.new();
+  const uFragments = await UFragments.new();
+  const uFragmentsPolicy = await UFragmentsPolicy.new();
+  await uFragmentsPolicy.sendTransaction({
+    data: encodeCall('initialize', ['address', 'address', 'address'], [deployer, mockUFragments.address, mockMarketOracle.address]),
+    from: deployer
+  });
+  await uFragments.sendTransaction({
+    data: encodeCall('initialize', ['address'], [deployer]),
+    from: deployer
+  });
 
   const callerConfig = {
     from: deployer,
@@ -79,12 +87,6 @@ async function computeGasUtilization () {
   console.log('USD to ETH:', ethUSDRate);
   console.log('Block gas limit:', await chain.getBlockGasLimit());
   console.log('-----------------------------------------------------');
-
-  console.log('CONTRACT DEPLOYMENT GAS UTILIZATION');
-  console.log('-----------------------------------------------------');
-
-  await cleanRoomTx('UFragments:DEPLOYMENT', () => chainConfig.UFragmentsTx);
-  console.log('**************************************************************');
 
   console.log('FRAGMENTS ERC20 CONTRACT FUNCTIONS');
   console.log('-----------------------------------------------------');

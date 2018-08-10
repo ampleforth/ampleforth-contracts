@@ -21,7 +21,7 @@
     "blockchain:start": "./scripts/frg-ethereum-runners/exec.sh start",
     "blockchain:stop": "./scripts/frg-ethereum-runners/exec.sh stop",
     "precommit": "./scripts/pre-commit.sh",
-    "deploy-contracts": "truffle migrate --reset --network",
+    "deploy-contracts": "truffle exec ./scripts/clean_deploy_contracts.js --network",
     "genDummyData": "truffle --network gethUnitTest exec ./scripts/gen_dummy_data.js",
     "lint": "npm run lint:js && npm run lint:sol",
     "lint:js": "node_modules/eslint/bin/eslint.js ./ --cache --fix",
@@ -42,7 +42,7 @@
     "app-root-path": "^2.0.1",
     "js-yaml": "^3.11.0",
     "lodash": "^4.17.5",
-    "openzeppelin-solidity": "1.10.0",
+    "openzeppelin-zos": "^1.9.1",
     "web3": "github:ethereum/web3.js"
   },
   "devDependencies": {
@@ -69,7 +69,8 @@
     "sinon": "^4.5.0",
     "solhint": "^1.1.10",
     "stochasm": "^0.5.0",
-    "truffle-hdwallet-provider": "0.0.5",
-    "webpack": "^4.10.2"
+    "util": "^0.11.0",
+    "webpack": "^4.10.2",
+    "zos-lib": "^1.3.0"
   }
 }

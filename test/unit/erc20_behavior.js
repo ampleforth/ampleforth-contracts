@@ -3,19 +3,23 @@ const UFragments = artifacts.require('UFragments.sol');
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
+const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const transferAmount = 10;
 const erroneousAmount = 1001;
 
-const truffleConfig = _require('/truffle.js');
-const accounts = truffleConfig.accounts;
-
-contract('UFragments:ERC20', function () {
+contract('UFragments:ERC20', function (accounts) {
   let token;
+  const deployer = accounts[0];
   before('setup UFragments contract', async function () {
     token = await UFragments.new();
+    await token.sendTransaction({
+      data: encodeCall('initialize', ['address'], [deployer]),
+      from: deployer
+    });
   });
+
   const initialTotalSupply = 1000;
   const owner = accounts[0];
   const anotherAccount = accounts[8];

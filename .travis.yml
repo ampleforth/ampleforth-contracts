@@ -1,5 +1,5 @@
 dist: trusty
-sudo: false
+sudo: required
 language: node_js
 node_js:
   - "8"
@@ -7,21 +7,17 @@ node_js:
 cache:
   directories:
     - node_modules
+    - $(npm config get prefix)/bin/truffle
+    - $(npm config get prefix)/bin/zos
+    - $(npm config get prefix)/bin/ganache-cli
 
 git:
   submodules:
     false
 
-addons:
-  apt:
-    sources:
-    - sourceline: 'ppa:ethereum/ethereum'
-    packages:
-    - ethereum
-
 before_install:
   - git submodule update --init --recursive
-  - ./scripts/frg-ethereum-runners/ci-dep-install.sh
+  - ./scripts/frg-ethereum-runners/dep-install.sh
 
 script:
   - npm run lint

@@ -64,3 +64,9 @@ node_modules/*
 
 # ES-Lint
 .eslintcache
+
+# ZOS
+.zos.session
+.zos.lock
+zos.ganacheUnitTest.json
+zos.gethUnitTest.json

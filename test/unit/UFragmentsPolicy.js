@@ -2,6 +2,7 @@ const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
 const MockUFragments = artifacts.require('MockUFragments.sol');
 const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
+const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const _ = require('lodash');
 const BigNumber = web3.BigNumber;
 const _require = require('app-root-path').require;
@@ -12,20 +13,26 @@ let uFragmentsPolicy, mockUFragments, mockMarketOracle;
 let r, _epoch, _time;
 const MAX_SUPPLY = new BigNumber('578960446186580977117854925043439539266349923328202820197');
 
+async function setupContracts () {
+  const accounts = await chain.getUserAccounts();
+  const deployerAccount = accounts[0];
+  mockUFragments = await MockUFragments.new();
+  mockMarketOracle = await MockMarketOracle.new();
+  uFragmentsPolicy = await UFragmentsPolicy.new();
+  await uFragmentsPolicy.sendTransaction({
+    data: encodeCall('initialize', ['address', 'address', 'address'], [deployerAccount, mockUFragments.address, mockMarketOracle.address]),
+    from: deployerAccount
+  });
+}
+
 async function mockExternalData (exchangeRate, volume, uFragSupply) {
   await mockMarketOracle.storeRate(exchangeRate);
   await mockMarketOracle.storeVolume(volume);
   await mockUFragments.storeSupply(uFragSupply);
 }
 
-async function setContractReferences () {
-  mockUFragments = await MockUFragments.deployed();
-  mockMarketOracle = await MockMarketOracle.deployed();
-  uFragmentsPolicy = await UFragmentsPolicy.new(MockUFragments.address, MockMarketOracle.address);
-}
-
-contract('UFragmentsPolicy:Rebase', async function () {
-  before('setup UFragmentsPolicy contract', setContractReferences);
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
 
   describe('when minRebaseTimeIntervalSec has NOT passed since the previous rebase', function () {
     before(async function () {
@@ -39,8 +46,8 @@ contract('UFragmentsPolicy:Rebase', async function () {
   });
 });
 
-contract('UFragmentsPolicy:Rebase', async function () {
-  before('setup UFragmentsPolicy contract', setContractReferences);
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
 
   describe('when rate is withinDeviationThreshold', function () {
     before(async function () {
@@ -54,8 +61,8 @@ contract('UFragmentsPolicy:Rebase', async function () {
   });
 });
 
-contract('UFragmentsPolicy:Rebase', async function () {
-  before('setup UFragmentsPolicy contract', setContractReferences);
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
 
   describe('when uFragments grows beyond MAX_SUPPLY', function () {
     before(async function () {
@@ -71,8 +78,8 @@ contract('UFragmentsPolicy:Rebase', async function () {
   });
 });
 
-contract('UFragmentsPolicy:Rebase', async function () {
-  before('setup UFragmentsPolicy contract', setContractReferences);
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
 
   describe('when uFragments supply equals MAX_SUPPLY', function () {
     before(async function () {
@@ -86,8 +93,8 @@ contract('UFragmentsPolicy:Rebase', async function () {
   });
 });
 
-contract('UFragmentsPolicy:Rebase', async function () {
-  before('setup UFragmentsPolicy contract', setContractReferences);
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
 
   describe('when minRebaseTimeIntervalSec has passed since the previous rebase', function () {
     describe('positive rate', function () {
@@ -137,8 +144,8 @@ contract('UFragmentsPolicy:Rebase', async function () {
   });
 });
 
-contract('UFragmentsPolicy:Rebase', async function () {
-  before('setup UFragmentsPolicy contract', setContractReferences);
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
 
   describe('negative rate', function () {
     before(async function () {

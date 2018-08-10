@@ -11,14 +11,10 @@
 */
 
 const UFragments = artifacts.require('UFragments.sol');
-
 const Stochasm = require('stochasm');
-const _require = require('app-root-path').require;
+const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 
-const truffleConfig = _require('/truffle.js');
-const accounts = truffleConfig.accounts;
-
-contract('UFragments', async function () {
+contract('UFragments', async function (accounts) {
   let uFragments, rebaseAmt, inflation;
   const deployer = accounts[0];
   const A = accounts[1];
@@ -29,7 +25,11 @@ contract('UFragments', async function () {
 
   before(async function () {
     uFragments = await UFragments.new();
-    await uFragments.setMonetaryPolicy(deployer, { from: deployer });
+    await uFragments.sendTransaction({
+      data: encodeCall('initialize', ['address'], [deployer]),
+      from: deployer
+    });
+    await uFragments.setMonetaryPolicy(deployer, {from: deployer});
     await uFragments.transfer(A, 3, {from: deployer});
     await uFragments.transfer(B, 4, {from: deployer});
     await uFragments.transfer(C, 5, {from: deployer});

@@ -2,20 +2,21 @@ const UFragments = artifacts.require('UFragments.sol');
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
+const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 
-const truffleConfig = _require('/truffle.js');
-const accounts = truffleConfig.accounts;
-
-let uFragments, b, r;
-
-async function setContractReferences () {
+let uFragments, b, r, deployer;
+async function setupContracts () {
+  const accounts = await chain.getUserAccounts();
+  deployer = accounts[0];
   uFragments = await UFragments.new();
+  await uFragments.sendTransaction({
+    data: encodeCall('initialize', ['address'], [deployer]),
+    from: deployer
+  });
 }
 
-contract('UFragments:Initialization', function () {
-  const deployer = accounts[0];
-
-  before('setup UFragments contract', setContractReferences);
+contract('UFragments:Initialization', function (accounts) {
+  before('setup UFragments contract', setupContracts);
 
   it('should add +1000 uFragments to the deployer', async function () {
     b = await uFragments.balanceOf.call(deployer);
@@ -27,13 +28,12 @@ contract('UFragments:Initialization', function () {
   });
 });
 
-contract('UFragments:MonetaryPolicy', function () {
-  const deployer = accounts[0];
+contract('UFragments:MonetaryPolicy', function (accounts) {
   const policy = accounts[1];
   const A = accounts[2];
 
   before('setup UFragments contract', async function () {
-    await setContractReferences();
+    await setupContracts();
     await uFragments.setMonetaryPolicy(policy, { from: deployer });
   });
 
@@ -44,14 +44,13 @@ contract('UFragments:MonetaryPolicy', function () {
   });
 });
 
-contract('UFragments:PauseRebase', function () {
-  const deployer = accounts[0];
+contract('UFragments:PauseRebase', function (accounts) {
   const policy = accounts[1];
   const A = accounts[2];
   const B = accounts[3];
 
   before('setup UFragments contract', async function () {
-    await setContractReferences();
+    await setupContracts();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     r = await uFragments.setRebasePaused(true);
   });
@@ -102,14 +101,13 @@ contract('UFragments:PauseRebase', function () {
   });
 });
 
-contract('UFragments:PauseToken', function () {
-  const deployer = accounts[0];
+contract('UFragments:PauseToken', function (accounts) {
   const policy = accounts[1];
   const A = accounts[2];
   const B = accounts[3];
 
   before('setup UFragments contract', async function () {
-    await setContractReferences();
+    await setupContracts();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     r = await uFragments.setTokenPaused(true);
   });
@@ -168,13 +166,12 @@ contract('UFragments:PauseToken', function () {
   });
 });
 
-contract('UFragments:Rebase:Access Controls', function () {
-  const deployer = accounts[0];
+contract('UFragments:Rebase:Access Controls', function (accounts) {
   const A = accounts[2];
   const policy = accounts[1];
 
   before('setup UFragments contract', async function () {
-    await setContractReferences();
+    await setupContracts();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     await uFragments.transfer(A, 250, { from: deployer });
     await uFragments.rebase(1, 500, {from: policy});
@@ -191,14 +188,13 @@ contract('UFragments:Rebase:Access Controls', function () {
   });
 });
 
-contract('UFragments:Rebase:Expansion', function () {
+contract('UFragments:Rebase:Expansion', function (accounts) {
   // Rebase +500 (50%), with starting balances deployer:750 and A:250.
-  const deployer = accounts[0];
   const A = accounts[2];
   const policy = accounts[1];
 
   before('setup UFragments contract', async function () {
-    await setContractReferences();
+    await setupContracts();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     await uFragments.transfer(A, 250, { from: deployer });
     r = await uFragments.rebase(1, 500, {from: policy});
@@ -226,14 +222,13 @@ contract('UFragments:Rebase:Expansion', function () {
   });
 });
 
-contract('UFragments:Rebase:Contraction', function () {
+contract('UFragments:Rebase:Contraction', function (accounts) {
   // Rebase -500 (-50%), with starting balances deployer:750 and A:250.
-  const deployer = accounts[0];
   const A = accounts[2];
   const policy = accounts[1];
 
   before('setup UFragments contract', async function () {
-    await setContractReferences();
+    await setupContracts();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     await uFragments.transfer(A, 250, { from: deployer });
     r = await uFragments.rebase(1, -500, {from: policy});
@@ -261,13 +256,12 @@ contract('UFragments:Rebase:Contraction', function () {
   });
 });
 
-contract('UFragments:Transfer', function () {
-  const deployer = accounts[0];
+contract('UFragments:Transfer', function (accounts) {
   const A = accounts[2];
   const B = accounts[3];
   const C = accounts[4];
 
-  before('setup UFragments contract', setContractReferences);
+  before('setup UFragments contract', setupContracts);
 
   describe('deployer transfers 12 to A', function () {
     it('should have balances [988,12]', async function () {

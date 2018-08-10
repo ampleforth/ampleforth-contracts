@@ -1,8 +1,8 @@
 pragma solidity 0.4.24;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
+import "openzeppelin-zos/contracts/math/SafeMath.sol";
+import "openzeppelin-zos/contracts/ownership/Ownable.sol";
+import "openzeppelin-zos/contracts/token/ERC20/DetailedERC20.sol";
 
 
 /**
@@ -16,7 +16,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
  *      the exchange rate between the hidden 'gons' and the public 'ufragments'. This exchange rate
  *      is determined by the internal properties 'GONS' and 'totalSupply_'.
  */
-contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
+contract UFragments is DetailedERC20, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
     // Anytime there is division, there is a risk of numerical instability from rounding errors. In
     // order to minimize this risk, we adhere to the following guidelines:
@@ -27,16 +27,16 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     // 2) Gon balances converted into fragments are always rounded down (truncated).
     // 3) Fragment values converted to gon values (such as in transfers) are chosen such at the
     //    below guarantees are upheld.
-    // 
+    //
     // We make the following guarantees:
     // - If address 'A' transfers x fragments to address 'B'. A's resulting external balance will
     //   be decreased by precisely x fragments, and B's external balance will be precisely
     //   increased by x fragments.
-    // 
+    //
     // We do not guarantee that the sum of all balances equals the result of calling totalSupply().
     // This is because, for any conversion function 'f()' that has non-zero rounding error,
     // f(x0) + f(x1) + ... + f(xn) is not always equal to f(x0 + x1 + ... xn).
-    // 
+    //
     // 'The Introduction of the Euro and the Rounding of Currency Amounts (1999)' is a good starting
     // reference for practices related to currency conversions.
     // http://ec.europa.eu/economy_finance/publications/pages/publication1224_en.pdf
@@ -55,8 +55,8 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     }
 
     // Emergency controls to bridge until system stability
-    bool public rebasePaused = false;
-    bool public tokenPaused = false;
+    bool public rebasePaused;
+    bool public tokenPaused;
 
     modifier whenRebaseNotPaused() {
         require(!rebasePaused);
@@ -67,7 +67,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
         require(!tokenPaused);
         _;
     }
-    
+
     mapping(address => uint256) private gonBalances;
 
     uint256 private constant GONS = 1 << 256 - 1;
@@ -77,12 +77,6 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
     // This is denominated in uFragments, because the gons-fragments conversion might change before
     // it's fully paid.
     mapping (address => mapping (address => uint256)) private allowedFragments;
-
-    constructor() public {
-        totalSupply_ = 1000;
-        gonBalances[msg.sender] = GONS;
-        gonsPerFragment = GONS.div(totalSupply_);
-    }
 
     /**
      * @param monetaryPolicy_ The address of the monetary policy contract to use for authz.
@@ -108,7 +102,7 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
         tokenPaused = paused;
         emit TokenPaused(paused);
     }
-    
+
     /**
      * @dev Notifies Fragments contract about a new rebase cycle.
      * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
@@ -121,6 +115,18 @@ contract UFragments is DetailedERC20("uFragments", "UFRG", 2), Ownable {
         }
         gonsPerFragment = GONS.div(totalSupply_);
         emit Rebase(epoch, totalSupply_);
+    }
+
+    function initialize(address owner) public isInitializer("UFragments", "0") {
+        DetailedERC20.initialize("UFragments", "UFRG", 2);
+        Ownable.initialize(owner);
+
+        rebasePaused = false;
+        tokenPaused = false;
+
+        totalSupply_ = 1000;
+        gonBalances[owner] = GONS;
+        gonsPerFragment = GONS.div(totalSupply_);
     }
 
     /**

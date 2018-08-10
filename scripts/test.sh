@@ -35,18 +35,6 @@ run-load-tests(){
     $PROJECT_DIR/test/load/gas_utilization.js verify
 }
 
-deploy-contracts(){
-  truffle migrate --reset --network $1
-}
-
-deploy-all-contracts(){
-  deploy-contracts "ganacheUnitTest"
-  if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
-  then
-    deploy-contracts "gethUnitTest"
-  fi
-}
-
 read REF GANACHE_PORT < <(get-network-config ganacheUnitTest)
 read REF GETH_PORT < <(get-network-config gethUnitTest)
 
@@ -64,33 +52,6 @@ else
   REFRESH_GETH=1
 fi
 
-echo "------Start blockchain(s)"
-start-chain "ganacheUnitTest"
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
-then
-  start-chain "gethUnitTest"
-fi
-
-echo "------Deploying contracts"
-deploy-all-contracts
-
-echo "------Running unit tests"
-run-unit-tests "ganacheUnitTest"
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
-then
-  run-unit-tests "gethUnitTest"
-fi
-
-echo "------Running gas utilization test"
-run-load-tests "ganacheUnitTest"
-
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
-then
-  echo "------Running simulation tests"
-  run-simulation-tests "ganacheUnitTest"
-  run-simulation-tests "gethUnitTest"
-fi
-
 # Stop chain
 cleanupGanache(){
   if [ "$REFRESH_GANACHE" == "1" ]
@@ -106,9 +67,42 @@ cleanupGeth(){
   fi
 }
 
-trap cleanupGanache EXIT
+echo "------Start blockchain(s)"
+start-chain "ganacheUnitTest"
+
+echo "------Deploying contracts"
+truffle  migrate --reset --network "ganacheUnitTest"
+truffle --network "ganacheUnitTest" exec $PROJECT_DIR/scripts/clean_deploy_contracts.js
+
+echo "------Running unit tests"
+run-unit-tests "ganacheUnitTest"
+
+echo "------Running gas utilization test"
+run-load-tests "ganacheUnitTest"
+
 if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
 then
+  echo "------Running simulation tests"
+  run-simulation-tests "ganacheUnitTest"
+fi
+trap cleanupGanache EXIT
+
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
+then
+  echo "------Start blockchain(s)"
+  start-chain "gethUnitTest"
+
+  echo "------Deploying contracts"
+  truffle  migrate --reset --network "gethUnitTest"
+  truffle --network "gethUnitTest" exec $PROJECT_DIR/scripts/clean_deploy_contracts.js
+
+  echo "------Running unit tests"
+  run-unit-tests "gethUnitTest"
+
+  echo "------Running simulation tests"
+  run-simulation-tests "gethUnitTest"
+
+  zos session --close
   trap cleanupGeth EXIT
 fi
 
