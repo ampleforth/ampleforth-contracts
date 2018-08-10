@@ -10,7 +10,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
  * @dev This is an implementation of the uFragments Ideal Money protocol @ https://fragments.org/protocol
  *      uFragments operates symmetrically on expansion and contraction. It will both split and
  *      combine coins to maintain a stable unit price.
- *      
+ *
  *      uFragment balances are internally represented with a hidden denomination, 'gons'. We support
  *      splitting the currency in expansion and combining the currency on contraction by changing
  *      the exchange rate between the hidden 'gons' and the public 'ufragments'. This exchange rate
