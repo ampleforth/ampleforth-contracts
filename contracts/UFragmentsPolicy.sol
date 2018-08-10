@@ -15,10 +15,11 @@ interface MarketOracle {
 
 /**
  * @title uFragments Monetary Supply Policy
- * @notice This is an implementation of the uFragments Ideal Money protocol @ https://fragments.org/protocol
- *         uFragments operates symmetrically on expansion and contraction. It will both split and
- *         combine coins to maintain a stable unit price.
- * @dev This component regulates the token supply of the uFragments ERC20 token in response to
+ * @dev This is an implementation of the uFragments Ideal Money protocol @ https://fragments.org/protocol
+ *      uFragments operates symmetrically on expansion and contraction. It will both split and
+ *      combine coins to maintain a stable unit price.
+ *
+ *      This component regulates the token supply of the uFragments ERC20 token in response to
  *      market oracles.
  */
 contract UFragmentsPolicy is Ownable {
