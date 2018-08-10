@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-zos/contracts/math/SafeMath.sol";
+import "openzeppelin-zos/contracts/ownership/Ownable.sol";
 
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
@@ -35,21 +35,21 @@ contract UFragmentsPolicy is Ownable {
     uint256 public lastRebaseTimestamp;
 
     // At least this much time must pass between rebase operations.
-    uint256 public minRebaseTimeIntervalSec = 1 days;
+    uint256 public minRebaseTimeIntervalSec;
 
     // The rebase lag parameter controls how long it takes, in cycles, to approach an absolute
     // supply correction. If the lag equals the smallest value of 1, then we apply full
     // supply correction at each rebase cycle. If it is greater than 1, say n, then we apply
     // a correction of 1/n at every cycle so that by the end of n cycles we would have
     // approached an absolute supply correction.
-    uint32 public rebaseLag = 30;
+    uint32 public rebaseLag;
 
     // If the current exchange rate is within this tolerance, no supply update is performed.
     // 18 decimal fixed point format
-    uint256 public deviationThreshold = 0.05 * 10**18;  // 5%
+    uint256 public deviationThreshold;
 
     // Keeps track of the number of rebase cycles since inception
-    uint256 public epoch = 0;
+    uint256 public epoch;
 
     // We cap the rate to avoid overflows in computations.
     // 18 decimal fixed point format
@@ -60,11 +60,6 @@ contract UFragmentsPolicy is Ownable {
     // Due to the signed math in rebase(), MAX_RATE x MAX_SUPPLY must fit into an int256.
     // MAX_SUPPLY = UInt256Lib.getMaxInt256() / MAX_RATE
     uint256 private constant MAX_SUPPLY = 578960446186580977117854925043439539266349923328202820197;
-
-    constructor(UFragments _uFrags, MarketOracle _marketOracle) public {
-        uFrags = _uFrags;
-        marketOracle = _marketOracle;
-    }
 
     /**
      * @notice Anyone may call this function to initiate a new rebase operation, provided the
@@ -81,7 +76,7 @@ contract UFragmentsPolicy is Ownable {
         if (exchangeRate > MAX_RATE) {
             exchangeRate = MAX_RATE;
         }
-        
+
         int256 supplyDelta = calcSupplyDelta(exchangeRate);
         supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 
@@ -122,6 +117,25 @@ contract UFragmentsPolicy is Ownable {
     function setRebaseLag(uint32 _rebaseLag) external onlyOwner {
         require(_rebaseLag > 0);
         rebaseLag = _rebaseLag;
+    }
+
+    /**
+     * @dev ZOS upgradable contract initialization method, called at the time of contract creation.
+     *      This is where parent class initializers are invloked and contract storage variables
+     *      are set with initial values.
+     */
+    function initialize(address owner, UFragments _uFrags, MarketOracle _marketOracle)
+        public isInitializer("UFragmentsPolicy", "0") {
+
+        Ownable.initialize(owner);
+
+        minRebaseTimeIntervalSec = 1 days;
+        rebaseLag = 30;
+        deviationThreshold = 0.05 * 10**18; // 5%
+        epoch = 0;
+
+        uFrags = _uFrags;
+        marketOracle = _marketOracle;
     }
 
     /**

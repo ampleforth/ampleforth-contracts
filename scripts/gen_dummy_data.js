@@ -18,13 +18,14 @@ const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 const Stochasm = require('stochasm');
 const BigNumber = require('bignumber.js');
 const _require = require('app-root-path').require;
-const BlockchainCaller = _require('/util/blockchain_caller');
-const chain = new BlockchainCaller(web3);
 
 const network = artifacts.options._values.network;
 const truffleConfig = _require('/truffle.js');
 const config = truffleConfig.networks[network];
 const chainConfig = yaml.safeLoad(fs.readFileSync(`${APP_ROOT_PATH}/migrations/deployments/${config.ref}.yaml`));
+
+const BlockchainCaller = _require('/util/blockchain_caller');
+const chain = new BlockchainCaller(web3);
 
 async function mockData () {
   const accounts = await chain.getUserAccounts();
