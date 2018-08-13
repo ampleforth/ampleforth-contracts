@@ -4,7 +4,7 @@
  * integration testing or bootstrapping dependent components.
  *
  * Example usage:
- * $ npm run blockchain:start gethUnitTest
+ * $ npx start-chain gethUnitTest
  * $ npm run genDummyData
  */
 const yaml = require('js-yaml');

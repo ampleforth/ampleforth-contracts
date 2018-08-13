@@ -7,7 +7,7 @@
  *******************************************************************************
  *
  * Example usage:
- * $ truffle --network [ganacheUnitTest|gethUnitTest] exec ./scripts/clean_deploy_contracts.js
+ * $ npx truffle --network [ganacheUnitTest|gethUnitTest] exec ./scripts/clean_deploy_contracts.js
  */
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);

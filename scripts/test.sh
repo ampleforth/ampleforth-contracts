@@ -5,10 +5,12 @@ PROJECT_DIR=$DIR/../
 # Exit script as soon as a command fails.
 set -o errexit
 
-source $DIR/frg-ethereum-runners/base-runner.sh
+process-pid(){
+  lsof -t -i:$1
+}
 
 frg-truffle(){
-  truffle \
+  npx truffle \
     --working-directory $PROJECT_DIR \
     "$@"
 }
@@ -35,8 +37,8 @@ run-load-tests(){
     $PROJECT_DIR/test/load/gas_utilization.js verify
 }
 
-read REF GANACHE_PORT < <(get-network-config ganacheUnitTest)
-read REF GETH_PORT < <(get-network-config gethUnitTest)
+read REF GANACHE_PORT < <(npx get-network-config ganacheUnitTest)
+read REF GETH_PORT < <(npx get-network-config gethUnitTest)
 
 # Is chain running?
 if [ $(process-pid $GANACHE_PORT) ]
@@ -56,23 +58,23 @@ fi
 cleanupGanache(){
   if [ "$REFRESH_GANACHE" == "1" ]
   then
-    stop-chain "ganacheUnitTest"
+    npx stop-chain "ganacheUnitTest"
   fi
 }
 
 cleanupGeth(){
   if [ "$REFRESH_GETH" == "1" ]
   then
-    stop-chain "gethUnitTest"
+    npx stop-chain "gethUnitTest"
   fi
 }
 
 echo "------Start blockchain(s)"
-start-chain "ganacheUnitTest"
+npx start-chain "ganacheUnitTest"
 
 echo "------Deploying contracts"
-truffle  migrate --reset --network "ganacheUnitTest"
-truffle --network "ganacheUnitTest" exec $PROJECT_DIR/scripts/clean_deploy_contracts.js
+npx truffle  migrate --reset --network "ganacheUnitTest"
+npx truffle --network "ganacheUnitTest" exec $PROJECT_DIR/scripts/clean_deploy_contracts.js
 
 echo "------Running unit tests"
 run-unit-tests "ganacheUnitTest"
@@ -90,11 +92,11 @@ trap cleanupGanache EXIT
 if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
 then
   echo "------Start blockchain(s)"
-  start-chain "gethUnitTest"
+  npx start-chain "gethUnitTest"
 
   echo "------Deploying contracts"
-  truffle  migrate --reset --network "gethUnitTest"
-  truffle --network "gethUnitTest" exec $PROJECT_DIR/scripts/clean_deploy_contracts.js
+  npx truffle  migrate --reset --network "gethUnitTest"
+  npx truffle --network "gethUnitTest" exec $PROJECT_DIR/scripts/clean_deploy_contracts.js
 
   echo "------Running unit tests"
   run-unit-tests "gethUnitTest"

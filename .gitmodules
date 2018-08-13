@@ -1,3 +1,0 @@
-[submodule "scripts/frg-ethereum-runners"]
-	path = scripts/frg-ethereum-runners
-	url = git@github.com:frgprotocol/frg-ethereum-runners.git

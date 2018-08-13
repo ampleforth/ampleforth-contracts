@@ -18,31 +18,28 @@
   "license": "ISC",
   "author": "eng@fragments.org",
   "scripts": {
-    "blockchain:start": "./scripts/frg-ethereum-runners/exec.sh start",
-    "blockchain:stop": "./scripts/frg-ethereum-runners/exec.sh stop",
     "precommit": "./scripts/pre-commit.sh",
     "deploy-contracts": "truffle exec ./scripts/clean_deploy_contracts.js --network",
     "genDummyData": "truffle --network gethUnitTest exec ./scripts/gen_dummy_data.js",
-    "lint": "npm run lint:js && npm run lint:sol",
-    "lint:js": "node_modules/eslint/bin/eslint.js ./ --cache --fix",
-    "lint:sol": "node_modules/solhint/solhint.js contracts/*.sol",
+    "lint": "npx eslint ./ --cache --fix && npx solhint contracts/*.sol",
+    "setup-ganache": "npx start-chain ganacheUnitTest && npm run deploy-contracts ganacheUnitTest",
     "test": "./scripts/test.sh",
-    "trackGasUtilization": "npm run blockchain:start ganacheUnitTest && npm run deploy-contracts ganacheUnitTest && npm run truffle ganacheUnitTest exec test/load/gas_utilization.js save",
-    "truffle": "truffle --network"
+    "trackGasUtilization": "npm run setup-ganache && truffle --network ganacheUnitTest exec test/load/gas_utilization.js save"
   },
   "pre-commit": {
     "run": [
       "precommit",
-      "lint:js",
-      "lint:sol",
+      "lint",
       "trackGasUtilization"
     ]
   },
   "dependencies": {
     "app-root-path": "^2.0.1",
+    "frg-ethereum-runners": "git+ssh://git@github.com/frgprotocol/frg-ethereum-runners.git#master",
     "js-yaml": "^3.11.0",
     "lodash": "^4.17.5",
     "openzeppelin-zos": "^1.9.1",
+    "truffle": "^4.1.14",
     "web3": "github:ethereum/web3.js"
   },
   "devDependencies": {
