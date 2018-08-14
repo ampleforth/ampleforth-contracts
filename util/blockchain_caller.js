@@ -79,7 +79,8 @@ BlockchainCaller.prototype.expectEthException = async function (promise) {
   }
   expect(
     msg.includes('VM Exception while processing transaction: revert') ||
-    msg.includes('exited with an error (status 0)')
+      msg.includes('invalid opcode') ||
+      msg.includes('exited with an error (status 0)')
   ).to.be.true;
 };
 
