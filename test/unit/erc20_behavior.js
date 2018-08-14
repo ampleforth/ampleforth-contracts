@@ -134,7 +134,7 @@ contract('UFragments:ERC20', function (accounts) {
         describe('when the owner does not have enough balance', function () {
           const amount = erroneousAmount;
 
-          it('reverts', async function () {
+          it('should fail', async function () {
             await chain.expectEthException(token.transferFrom(owner, to, amount, { from: spender }));
           });
         });

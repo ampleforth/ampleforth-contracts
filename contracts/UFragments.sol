@@ -70,7 +70,8 @@ contract UFragments is DetailedERC20, Ownable {
 
     mapping(address => uint256) private gonBalances;
 
-    uint256 private constant GONS = 1 << 256 - 1;
+    // Use max uint256 to get highest granularity
+    uint256 private constant GONS = ~uint256(0);
     uint256 private totalSupply_;
     uint256 private gonsPerFragment;
 

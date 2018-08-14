@@ -2,5 +2,5 @@
 # Any manual changes may be lost.
 'UFragments:transfer(user, 10)': 54248
 'UFragments: approve and transferFrom(user, 10)': 46490
-'UFragments:rebase(1, +100)': 35009
+'UFragments:rebase(1, +100)': 35012
 'UFragmentsPolicy:rebase() [WITH STUB]': 87761
