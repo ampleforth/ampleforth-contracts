@@ -3,26 +3,17 @@ sudo: required
 language: node_js
 node_js:
   - "8"
-
 cache:
   directories:
     - node_modules
-    - $(npm config get prefix)/bin/truffle
     - $(npm config get prefix)/bin/zos
     - $(npm config get prefix)/bin/ganache-cli
-
-git:
-  submodules:
-    false
-
 before_install:
-  - git submodule update --init --recursive
-  - ./scripts/frg-ethereum-runners/dep-install.sh
-
+  - npm install -g npx
 script:
+  - npx setup-local-chains
   - npm run lint
   - ./scripts/test.sh
-
 notifications:
   email:
     - eng@fragments.org

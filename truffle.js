@@ -1,4 +1,4 @@
-const connectionConfig = require('./scripts/frg-ethereum-runners/config/network_config.json');
+const connectionConfig = require('frg-ethereum-runners/config/network_config.json');
 
 module.exports = {
   networks: {
