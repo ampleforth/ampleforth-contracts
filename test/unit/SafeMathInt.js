@@ -19,13 +19,16 @@ contract('SafeMathInt', () => {
     safeMathInt = await SafeMathIntMock.new();
   });
 
+  async function returnVal (tx) {
+    return (await tx).logs[0].args.intVal;
+  }
+
   describe('add', function () {
     it('adds correctly', async function () {
       const a = new BigNumber(5678);
       const b = new BigNumber(1234);
 
-      const result = await safeMathInt.add(a, b);
-      result.should.be.bignumber.eq(a.plus(b));
+      (await returnVal(safeMathInt.add(a, b))).should.be.bignumber.eq(a.plus(b));
     });
 
     it('throws an error on addition overflow', async function () {
@@ -50,8 +53,7 @@ contract('SafeMathInt', () => {
       const a = new BigNumber(5678);
       const b = new BigNumber(1234);
 
-      const result = await safeMathInt.sub(a, b);
-      result.should.be.bignumber.eq(a.minus(b));
+      (await returnVal(safeMathInt.sub(a, b))).should.be.bignumber.eq(a.minus(b));
     });
 
     it('throws an error on subtraction overflow', async function () {
@@ -74,16 +76,14 @@ contract('SafeMathInt', () => {
       const a = new BigNumber(1234);
       const b = new BigNumber(5678);
 
-      const result = await safeMathInt.mul(a, b);
-      result.should.be.bignumber.eq(a.times(b));
+      (await returnVal(safeMathInt.mul(a, b))).should.be.bignumber.eq(a.times(b));
     });
 
     it('handles a zero product correctly', async function () {
       const a = new BigNumber(0);
       const b = new BigNumber(5678);
 
-      const result = await safeMathInt.mul(a, b);
-      result.should.be.bignumber.eq(a.times(b));
+      (await returnVal(safeMathInt.mul(a, b))).should.be.bignumber.eq(a.times(b));
     });
 
     it('throws an error on multiplication overflow', async function () {
@@ -116,8 +116,7 @@ contract('SafeMathInt', () => {
       const a = new BigNumber(5678);
       const b = new BigNumber(5678);
 
-      const result = await safeMathInt.div(a, b);
-      result.should.be.bignumber.eq(a.div(b));
+      (await returnVal(safeMathInt.div(a, b))).should.be.bignumber.eq(a.div(b));
     });
 
     it('throws an error on zero division', async function () {
