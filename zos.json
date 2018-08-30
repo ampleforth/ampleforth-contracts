@@ -1,8 +1,0 @@
-{
-  "name": "uFragments",
-  "version": "0.1.0",
-  "contracts": {
-    "UFragments": "UFragments",
-    "UFragmentsPolicy": "UFragmentsPolicy"
-  }
-}

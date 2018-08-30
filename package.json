@@ -19,17 +19,15 @@
   "author": "eng@fragments.org",
   "scripts": {
     "precommit": "./scripts/pre-commit.sh",
-    "deploy-contracts": "truffle exec ./scripts/clean_deploy_contracts.js --network",
-    "lint": "npx eslint ./ --cache --fix && npx solhint contracts/*.sol",
+    "coverage": "./scripts/coverage.sh",
+    "lint": "npx eslint ./scripts ./test ./util *.js --cache --fix && npx solhint ./contracts/**/*.sol",
     "setup-ganache": "npx start-chain ganacheUnitTest && npm run deploy-contracts ganacheUnitTest",
-    "test": "./scripts/test.sh",
-    "trackGasUtilization": "npm run setup-ganache && truffle --network ganacheUnitTest exec test/load/gas_utilization.js save"
+    "test": "./scripts/test.sh"
   },
   "pre-commit": {
     "run": [
       "precommit",
-      "lint",
-      "trackGasUtilization"
+      "lint"
     ]
   },
   "dependencies": {
@@ -44,6 +42,7 @@
   "devDependencies": {
     "chai": "^4.1.2",
     "chai-bignumber": "^2.0.2",
+    "coveralls": "^3.0.2",
     "eslint": "^4.19.1",
     "eslint-config-google": "^0.9.1",
     "eslint-config-mocha": "0.0.0",
@@ -64,6 +63,7 @@
     "request-promise": "^4.2.2",
     "sinon": "^4.5.0",
     "solhint": "^1.1.10",
+    "solidity-coverage": "0.5.8",
     "stochasm": "^0.5.0",
     "util": "^0.11.0",
     "webpack": "^4.10.2",

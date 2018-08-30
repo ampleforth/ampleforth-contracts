@@ -39,7 +39,7 @@ module.exports = {
               "passcode", "geth", "rpc", "rpcmsg","stdev",  "stochasm",
               "whitelist", "uint", "passcodes", "keystore", "hdwallet",
               "formatter", "zos", "stderr", "stdout", "upgradable",
-              "mainnet", "testnets", "npx",
+              "mainnet", "testnets", "npx", "testrpc",
 
               // shorthand
               "eth", "args", "util", "utils", "msg", "prev", "bal",
