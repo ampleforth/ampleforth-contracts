@@ -2,6 +2,7 @@ pragma solidity 0.4.24;
 
 import "./Mock.sol";
 
+
 contract MockUFragments is Mock {
     uint256 private supply;
 

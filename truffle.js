@@ -3,7 +3,8 @@ const connectionConfig = require('frg-ethereum-runners/config/network_config.jso
 module.exports = {
   networks: {
     ganacheUnitTest: connectionConfig.ganacheUnitTest,
-    gethUnitTest: connectionConfig.gethUnitTest
+    gethUnitTest: connectionConfig.gethUnitTest,
+    testrpcCoverage: connectionConfig.testrpcCoverage
   },
   mocha: {
     enableTimeouts: false

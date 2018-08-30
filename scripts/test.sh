@@ -9,103 +9,51 @@ process-pid(){
   lsof -t -i:$1
 }
 
-frg-truffle(){
-  npx truffle \
-    --working-directory $PROJECT_DIR \
-    "$@"
-}
-
 run-unit-tests(){
-  frg-truffle \
+  npx truffle \
     --network $1 \
-    --timeout 25000 \
     test \
     $PROJECT_DIR/test/unit/*.js
 }
 
 run-simulation-tests(){
-  frg-truffle \
+  npx truffle \
     --network $1 \
     test \
-    test/simulation/*
+    test/simulation/**/*.js
 }
 
-run-load-tests(){
-  frg-truffle \
-    --network $1 \
-    exec \
-    $PROJECT_DIR/test/load/gas_utilization.js verify
-}
+run-all-tests(){
+  read REF PORT < <(npx get-network-config $1)
 
-read REF GANACHE_PORT < <(npx get-network-config ganacheUnitTest)
-read REF GETH_PORT < <(npx get-network-config gethUnitTest)
-
-# Is chain running?
-if [ $(process-pid $GANACHE_PORT) ]
-then
-  REFRESH_GANACHE=0
-else
-  REFRESH_GANACHE=1
-fi
-if [ $(process-pid $GETH_PORT) ]
-then
-  REFRESH_GETH=0
-else
-  REFRESH_GETH=1
-fi
-
-# Stop chain
-cleanupGanache(){
-  if [ "$REFRESH_GANACHE" == "1" ]
+  if [ $(process-pid $PORT) ]
   then
-    npx stop-chain "ganacheUnitTest"
+    REFRESH=0
+  else
+    REFRESH=1
+    echo "------Start blockchain(s)"
+    npx start-chain $1
   fi
-}
-
-cleanupGeth(){
-  if [ "$REFRESH_GETH" == "1" ]
-  then
-    npx stop-chain "gethUnitTest"
-  fi
-}
-
-echo "------Start blockchain(s)"
-npx start-chain "ganacheUnitTest"
-
-echo "------Deploying contracts"
-npx truffle  migrate --reset --network "ganacheUnitTest"
-npx truffle --network "ganacheUnitTest" exec $PROJECT_DIR/scripts/clean_deploy_contracts.js
-
-echo "------Running unit tests"
-run-unit-tests "ganacheUnitTest"
-
-echo "------Running gas utilization test"
-run-load-tests "ganacheUnitTest"
-
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
-then
-  echo "------Running simulation tests"
-  run-simulation-tests "ganacheUnitTest"
-fi
-trap cleanupGanache EXIT
-
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
-then
-  echo "------Start blockchain(s)"
-  npx start-chain "gethUnitTest"
-
-  echo "------Deploying contracts"
-  npx truffle  migrate --reset --network "gethUnitTest"
-  npx truffle --network "gethUnitTest" exec $PROJECT_DIR/scripts/clean_deploy_contracts.js
 
   echo "------Running unit tests"
-  run-unit-tests "gethUnitTest"
+  run-unit-tests $1
 
-  echo "------Running simulation tests"
+  cleanup(){
+    if [ "$REFRESH" == "1" ]
+    then
+      npx stop-chain $1
+    fi
+  }
+  trap cleanup EXIT
+}
+
+run-all-tests "ganacheUnitTest"
+
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
+then
+  run-simulation-tests "ganacheUnitTest"
+  run-all-tests "gethUnitTest"
   run-simulation-tests "gethUnitTest"
-
-  zos session --close
-  trap cleanupGeth EXIT
 fi
 
 exit 0

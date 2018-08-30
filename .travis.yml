@@ -6,14 +6,16 @@ node_js:
 cache:
   directories:
     - node_modules
-    - $(npm config get prefix)/bin/zos
     - $(npm config get prefix)/bin/ganache-cli
 before_install:
   - npm install -g npx
 script:
-  - npx setup-local-chains
+  - ./scripts/setup-ci.sh
   - npm run lint
-  - ./scripts/test.sh
+  - npm run test
+  - npx frg-coverage
+after_success:
+  - cat coverage/lcov.info | npx coveralls
 notifications:
   email:
     - eng@fragments.org
