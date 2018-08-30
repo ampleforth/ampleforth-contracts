@@ -13,7 +13,7 @@ run-unit-tests(){
   npx truffle \
     --network $1 \
     test \
-    $PROJECT_DIR/test/unit/**/*.js
+    $PROJECT_DIR/test/unit/*.js
 }
 
 run-simulation-tests(){

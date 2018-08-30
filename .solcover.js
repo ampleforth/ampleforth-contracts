@@ -8,7 +8,7 @@ module.exports = {
     gas: config.gas,
     gasPrice: config.gasPrice,
     norpc: true,
-    testCommand: 'npx truffle test ./test/unit/**/*.js',
+    testCommand: 'npx truffle test ./test/unit/*.js',
     compileCommand: 'npx truffle compile',
     skipFiles: ['mocks'],
     copyPackages: ['openzeppelin-zos'],
