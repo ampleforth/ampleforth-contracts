@@ -20,7 +20,7 @@ run-simulation-tests(){
   npx truffle \
     --network $1 \
     test \
-    test/simulation/**/*.js
+    test/simulation/*.js
 }
 
 run-all-tests(){
