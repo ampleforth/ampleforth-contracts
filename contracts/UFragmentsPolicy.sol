@@ -8,7 +8,7 @@ import "./lib/UInt256Lib.sol";
 import "./UFragments.sol";
 
 
-interface MarketOracle {
+interface IMarketOracle {
     function getPriceAndVolume() external returns (uint256, uint256);
 }
 
@@ -30,7 +30,7 @@ contract UFragmentsPolicy is Ownable {
     event Rebase(uint256 indexed epoch, uint256 exchangeRate, uint256 volume24hrs, int256 appliedSupplyAdjustment);
 
     UFragments private uFrags;
-    MarketOracle private marketOracle;
+    IMarketOracle private marketOracle;
 
     // Block timestamp of last rebase operation
     uint256 public lastRebaseTimestamp;
@@ -125,7 +125,7 @@ contract UFragmentsPolicy is Ownable {
      *      This is where parent class initializers are invloked and contract storage variables
      *      are set with initial values.
      */
-    function initialize(address owner, UFragments _uFrags, MarketOracle _marketOracle)
+    function initialize(address owner, UFragments _uFrags, IMarketOracle _marketOracle)
         public isInitializer("UFragmentsPolicy", "0") {
 
         Ownable.initialize(owner);
