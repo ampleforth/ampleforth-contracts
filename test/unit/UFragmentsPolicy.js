@@ -119,7 +119,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       });
       it('should emit Rebase with positive appliedSupplyAdjustment', async function () {
         const log = r.logs[0];
-        expect(log.event).to.eq('Rebase');
+        expect(log.event).to.eq('LogRebase');
         expect(log.args.epoch.eq(_epoch.plus(1))).to.be.true;
         expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(20);
         expect(log.args.volume24hrs.toNumber()).to.eq(100);
@@ -155,7 +155,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
     it('should emit Rebase with negative appliedSupplyAdjustment', async function () {
       const log = r.logs[0];
-      expect(log.event).to.eq('Rebase');
+      expect(log.event).to.eq('LogRebase');
       expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(-10);
     });
   });

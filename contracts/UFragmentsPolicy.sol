@@ -27,7 +27,7 @@ contract UFragmentsPolicy is Ownable {
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
 
-    event Rebase(uint256 indexed epoch, uint256 exchangeRate, uint256 volume24hrs, int256 appliedSupplyAdjustment);
+    event LogRebase(uint256 indexed epoch, uint256 exchangeRate, uint256 volume24hrs, int256 appliedSupplyAdjustment);
 
     UFragments private uFrags;
     IMarketOracle private marketOracle;
@@ -87,7 +87,7 @@ contract UFragmentsPolicy is Ownable {
 
         uFrags.rebase(epoch, supplyDelta);
         assert(uFrags.totalSupply() <= MAX_SUPPLY);
-        emit Rebase(epoch, exchangeRate, volume, supplyDelta);
+        emit LogRebase(epoch, exchangeRate, volume, supplyDelta);
     }
 
     /**
