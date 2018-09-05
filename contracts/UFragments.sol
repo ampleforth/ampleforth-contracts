@@ -68,6 +68,12 @@ contract UFragments is DetailedERC20, Ownable {
         _;
     }
 
+    modifier validRecipient(address to) {
+        require(to != address(0x0));
+        require(to != address(this));
+        _;
+    }
+
     mapping(address => uint256) private gonBalances;
 
     // Use max uint256 to get highest granularity
@@ -236,9 +242,7 @@ contract UFragments is DetailedERC20, Ownable {
      * @dev Transfers a number of gons between from and to, such that the resulting balances match
      * the expectations when denominated in fragments.
      */
-    function transferHelper(address from, address to, uint256 value) private {
-        require(to != address(0));
-
+    function transferHelper(address from, address to, uint256 value) private validRecipient(to) {
         uint256 senderMod = gonBalances[from] % gonsPerFragment;
         uint256 receiverMod = gonBalances[to] % gonsPerFragment;
         uint256 baseAmt = value.mul(gonsPerFragment);

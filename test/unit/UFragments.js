@@ -3,6 +3,8 @@ const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const transferAmount = 10;
 
 let uFragments, b, r, deployer;
 async function setupContracts () {
@@ -290,6 +292,31 @@ contract('UFragments:Transfer', function (accounts) {
       expect(b.toNumber()).to.eq(0);
       b = await uFragments.balanceOf.call(C);
       expect(b.toNumber()).to.eq(973);
+    });
+  });
+
+  describe('when the recipient is the zero address', function () {
+    const to = ZERO_ADDRESS;
+    const owner = A;
+
+    it('reverts on transfer', async function () {
+      await chain.expectEthException(uFragments.transfer(to, transferAmount, { from: owner }));
+    });
+
+    it('reverts on transferFrom', async function () {
+      await chain.expectEthException(uFragments.transferFrom(owner, to, transferAmount, { from: owner }));
+    });
+  });
+
+  describe('when the recipient address is the contract address', function () {
+    const owner = A;
+
+    it('reverts on transfer', async function () {
+      await chain.expectEthException(uFragments.transfer(uFragments.address, transferAmount, { from: owner }));
+    });
+
+    it('reverts on transferFrom', async function () {
+      await chain.expectEthException(uFragments.transferFrom(owner, uFragments.address, transferAmount, { from: owner }));
     });
   });
 });
