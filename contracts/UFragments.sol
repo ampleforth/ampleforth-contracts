@@ -42,9 +42,9 @@ contract UFragments is DetailedERC20, Ownable {
     // http://ec.europa.eu/economy_finance/publications/pages/publication1224_en.pdf
     using SafeMath for uint256;
 
-    event Rebase(uint256 indexed epoch, uint256 totalSupply);
-    event RebasePaused(bool paused);
-    event TokenPaused(bool paused);
+    event LogRebase(uint256 indexed epoch, uint256 totalSupply);
+    event LogRebasePaused(bool paused);
+    event LogTokenPaused(bool paused);
 
     // Used for basic authz.
     address public monetaryPolicy;
@@ -92,7 +92,7 @@ contract UFragments is DetailedERC20, Ownable {
      */
     function setRebasePaused(bool paused) external onlyOwner {
         rebasePaused = paused;
-        emit RebasePaused(paused);
+        emit LogRebasePaused(paused);
     }
 
     /**
@@ -101,7 +101,7 @@ contract UFragments is DetailedERC20, Ownable {
      */
     function setTokenPaused(bool paused) external onlyOwner {
         tokenPaused = paused;
-        emit TokenPaused(paused);
+        emit LogTokenPaused(paused);
     }
 
     /**
@@ -115,7 +115,7 @@ contract UFragments is DetailedERC20, Ownable {
             totalSupply_ = totalSupply_.add(uint256(supplyDelta));
         }
         gonsPerFragment = GONS.div(totalSupply_);
-        emit Rebase(epoch, totalSupply_);
+        emit LogRebase(epoch, totalSupply_);
     }
 
     function initialize(address owner) public isInitializer("UFragments", "0") {

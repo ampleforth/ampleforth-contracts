@@ -58,7 +58,7 @@ contract('UFragments:PauseRebase', function (accounts) {
   it('should emit pause event', async function () {
     const log = r.logs[0];
     expect(log).to.exist;
-    expect(log.event).to.eq('RebasePaused');
+    expect(log.event).to.eq('LogRebasePaused');
     expect(log.args.paused).to.be.true;
   });
 
@@ -115,7 +115,7 @@ contract('UFragments:PauseToken', function (accounts) {
   it('should emit pause event', async function () {
     const log = r.logs[0];
     expect(log).to.exist;
-    expect(log.event).to.eq('TokenPaused');
+    expect(log.event).to.eq('LogTokenPaused');
     expect(log.args.paused).to.be.true;
   });
 
@@ -216,7 +216,7 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
   it('should emit Rebase', async function () {
     const log = r.logs[0];
     expect(log).to.exist;
-    expect(log.event).to.eq('Rebase');
+    expect(log.event).to.eq('LogRebase');
     expect(log.args.epoch.toNumber()).to.eq(1);
     expect(log.args.totalSupply.toNumber()).to.eq(1500);
   });
@@ -250,7 +250,7 @@ contract('UFragments:Rebase:Contraction', function (accounts) {
   it('should emit Rebase', async function () {
     const log = r.logs[0];
     expect(log).to.exist;
-    expect(log.event).to.eq('Rebase');
+    expect(log.event).to.eq('LogRebase');
     expect(log.args.epoch.toNumber()).to.eq(1);
     expect(log.args.totalSupply.toNumber()).to.eq(500);
   });
