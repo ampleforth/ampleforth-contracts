@@ -5,6 +5,7 @@ const chain = new BlockchainCaller(web3);
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const transferAmount = 10;
+const erroneousAmount = 1001;
 
 let uFragments, b, r, deployer;
 async function setupContracts () {
@@ -295,6 +296,28 @@ contract('UFragments:Transfer', function (accounts) {
     });
   });
 
+  describe('when the spender does not have enough approved balance', function () {
+    beforeEach(async function () {
+      await uFragments.approve(A, 9, { from: deployer });
+    });
+
+    describe('when the owner has enough balance', function () {
+      const amount = transferAmount;
+
+      it('reverts', async function () {
+        await chain.expectEthException(uFragments.transferFrom(deployer, B, amount, { from: A }));
+      });
+    });
+
+    describe('when the owner does not have enough balance', function () {
+      const amount = erroneousAmount;
+
+      it('reverts', async function () {
+        await chain.expectEthException(uFragments.transferFrom(deployer, B, amount, { from: A }));
+      });
+    });
+  });
+
   describe('when the recipient is the zero address', function () {
     const to = ZERO_ADDRESS;
     const owner = A;
@@ -317,6 +340,327 @@ contract('UFragments:Transfer', function (accounts) {
 
     it('reverts on transferFrom', async function () {
       await chain.expectEthException(uFragments.transferFrom(owner, uFragments.address, transferAmount, { from: owner }));
+    });
+  });
+});
+
+contract('UFragments:Approval', function (accounts) {
+  const owner = accounts[0];
+  const recipient = accounts[1];
+
+  before('setup UFragments contract', setupContracts);
+
+  describe('approve', function () {
+    describe('when the spender is not the zero address', function () {
+      const spender = recipient;
+
+      describe('when the sender has enough balance', function () {
+        const amount = transferAmount;
+
+        it('emits an approval event', async function () {
+          const { logs } = await uFragments.approve(spender, amount, { from: owner });
+
+          assert.equal(logs.length, 1);
+          assert.equal(logs[0].event, 'Approval');
+          assert.equal(logs[0].args.owner, owner);
+          assert.equal(logs[0].args.spender, spender);
+          assert(logs[0].args.value.eq(amount));
+        });
+
+        describe('when there was no approved amount before', function () {
+          it('approves the requested amount', async function () {
+            await uFragments.approve(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, amount);
+          });
+        });
+
+        describe('when the spender had an approved amount', function () {
+          beforeEach(async function () {
+            await uFragments.approve(spender, 1, { from: owner });
+          });
+
+          it('approves the requested amount and replaces the previous one', async function () {
+            await uFragments.approve(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, amount);
+          });
+        });
+      });
+
+      describe('when the sender does not have enough balance', function () {
+        const amount = erroneousAmount;
+
+        it('emits an approval event', async function () {
+          const { logs } = await uFragments.approve(spender, amount, { from: owner });
+
+          assert.equal(logs.length, 1);
+          assert.equal(logs[0].event, 'Approval');
+          assert.equal(logs[0].args.owner, owner);
+          assert.equal(logs[0].args.spender, spender);
+          assert(logs[0].args.value.eq(amount));
+        });
+
+        describe('when there was no approved amount before', function () {
+          it('approves the requested amount', async function () {
+            await uFragments.approve(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, amount);
+          });
+        });
+
+        describe('when the spender had an approved amount', function () {
+          beforeEach(async function () {
+            await uFragments.approve(spender, 1, { from: owner });
+          });
+
+          it('approves the requested amount and replaces the previous one', async function () {
+            await uFragments.approve(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, amount);
+          });
+        });
+      });
+    });
+
+    describe('when the spender is the zero address', function () {
+      const amount = transferAmount;
+      const spender = ZERO_ADDRESS;
+
+      it('approves the requested amount', async function () {
+        await uFragments.approve(spender, amount, { from: owner });
+
+        const allowance = await uFragments.allowance(owner, spender);
+        assert.equal(allowance, amount);
+      });
+
+      it('emits an approval event', async function () {
+        const { logs } = await uFragments.approve(spender, amount, { from: owner });
+
+        assert.equal(logs.length, 1);
+        assert.equal(logs[0].event, 'Approval');
+        assert.equal(logs[0].args.owner, owner);
+        assert.equal(logs[0].args.spender, spender);
+        assert(logs[0].args.value.eq(amount));
+      });
+    });
+  });
+
+  describe('decrease approval', function () {
+    describe('when the spender is not the zero address', function () {
+      const spender = recipient;
+
+      beforeEach(async () => {
+        await uFragments.approve(spender, 0, { from: owner });
+      });
+
+      describe('when the sender has enough balance', function () {
+        const amount = transferAmount;
+
+        it('emits an approval event', async function () {
+          const { logs } = await uFragments.decreaseApproval(spender, amount, { from: owner });
+
+          assert.equal(logs.length, 1);
+          assert.equal(logs[0].event, 'Approval');
+          assert.equal(logs[0].args.owner, owner);
+          assert.equal(logs[0].args.spender, spender);
+          assert(logs[0].args.value.eq(0));
+        });
+
+        describe('when there was no approved amount before', function () {
+          it('keeps the allowance to zero', async function () {
+            await uFragments.decreaseApproval(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, 0);
+          });
+        });
+
+        describe('when the spender had an approved amount', function () {
+          beforeEach(async function () {
+            await uFragments.approve(spender, amount + 1, { from: owner });
+          });
+
+          it('decreases the spender allowance subtracting the requested amount', async function () {
+            await uFragments.decreaseApproval(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, 1);
+          });
+        });
+      });
+
+      describe('when the sender does not have enough balance', function () {
+        const amount = erroneousAmount;
+
+        it('emits an approval event', async function () {
+          const { logs } = await uFragments.decreaseApproval(spender, amount, { from: owner });
+
+          assert.equal(logs.length, 1);
+          assert.equal(logs[0].event, 'Approval');
+          assert.equal(logs[0].args.owner, owner);
+          assert.equal(logs[0].args.spender, spender);
+          assert(logs[0].args.value.eq(0));
+        });
+
+        describe('when there was no approved amount before', function () {
+          it('keeps the allowance to zero', async function () {
+            await uFragments.decreaseApproval(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, 0);
+          });
+        });
+
+        describe('when the spender had an approved amount', function () {
+          beforeEach(async function () {
+            await uFragments.approve(spender, amount + 1, { from: owner });
+          });
+
+          it('decreases the spender allowance subtracting the requested amount', async function () {
+            await uFragments.decreaseApproval(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, 1);
+          });
+        });
+      });
+    });
+
+    describe('when the spender is the zero address', function () {
+      const amount = transferAmount;
+      const spender = ZERO_ADDRESS;
+
+      beforeEach(async () => {
+        await uFragments.approve(spender, 0, { from: owner });
+      });
+
+      it('decreases the requested amount', async function () {
+        await uFragments.decreaseApproval(spender, amount, { from: owner });
+
+        const allowance = await uFragments.allowance(owner, spender);
+        assert.equal(allowance, 0);
+      });
+
+      it('emits an approval event', async function () {
+        const { logs } = await uFragments.decreaseApproval(spender, amount, { from: owner });
+
+        assert.equal(logs.length, 1);
+        assert.equal(logs[0].event, 'Approval');
+        assert.equal(logs[0].args.owner, owner);
+        assert.equal(logs[0].args.spender, spender);
+        assert(logs[0].args.value.eq(0));
+      });
+    });
+  });
+
+  describe('increase approval', function () {
+    const amount = transferAmount;
+
+    describe('when the spender is not the zero address', function () {
+      const spender = recipient;
+
+      beforeEach(async () => {
+        await uFragments.approve(spender, 0, { from: owner });
+      });
+
+      describe('when the sender has enough balance', function () {
+        it('emits an approval event', async function () {
+          const { logs } = await uFragments.increaseApproval(spender, amount, { from: owner });
+
+          assert.equal(logs.length, 1);
+          assert.equal(logs[0].event, 'Approval');
+          assert.equal(logs[0].args.owner, owner);
+          assert.equal(logs[0].args.spender, spender);
+          assert(logs[0].args.value.eq(amount));
+        });
+
+        describe('when there was no approved amount before', function () {
+          it('approves the requested amount', async function () {
+            await uFragments.increaseApproval(spender, amount, { from: owner });
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance.toNumber(), amount);
+          });
+        });
+
+        describe('when the spender had an approved amount', function () {
+          beforeEach(async function () {
+            await uFragments.approve(spender, 1, { from: owner });
+          });
+
+          it('increases the spender allowance adding the requested amount', async function () {
+            await uFragments.increaseApproval(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, amount + 1);
+          });
+        });
+      });
+
+      describe('when the sender does not have enough balance', function () {
+        const amount = erroneousAmount;
+
+        it('emits an approval event', async function () {
+          const { logs } = await uFragments.increaseApproval(spender, amount, { from: owner });
+
+          assert.equal(logs.length, 1);
+          assert.equal(logs[0].event, 'Approval');
+          assert.equal(logs[0].args.owner, owner);
+          assert.equal(logs[0].args.spender, spender);
+          assert(logs[0].args.value.eq(amount));
+        });
+
+        describe('when there was no approved amount before', function () {
+          it('approves the requested amount', async function () {
+            await uFragments.increaseApproval(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance.toNumber(), amount);
+          });
+        });
+
+        describe('when the spender had an approved amount', function () {
+          beforeEach(async function () {
+            await uFragments.approve(spender, 1, { from: owner });
+          });
+
+          it('increases the spender allowance adding the requested amount', async function () {
+            await uFragments.increaseApproval(spender, amount, { from: owner });
+
+            const allowance = await uFragments.allowance(owner, spender);
+            assert.equal(allowance, amount + 1);
+          });
+        });
+      });
+    });
+
+    describe('when the spender is the zero address', function () {
+      const spender = ZERO_ADDRESS;
+
+      beforeEach(async () => {
+        await uFragments.approve(spender, 0, { from: owner });
+      });
+
+      it('approves the requested amount', async function () {
+        await uFragments.increaseApproval(spender, amount, { from: owner });
+
+        const allowance = await uFragments.allowance(owner, spender);
+        assert.equal(allowance, amount);
+      });
+
+      it('emits an approval event', async function () {
+        const { logs } = await uFragments.increaseApproval(spender, amount, { from: owner });
+
+        assert.equal(logs.length, 1);
+        assert.equal(logs[0].event, 'Approval');
+        assert.equal(logs[0].args.owner, owner);
+        assert.equal(logs[0].args.spender, spender);
+        assert(logs[0].args.value.eq(amount));
+      });
     });
   });
 });
