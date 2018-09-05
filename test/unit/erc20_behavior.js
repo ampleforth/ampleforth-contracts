@@ -85,14 +85,6 @@ contract('UFragments:ERC20', function (accounts) {
         });
       });
     });
-
-    describe('when the recipient is the zero address', function () {
-      const to = ZERO_ADDRESS;
-
-      it('reverts', async function () {
-        await chain.expectEthException(token.transfer(to, 10, { from: owner }));
-      });
-    });
   });
 
   describe('transfer from', function () {
@@ -160,19 +152,6 @@ contract('UFragments:ERC20', function (accounts) {
             await chain.expectEthException(token.transferFrom(owner, to, amount, { from: spender }));
           });
         });
-      });
-    });
-
-    describe('when the recipient is the zero address', function () {
-      const amount = transferAmount;
-      const to = ZERO_ADDRESS;
-
-      beforeEach(async function () {
-        await token.approve(spender, amount, { from: owner });
-      });
-
-      it('reverts', async function () {
-        await chain.expectEthException(token.transferFrom(owner, to, amount, { from: spender }));
       });
     });
   });
