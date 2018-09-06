@@ -23,7 +23,7 @@ npx start-chain [ganacheUnitTest|gethUnitTest]
 npm run lint
 
 # View code coverage
-npx frg-coverage
+npm run coverage
 ```
 
 # Testing

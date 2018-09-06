@@ -40,9 +40,9 @@ contract('UFragments:MonetaryPolicy', function (accounts) {
   });
 
   it('should NOT be set-able by non-owner', async function () {
-    await chain.expectEthException(
-      uFragments.setMonetaryPolicy(A, { from: policy })
-    );
+    expect(
+      await chain.isEthException(uFragments.setMonetaryPolicy(A, { from: policy }))
+    ).to.be.true;
   });
 });
 
@@ -65,9 +65,9 @@ contract('UFragments:PauseRebase', function (accounts) {
   });
 
   it('should not allow calling rebase', async function () {
-    await chain.expectEthException(
-      uFragments.rebase(1, 500, { from: policy })
-    );
+    expect(
+      await chain.isEthException(uFragments.rebase(1, 500, { from: policy }))
+    ).to.be.true;
   });
 
   it('should allow calling transfer', async function () {
@@ -126,15 +126,15 @@ contract('UFragments:PauseToken', function (accounts) {
   });
 
   it('should not allow calling transfer', async function () {
-    await chain.expectEthException(
-      uFragments.transfer(A, 10, { from: deployer })
-    );
+    expect(
+      await chain.isEthException(uFragments.transfer(A, 10, { from: deployer }))
+    ).to.be.true;
   });
 
   it('should not allow calling approve', async function () {
-    await chain.expectEthException(
-      uFragments.approve(A, 10, { from: deployer })
-    );
+    expect(
+      await chain.isEthException(uFragments.approve(A, 10, { from: deployer }))
+    ).to.be.true;
   });
 
   it('should allow calling allowance', async function () {
@@ -142,21 +142,21 @@ contract('UFragments:PauseToken', function (accounts) {
   });
 
   it('should not allow calling transferFrom', async function () {
-    await chain.expectEthException(
-      uFragments.transferFrom(deployer, B, 10, {from: A})
-    );
+    expect(
+      await chain.isEthException(uFragments.transferFrom(deployer, B, 10, {from: A}))
+    ).to.be.true;
   });
 
   it('should not allow calling increaseApproval', async function () {
-    await chain.expectEthException(
-      uFragments.increaseApproval(A, 10, {from: deployer})
-    );
+    expect(
+      await chain.isEthException(uFragments.increaseApproval(A, 10, {from: deployer}))
+    ).to.be.true;
   });
 
   it('should not allow calling decreaseApproval', async function () {
-    await chain.expectEthException(
-      uFragments.decreaseApproval(A, 10, {from: deployer})
-    );
+    expect(
+      await chain.isEthException(uFragments.decreaseApproval(A, 10, {from: deployer}))
+    ).to.be.true;
   });
 
   it('should allow calling balanceOf', async function () {
@@ -184,9 +184,9 @@ contract('UFragments:Rebase:Access Controls', function (accounts) {
   });
 
   it('should not be callable by others', async function () {
-    await chain.expectEthException(
-      uFragments.rebase(1, 500, { from: deployer })
-    );
+    expect(
+      await chain.isEthException(uFragments.rebase(1, 500, { from: deployer }))
+    ).to.be.true;
   });
 });
 
@@ -300,11 +300,15 @@ contract('UFragments:Transfer', function (accounts) {
     const owner = A;
 
     it('reverts on transfer', async function () {
-      await chain.expectEthException(uFragments.transfer(to, transferAmount, { from: owner }));
+      expect(
+        await chain.isEthException(uFragments.transfer(to, transferAmount, { from: owner }))
+      ).to.be.true;
     });
 
     it('reverts on transferFrom', async function () {
-      await chain.expectEthException(uFragments.transferFrom(owner, to, transferAmount, { from: owner }));
+      expect(
+        await chain.isEthException(uFragments.transferFrom(owner, to, transferAmount, { from: owner }))
+      ).to.be.true;
     });
   });
 
@@ -312,11 +316,15 @@ contract('UFragments:Transfer', function (accounts) {
     const owner = A;
 
     it('reverts on transfer', async function () {
-      await chain.expectEthException(uFragments.transfer(uFragments.address, transferAmount, { from: owner }));
+      expect(
+        await chain.isEthException(uFragments.transfer(uFragments.address, transferAmount, { from: owner }))
+      ).to.be.true;
     });
 
     it('reverts on transferFrom', async function () {
-      await chain.expectEthException(uFragments.transferFrom(owner, uFragments.address, transferAmount, { from: owner }));
+      expect(
+        await chain.isEthException(uFragments.transferFrom(owner, uFragments.address, transferAmount, { from: owner }))
+      ).to.be.true;
     });
   });
 });

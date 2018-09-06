@@ -13,7 +13,7 @@ script:
   - ./scripts/setup-ci.sh
   - npm run lint
   - npm run test
-  - npx frg-coverage
+  - npm run coverage
 after_success:
   - cat coverage/lcov.info | npx coveralls
 notifications:

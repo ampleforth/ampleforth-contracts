@@ -19,7 +19,7 @@
   "author": "eng@fragments.org",
   "scripts": {
     "precommit": "./scripts/pre-commit.sh",
-    "coverage": "./scripts/coverage.sh",
+    "coverage": "npx frg-coverage",
     "lint": "npx eslint ./scripts ./test ./util *.js --cache --fix && npx solhint ./contracts/**/*.sol",
     "setup-ganache": "npx start-chain ganacheUnitTest && npm run deploy-contracts ganacheUnitTest",
     "test": "./scripts/test.sh"
