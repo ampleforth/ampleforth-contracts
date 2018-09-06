@@ -6,7 +6,8 @@ const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const transferAmount = 10;
 
-let uFragments, b, r, deployer;
+let uFragments, b, r, deployer, initialSupply;
+
 async function setupContracts () {
   const accounts = await chain.getUserAccounts();
   deployer = accounts[0];
@@ -15,18 +16,19 @@ async function setupContracts () {
     data: encodeCall('initialize', ['address'], [deployer]),
     from: deployer
   });
+  initialSupply = await uFragments.totalSupply.call();
 }
 
 contract('UFragments:Initialization', function (accounts) {
   before('setup UFragments contract', setupContracts);
 
-  it('should add +1000 uFragments to the deployer', async function () {
+  it('should add 50M uFragments to the deployer', async function () {
     b = await uFragments.balanceOf.call(deployer);
-    expect(b.toNumber()).to.eq(1000);
+    expect(b.toNumber()).to.eq(50000000);
   });
-  it('should set the totalSupply to 1000', async function () {
+  it('should set the totalSupply to 50M', async function () {
     b = await uFragments.totalSupply.call();
-    expect(b.toNumber()).to.eq(1000);
+    expect(b.toNumber()).to.eq(50000000);
   });
 });
 
@@ -191,28 +193,30 @@ contract('UFragments:Rebase:Access Controls', function (accounts) {
 });
 
 contract('UFragments:Rebase:Expansion', function (accounts) {
-  // Rebase +500 (50%), with starting balances deployer:750 and A:250.
+  // Rebase +5M (10%), with starting balances A:750 and B:250.
   const A = accounts[2];
+  const B = accounts[3];
   const policy = accounts[1];
 
   before('setup UFragments contract', async function () {
     await setupContracts();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
-    await uFragments.transfer(A, 250, { from: deployer });
-    r = await uFragments.rebase(1, 500, {from: policy});
+    await uFragments.transfer(A, 750, { from: deployer });
+    await uFragments.transfer(B, 250, { from: deployer });
+    r = await uFragments.rebase(1, 5000000, {from: policy});
   });
 
   it('should increase the totalSupply', async function () {
     b = await uFragments.totalSupply.call();
-    expect(b.toNumber()).to.eq(1500);
+    expect(b.toNumber()).to.eq(initialSupply.toNumber() + 5000000);
   });
 
   it('should increase individual balances', async function () {
-    b = await uFragments.balanceOf.call(deployer);
-    expect(b.toNumber()).to.be.above(750).and.at.most(1125);
-
     b = await uFragments.balanceOf.call(A);
-    expect(b.toNumber()).to.be.above(250).and.at.most(375);
+    expect(b.toNumber()).to.be.at.least(824).and.at.most(825);
+
+    b = await uFragments.balanceOf.call(B);
+    expect(b.toNumber()).to.be.at.least(274).and.at.most(275);
   });
 
   it('should emit Rebase', async function () {
@@ -220,33 +224,35 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
     expect(log).to.exist;
     expect(log.event).to.eq('LogRebase');
     expect(log.args.epoch.toNumber()).to.eq(1);
-    expect(log.args.totalSupply.toNumber()).to.eq(1500);
+    expect(log.args.totalSupply.toNumber()).to.eq(initialSupply.toNumber() + 5000000);
   });
 });
 
 contract('UFragments:Rebase:Contraction', function (accounts) {
-  // Rebase -500 (-50%), with starting balances deployer:750 and A:250.
+  // Rebase -5M (-10%), with starting balances A:750 and B:250.
   const A = accounts[2];
+  const B = accounts[3];
   const policy = accounts[1];
 
   before('setup UFragments contract', async function () {
     await setupContracts();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
-    await uFragments.transfer(A, 250, { from: deployer });
-    r = await uFragments.rebase(1, -500, {from: policy});
+    await uFragments.transfer(A, 750, { from: deployer });
+    await uFragments.transfer(B, 250, { from: deployer });
+    r = await uFragments.rebase(1, -5000000, {from: policy});
   });
 
   it('should decrease the totalSupply', async function () {
     b = await uFragments.totalSupply.call();
-    expect(b.toNumber()).to.eq(500);
+    expect(b.toNumber()).to.eq(initialSupply.toNumber() - 5000000);
   });
 
   it('should decrease individual balances', async function () {
-    b = await uFragments.balanceOf.call(deployer);
-    expect(b.toNumber()).to.at.least(374).and.at.most(375);
-
     b = await uFragments.balanceOf.call(A);
-    expect(b.toNumber()).to.at.least(124).and.at.most(125);
+    expect(b.toNumber()).to.at.least(674).and.at.most(675);
+
+    b = await uFragments.balanceOf.call(B);
+    expect(b.toNumber()).to.at.least(224).and.at.most(225);
   });
 
   it('should emit Rebase', async function () {
@@ -254,7 +260,7 @@ contract('UFragments:Rebase:Contraction', function (accounts) {
     expect(log).to.exist;
     expect(log.event).to.eq('LogRebase');
     expect(log.args.epoch.toNumber()).to.eq(1);
-    expect(log.args.totalSupply.toNumber()).to.eq(500);
+    expect(log.args.totalSupply.toNumber()).to.eq(initialSupply.toNumber() - 5000000);
   });
 });
 
@@ -266,10 +272,13 @@ contract('UFragments:Transfer', function (accounts) {
   before('setup UFragments contract', setupContracts);
 
   describe('deployer transfers 12 to A', function () {
-    it('should have balances [988,12]', async function () {
+    it('should have correct balances', async function () {
+      const deployerBefore = await uFragments.balanceOf.call(deployer);
+
       await uFragments.transfer(A, 12, { from: deployer });
+
       b = await uFragments.balanceOf.call(deployer);
-      expect(b.toNumber()).to.eq(988);
+      expect(b.toNumber()).to.eq(deployerBefore - 12);
       b = await uFragments.balanceOf.call(A);
       expect(b.toNumber()).to.eq(12);
     });
@@ -277,9 +286,11 @@ contract('UFragments:Transfer', function (accounts) {
 
   describe('deployer transfers 15 to B', async function () {
     it('should have balances [973,15]', async function () {
+      const deployerBefore = await uFragments.balanceOf.call(deployer);
+
       await uFragments.transfer(B, 15, { from: deployer });
       b = await uFragments.balanceOf.call(deployer);
-      expect(b.toNumber()).to.eq(973);
+      expect(b.toNumber()).to.eq(deployerBefore - 15);
       b = await uFragments.balanceOf.call(B);
       expect(b.toNumber()).to.eq(15);
     });
@@ -287,11 +298,13 @@ contract('UFragments:Transfer', function (accounts) {
 
   describe('deployer transfers the rest to C', async function () {
     it('should have balances [0,973]', async function () {
-      await uFragments.transfer(C, 973, { from: deployer });
+      const deployerBefore = await uFragments.balanceOf.call(deployer);
+
+      await uFragments.transfer(C, deployerBefore, { from: deployer });
       b = await uFragments.balanceOf.call(deployer);
       expect(b.toNumber()).to.eq(0);
       b = await uFragments.balanceOf.call(C);
-      expect(b.toNumber()).to.eq(973);
+      expect(b.toNumber()).to.eq(deployerBefore.toNumber());
     });
   });
 

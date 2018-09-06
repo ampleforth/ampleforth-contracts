@@ -7,7 +7,7 @@ const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const transferAmount = 10;
-const erroneousAmount = 1001;
+const erroneousAmount = 50000001;
 
 contract('UFragments:ERC20', function (accounts) {
   let token;
@@ -20,7 +20,7 @@ contract('UFragments:ERC20', function (accounts) {
     });
   });
 
-  const initialTotalSupply = 1000;
+  const initialTotalSupply = 50000000;
   const owner = accounts[0];
   const anotherAccount = accounts[8];
   const recipient = accounts[9];
