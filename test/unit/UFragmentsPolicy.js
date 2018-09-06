@@ -9,6 +9,10 @@ const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
+require('chai')
+  .use(require('chai-bignumber')(BigNumber))
+  .should();
+
 let uFragmentsPolicy, mockUFragments, mockMarketOracle;
 let r, _epoch, _time;
 const MAX_SUPPLY = new BigNumber('578960446186580977117854925043439539266349923328202820197');
@@ -31,6 +35,44 @@ async function mockExternalData (exchangeRate, volume, uFragSupply) {
   await mockUFragments.storeSupply(uFragSupply);
 }
 
+contract('UFragmentsPolicy:setDeviationThreshold', async function (accounts) {
+  let _threshold, threshold;
+  before('setup UFragmentsPolicy contract', async function () {
+    await setupContracts();
+    _threshold = await uFragmentsPolicy.deviationThreshold.call();
+    threshold = _threshold.plus(0.1 * 10 ** 18);
+    await uFragmentsPolicy.setDeviationThreshold(threshold);
+  });
+
+  it('should set deviationThreshold', async function () {
+    (await uFragmentsPolicy.deviationThreshold.call()).should.be.bignumber.eq(threshold);
+  });
+});
+
+contract('UFragmentsPolicy:setRebaseLag', async function (accounts) {
+  let _lag;
+  before('setup UFragmentsPolicy contract', async function () {
+    await setupContracts();
+    _lag = await uFragmentsPolicy.rebaseLag.call();
+  });
+
+  describe('when rebaseLag is more than 0', async function () {
+    it('should setRebaseLag', async function () {
+      const lag = _lag + 1;
+      await uFragmentsPolicy.setRebaseLag(lag);
+      (await uFragmentsPolicy.rebaseLag.call()).should.be.bignumber.eq(lag);
+    });
+  });
+
+  describe('when rebaseLag is 0', async function () {
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(uFragmentsPolicy.setRebaseLag(0))
+      ).to.be.true;
+    });
+  });
+});
+
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
@@ -41,7 +83,9 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     });
 
     it('should fail', async function () {
-      await chain.expectEthException(uFragmentsPolicy.rebase());
+      expect(
+        await chain.isEthException(uFragmentsPolicy.rebase())
+      ).to.be.true;
     });
   });
 });
@@ -81,14 +125,15 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
-  describe('when uFragments supply equals MAX_SUPPLY', function () {
+  describe('when uFragments supply equals MAX_SUPPLY and rebase attempts to grow', function () {
     before(async function () {
       await mockExternalData(2e18, 100, MAX_SUPPLY);
     });
 
-    it('should apply SupplyAdjustment=0', async function () {
-      r = await uFragmentsPolicy.rebase();
-      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(0);
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(uFragmentsPolicy.rebase())
+      ).to.be.true;
     });
   });
 });

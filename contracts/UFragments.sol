@@ -253,7 +253,6 @@ contract UFragments is DetailedERC20, Ownable {
         // Choose the max of the minimum viable transfer amounts on each side.
         uint256 gonValue = (senderGonMinAmt >= receiverGonMinAmt) ? senderGonMinAmt : receiverGonMinAmt;
 
-        require(gonValue <= gonBalances[from]);
         gonBalances[from] = gonBalances[from].sub(gonValue);
         gonBalances[to] = gonBalances[to].add(gonValue);
         emit Transfer(from, to, value);
