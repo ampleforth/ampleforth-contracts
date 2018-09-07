@@ -131,7 +131,7 @@ contract UFragments is DetailedERC20, Ownable {
         rebasePaused = false;
         tokenPaused = false;
 
-        totalSupply_ = 1000;
+        totalSupply_ = 50000000;  // 50M
         gonBalances[owner] = GONS;
         gonsPerFragment = GONS.div(totalSupply_);
     }
