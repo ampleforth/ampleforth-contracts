@@ -162,20 +162,20 @@ contract('SafeMathInt', () => {
     });
   });
 
-  describe('abs', function() {
-    it('works for 0', async function() {
+  describe('abs', function () {
+    it('works for 0', async function () {
       (await returnVal(safeMathInt.abs(0))).should.be.bignumber.eq(0);
     });
 
-    it('works on positive numbers', async function() {
+    it('works on positive numbers', async function () {
       (await returnVal(safeMathInt.abs(100))).should.be.bignumber.eq(100);
     });
 
-    it('works on negative numbers', async function() {
+    it('works on negative numbers', async function () {
       (await returnVal(safeMathInt.abs(-100))).should.be.bignumber.eq(100);
     });
 
-    it('fails on overflow condition', async function() {
+    it('fails on overflow condition', async function () {
       expect(
         await chain.isEthException(safeMathInt.abs(MIN_INT256))
       ).to.be.true;
