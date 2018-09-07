@@ -273,6 +273,42 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
   });
 });
 
+contract('UFragments:Rebase:NoChange', function (accounts) {
+  // Rebase (0%), with starting balances A:750 and B:250.
+  const A = accounts[2];
+  const B = accounts[3];
+  const policy = accounts[1];
+
+  before('setup UFragments contract', async function () {
+    await setupContracts();
+    await uFragments.setMonetaryPolicy(policy, {from: deployer});
+    await uFragments.transfer(A, 750, { from: deployer });
+    await uFragments.transfer(B, 250, { from: deployer });
+    r = await uFragments.rebase(1, 0, {from: policy});
+  });
+
+  it('should NOT CHANGE the totalSupply', async function () {
+    b = await uFragments.totalSupply.call();
+    expect(b.toNumber()).to.eq(initialSupply.toNumber());
+  });
+
+  it('should NOT CHANGE individual balances', async function () {
+    b = await uFragments.balanceOf.call(A);
+    expect(b.toNumber()).to.eq(750);
+
+    b = await uFragments.balanceOf.call(B);
+    expect(b.toNumber()).to.eq(250);
+  });
+
+  it('should emit Rebase', async function () {
+    const log = r.logs[0];
+    expect(log).to.exist;
+    expect(log.event).to.eq('LogRebase');
+    expect(log.args.epoch.toNumber()).to.eq(1);
+    expect(log.args.totalSupply.toNumber()).to.eq(initialSupply.toNumber());
+  });
+});
+
 contract('UFragments:Rebase:Contraction', function (accounts) {
   // Rebase -5M (-10%), with starting balances A:750 and B:250.
   const A = accounts[2];
