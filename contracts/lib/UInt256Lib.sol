@@ -12,7 +12,7 @@ library UInt256Lib {
      * @dev Safely converts a uint256 to an int256.
      */
     function toInt256Safe(uint256 a) internal pure returns (int256) {
-        assert(a <= MAX_INT256);
+        require(a <= MAX_INT256);
         return int256(a);
     }
 }

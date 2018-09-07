@@ -17,9 +17,9 @@ library SafeMathInt {
         int256 c = a * b;
 
         // Detect overflow when multiplying MIN_INT256 with -1
-        assert(c != MIN_INT256 ||
+        require(c != MIN_INT256 ||
             (a & MIN_INT256) != (b & MIN_INT256));
-        assert((b == 0) || (c / b == a));
+        require((b == 0) || (c / b == a));
         return c;
     }
 
@@ -28,7 +28,7 @@ library SafeMathInt {
      */
     function div(int256 a, int256 b) internal pure returns (int256) {
         // Prevent overflow when dividing MIN_INT256 by -1
-        assert(b != -1 || a != MIN_INT256);
+        require(b != -1 || a != MIN_INT256);
 
         // assert(b > 0); // Solidity automatically throws when dividing by 0
         int256 c = a / b;
@@ -40,7 +40,7 @@ library SafeMathInt {
      * @dev Subtracts two int256 variables and fails on overflow.
      */
     function sub(int256 a, int256 b) internal pure returns (int256) {
-        assert((b >= 0 && a - b <= a) || (b < 0 && a - b > a));
+        require((b >= 0 && a - b <= a) || (b < 0 && a - b > a));
 
         return a - b;
     }
@@ -50,7 +50,7 @@ library SafeMathInt {
      */
     function add(int256 a, int256 b) internal pure returns (int256) {
         int256 c = a + b;
-        assert((b >= 0 && c >= a) || (b < 0 && c < a));
+        require((b >= 0 && c >= a) || (b < 0 && c < a));
         return c;
     }
 
@@ -59,7 +59,7 @@ library SafeMathInt {
      * is less than 0.
      */
     function toUint256Safe(int256 a) internal pure returns (uint256) {
-        assert(a >= 0);
+        require(a >= 0);
         return uint256(a);
     }
 }
