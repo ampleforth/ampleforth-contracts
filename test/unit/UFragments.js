@@ -6,11 +6,12 @@ const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const transferAmount = 10;
 
-let uFragments, b, r, deployer, initialSupply;
+let uFragments, b, r, deployer, user, initialSupply;
 
 async function setupContracts () {
   const accounts = await chain.getUserAccounts();
   deployer = accounts[0];
+  user = accounts[1];
   uFragments = await UFragments.new();
   await uFragments.sendTransaction({
     data: encodeCall('initialize', ['address'], [deployer]),
@@ -32,18 +33,33 @@ contract('UFragments:Initialization', function (accounts) {
   });
 });
 
-contract('UFragments:MonetaryPolicy', function (accounts) {
+contract('UFragments:setMonetaryPolicy', function (accounts) {
   const policy = accounts[1];
-  const A = accounts[2];
 
   before('setup UFragments contract', async function () {
     await setupContracts();
-    await uFragments.setMonetaryPolicy(policy, { from: deployer });
   });
 
-  it('should NOT be set-able by non-owner', async function () {
+  it('should set reference to policy contract', async function () {
+    await uFragments.setMonetaryPolicy(policy, { from: deployer });
+    expect(await uFragments.monetaryPolicy.call()).to.eq(policy);
+  });
+});
+
+contract('UFragments:setMonetaryPolicy:accessControl', function (accounts) {
+  const policy = accounts[1];
+
+  before('setup UFragments contract', setupContracts);
+
+  it('should be callable by owner', async function () {
     expect(
-      await chain.isEthException(uFragments.setMonetaryPolicy(A, { from: policy }))
+      await chain.isEthException(uFragments.setMonetaryPolicy(policy, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragments.setMonetaryPolicy(policy, { from: user }))
     ).to.be.true;
   });
 });
@@ -102,6 +118,22 @@ contract('UFragments:PauseRebase', function (accounts) {
 
   it('should allow calling totalSupply', async function () {
     await uFragments.totalSupply.call();
+  });
+});
+
+contract('UFragments:PauseRebase:accessControl', function (accounts) {
+  before('setup UFragments contract', setupContracts);
+
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragments.setRebasePaused(true, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragments.setRebasePaused(true, { from: user }))
+    ).to.be.true;
   });
 });
 
@@ -170,24 +202,37 @@ contract('UFragments:PauseToken', function (accounts) {
   });
 });
 
-contract('UFragments:Rebase:Access Controls', function (accounts) {
-  const A = accounts[2];
-  const policy = accounts[1];
+contract('UFragments:PauseToken:accessControl', function (accounts) {
+  before('setup UFragments contract', setupContracts);
 
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragments.setTokenPaused(true, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragments.setTokenPaused(true, { from: user }))
+    ).to.be.true;
+  });
+});
+
+contract('UFragments:Rebase:accessControl', function (accounts) {
   before('setup UFragments contract', async function () {
     await setupContracts();
-    await uFragments.setMonetaryPolicy(policy, {from: deployer});
-    await uFragments.transfer(A, 250, { from: deployer });
-    await uFragments.rebase(1, 500, {from: policy});
+    await uFragments.setMonetaryPolicy(user, {from: deployer});
   });
 
   it('should be callable by monetary policy', async function () {
-    await uFragments.rebase(1, 10, {from: policy});
+    expect(
+      await chain.isEthException(uFragments.rebase(1, 10, { from: user }))
+    ).to.be.false;
   });
 
   it('should not be callable by others', async function () {
     expect(
-      await chain.isEthException(uFragments.rebase(1, 500, { from: deployer }))
+      await chain.isEthException(uFragments.rebase(1, 10, { from: deployer }))
     ).to.be.true;
   });
 });
