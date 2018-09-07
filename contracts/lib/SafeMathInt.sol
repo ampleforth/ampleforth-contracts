@@ -17,10 +17,8 @@ library SafeMathInt {
         int256 c = a * b;
 
         // Detect overflow when multiplying MIN_INT256 with -1
-        assert(
-            c != MIN_INT256
-            || (a & MIN_INT256) != (b & MIN_INT256)
-        );
+        assert(c != MIN_INT256 ||
+            (a & MIN_INT256) != (b & MIN_INT256));
         assert((b == 0) || (c / b == a));
         return c;
     }

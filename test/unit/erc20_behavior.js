@@ -55,7 +55,9 @@ contract('UFragments:ERC20', function (accounts) {
         const amount = erroneousAmount;
 
         it('reverts', async function () {
-          await chain.expectEthException(token.transfer(to, amount, { from: owner }));
+          expect(
+            await chain.isEthException(token.transfer(to, amount, { from: owner }))
+          ).to.be.true;
         }).timeout();
       });
 
@@ -127,7 +129,9 @@ contract('UFragments:ERC20', function (accounts) {
           const amount = erroneousAmount;
 
           it('should fail', async function () {
-            await chain.expectEthException(token.transferFrom(owner, to, amount, { from: spender }));
+            expect(
+              await chain.isEthException(token.transferFrom(owner, to, amount, { from: spender }))
+            ).to.be.true;
           });
         });
       });
@@ -141,7 +145,9 @@ contract('UFragments:ERC20', function (accounts) {
           const amount = transferAmount;
 
           it('reverts', async function () {
-            await chain.expectEthException(token.transferFrom(owner, to, amount, { from: spender }));
+            expect(
+              await chain.isEthException(token.transferFrom(owner, to, amount, { from: spender }))
+            ).to.be.true;
           });
         });
 
@@ -149,7 +155,9 @@ contract('UFragments:ERC20', function (accounts) {
           const amount = erroneousAmount;
 
           it('reverts', async function () {
-            await chain.expectEthException(token.transferFrom(owner, to, amount, { from: spender }));
+            expect(
+              await chain.isEthException(token.transferFrom(owner, to, amount, { from: spender }))
+            ).to.be.true;
           });
         });
       });

@@ -20,7 +20,7 @@ contract('SafeMathInt', () => {
   });
 
   async function returnVal (tx) {
-    return (await tx).logs[0].args.intVal;
+    return (await tx).logs[0].args.val;
   }
 
   describe('add', function () {
@@ -31,20 +31,28 @@ contract('SafeMathInt', () => {
       (await returnVal(safeMathInt.add(a, b))).should.be.bignumber.eq(a.plus(b));
     });
 
-    it('throws an error on addition overflow', async function () {
+    it('should fail on addition overflow', async function () {
       const a = MAX_INT256;
       const b = new BigNumber(1);
 
-      await chain.expectInvalidOpcode(safeMathInt.add(a, b));
-      await chain.expectInvalidOpcode(safeMathInt.add(b, a));
+      expect(
+        await chain.isEthException(safeMathInt.add(a, b))
+      ).to.be.true;
+      expect(
+        await chain.isEthException(safeMathInt.add(b, a))
+      ).to.be.true;
     });
 
-    it('throws an error on addition negative overflow', async function () {
+    it('should fail on addition negative overflow', async function () {
       const a = MIN_INT256;
       const b = new BigNumber(-1);
 
-      await chain.expectInvalidOpcode(safeMathInt.add(a, b));
-      await chain.expectInvalidOpcode(safeMathInt.add(b, a));
+      expect(
+        await chain.isEthException(safeMathInt.add(a, b))
+      ).to.be.true;
+      expect(
+        await chain.isEthException(safeMathInt.add(b, a))
+      ).to.be.true;
     });
   });
 
@@ -56,18 +64,22 @@ contract('SafeMathInt', () => {
       (await returnVal(safeMathInt.sub(a, b))).should.be.bignumber.eq(a.minus(b));
     });
 
-    it('throws an error on subtraction overflow', async function () {
+    it('should fail on subtraction overflow', async function () {
       const a = MAX_INT256;
       const b = new BigNumber(-1);
 
-      await chain.expectInvalidOpcode(safeMathInt.sub(a, b));
+      expect(
+        await chain.isEthException(safeMathInt.sub(a, b))
+      ).to.be.true;
     });
 
-    it('throws an error on subtraction negative overflow', async function () {
+    it('should fail on subtraction negative overflow', async function () {
       const a = MIN_INT256;
       const b = new BigNumber(1);
 
-      await chain.expectInvalidOpcode(safeMathInt.sub(a, b));
+      expect(
+        await chain.isEthException(safeMathInt.sub(a, b))
+      ).to.be.true;
     });
   });
 
@@ -86,28 +98,40 @@ contract('SafeMathInt', () => {
       (await returnVal(safeMathInt.mul(a, b))).should.be.bignumber.eq(a.times(b));
     });
 
-    it('throws an error on multiplication overflow', async function () {
+    it('should fail on multiplication overflow', async function () {
       const a = MAX_INT256;
       const b = new BigNumber(2);
 
-      await chain.expectInvalidOpcode(safeMathInt.mul(a, b));
-      await chain.expectInvalidOpcode(safeMathInt.mul(b, a));
+      expect(
+        await chain.isEthException(safeMathInt.mul(a, b))
+      ).to.be.true;
+      expect(
+        await chain.isEthException(safeMathInt.mul(b, a))
+      ).to.be.true;
     });
 
-    it('throws an error on multiplication negative overflow', async function () {
+    it('should fail on multiplication negative overflow', async function () {
       const a = MIN_INT256;
       const b = new BigNumber(2);
 
-      await chain.expectInvalidOpcode(safeMathInt.mul(a, b));
-      await chain.expectInvalidOpcode(safeMathInt.mul(b, a));
+      expect(
+        await chain.isEthException(safeMathInt.mul(a, b))
+      ).to.be.true;
+      expect(
+        await chain.isEthException(safeMathInt.mul(b, a))
+      ).to.be.true;
     });
 
-    it('throws an error on multiplication between -1 and MIN_INT256', async function () {
+    it('should fail on multiplication between -1 and MIN_INT256', async function () {
       const a = MIN_INT256;
       const b = new BigNumber(-1);
 
-      await chain.expectInvalidOpcode(safeMathInt.mul(a, b));
-      await chain.expectInvalidOpcode(safeMathInt.mul(b, a));
+      expect(
+        await chain.isEthException(safeMathInt.mul(a, b))
+      ).to.be.true;
+      expect(
+        await chain.isEthException(safeMathInt.mul(b, a))
+      ).to.be.true;
     });
   });
 
@@ -119,11 +143,50 @@ contract('SafeMathInt', () => {
       (await returnVal(safeMathInt.div(a, b))).should.be.bignumber.eq(a.div(b));
     });
 
-    it('throws an error on zero division', async function () {
+    it('should fail on zero division', async function () {
       const a = new BigNumber(5678);
       const b = new BigNumber(0);
 
-      await chain.expectInvalidOpcode(safeMathInt.div(a, b));
+      expect(
+        await chain.isEthException(safeMathInt.div(a, b))
+      ).to.be.true;
+    });
+
+    it('should fail when MIN_INT256 is divided by -1', async function () {
+      const a = new BigNumber(MIN_INT256);
+      const b = new BigNumber(-1);
+
+      expect(
+        await chain.isEthException(safeMathInt.div(a, b))
+      ).to.be.true;
+    });
+  });
+
+  describe('toUint256Safe', function () {
+    describe('when then number is MAX_INT256', () => {
+      it('converts int to uint256 safely', async function () {
+        (await returnVal(safeMathInt.toUint256Safe(MAX_INT256))).should.be.bignumber.eq(MAX_INT256);
+      });
+    });
+
+    describe('when then number is less than MAX_INT256', () => {
+      it('converts int to uint256 safely', async function () {
+        (await returnVal(safeMathInt.toUint256Safe(MAX_INT256.minus(1)))).should.be.bignumber.eq(MAX_INT256.minus(1));
+      });
+    });
+
+    describe('when then number is 0', () => {
+      it('converts int to uint256 safely', async function () {
+        (await returnVal(safeMathInt.toUint256Safe(0))).should.be.bignumber.eq(0);
+      });
+    });
+
+    describe('when then number is less than 0', () => {
+      it('should fail', async function () {
+        expect(
+          await chain.isEthException(safeMathInt.toUint256Safe(-1))
+        ).to.be.true;
+      });
     });
   });
 });
