@@ -162,29 +162,49 @@ contract('SafeMathInt', () => {
     });
   });
 
-  describe('toUint256Safe', function () {
+  describe('abs', function () {
+    it('works for 0', async function () {
+      (await returnVal(safeMathInt.abs(0))).should.be.bignumber.eq(0);
+    });
+
+    it('works on positive numbers', async function () {
+      (await returnVal(safeMathInt.abs(100))).should.be.bignumber.eq(100);
+    });
+
+    it('works on negative numbers', async function () {
+      (await returnVal(safeMathInt.abs(-100))).should.be.bignumber.eq(100);
+    });
+
+    it('fails on overflow condition', async function () {
+      expect(
+        await chain.isEthException(safeMathInt.abs(MIN_INT256))
+      ).to.be.true;
+    });
+  });
+
+  describe('toUInt256Safe', function () {
     describe('when then number is MAX_INT256', () => {
       it('converts int to uint256 safely', async function () {
-        (await returnVal(safeMathInt.toUint256Safe(MAX_INT256))).should.be.bignumber.eq(MAX_INT256);
+        (await returnVal(safeMathInt.toUInt256Safe(MAX_INT256))).should.be.bignumber.eq(MAX_INT256);
       });
     });
 
     describe('when then number is less than MAX_INT256', () => {
       it('converts int to uint256 safely', async function () {
-        (await returnVal(safeMathInt.toUint256Safe(MAX_INT256.minus(1)))).should.be.bignumber.eq(MAX_INT256.minus(1));
+        (await returnVal(safeMathInt.toUInt256Safe(MAX_INT256.minus(1)))).should.be.bignumber.eq(MAX_INT256.minus(1));
       });
     });
 
     describe('when then number is 0', () => {
       it('converts int to uint256 safely', async function () {
-        (await returnVal(safeMathInt.toUint256Safe(0))).should.be.bignumber.eq(0);
+        (await returnVal(safeMathInt.toUInt256Safe(0))).should.be.bignumber.eq(0);
       });
     });
 
     describe('when then number is less than 0', () => {
       it('should fail', async function () {
         expect(
-          await chain.isEthException(safeMathInt.toUint256Safe(-1))
+          await chain.isEthException(safeMathInt.toUInt256Safe(-1))
         ).to.be.true;
       });
     });

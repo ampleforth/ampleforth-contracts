@@ -4,6 +4,7 @@ import "openzeppelin-zos/contracts/math/SafeMath.sol";
 import "openzeppelin-zos/contracts/ownership/Ownable.sol";
 import "openzeppelin-zos/contracts/token/ERC20/DetailedERC20.sol";
 
+import "./lib/SafeMathInt.sol";
 
 /**
  * @title uFragments ERC20 token
@@ -25,7 +26,7 @@ contract UFragments is DetailedERC20, Ownable {
     //    denominator. (i.e. If you want to convert gons to fragments instead of multiplying by the
     //    inverse rate, you should divide by the normal rate)
     // 2) Gon balances converted into fragments are always rounded down (truncated).
-    // 3) Fragment values converted to gon values (such as in transfers) are chosen such at the
+    // 3) Fragment values converted to gon values (such as in transfers) are chosen such that the
     //    below guarantees are upheld.
     //
     // We make the following guarantees:
@@ -41,6 +42,7 @@ contract UFragments is DetailedERC20, Ownable {
     // reference for practices related to currency conversions.
     // http://ec.europa.eu/economy_finance/publications/pages/publication1224_en.pdf
     using SafeMath for uint256;
+    using SafeMathInt for int256;
 
     event LogRebase(uint256 indexed epoch, uint256 totalSupply);
     event LogRebasePaused(bool paused);
@@ -116,7 +118,7 @@ contract UFragments is DetailedERC20, Ownable {
      */
     function rebase(uint256 epoch, int256 supplyDelta) external onlyMonetaryPolicy whenRebaseNotPaused {
         if (supplyDelta < 0) {
-            totalSupply_ = totalSupply_.sub(uint256(-supplyDelta));
+            totalSupply_ = totalSupply_.sub(supplyDelta.abs().toUInt256Safe());
         } else {
             totalSupply_ = totalSupply_.add(uint256(supplyDelta));
         }
