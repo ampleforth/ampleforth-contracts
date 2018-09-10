@@ -36,13 +36,26 @@ contract('UFragments:Initialization', function (accounts) {
 contract('UFragments:setMonetaryPolicy', function (accounts) {
   const policy = accounts[1];
 
-  before('setup UFragments contract', async function () {
-    await setupContracts();
-  });
+  before('setup UFragments contract', setupContracts);
 
   it('should set reference to policy contract', async function () {
     await uFragments.setMonetaryPolicy(policy, { from: deployer });
     expect(await uFragments.monetaryPolicy.call()).to.eq(policy);
+  });
+});
+
+contract('UFragments:setMonetaryPolicy', function (accounts) {
+  const policy = accounts[1];
+
+  before('setup UFragments contract', setupContracts);
+
+  it('should not be callable after reference is set', async function () {
+    expect(
+      await chain.isEthException(uFragments.setMonetaryPolicy(policy, { from: deployer }))
+    ).to.be.false;
+    expect(
+      await chain.isEthException(uFragments.setMonetaryPolicy(policy, { from: deployer }))
+    ).to.be.true;
   });
 });
 
@@ -56,6 +69,13 @@ contract('UFragments:setMonetaryPolicy:accessControl', function (accounts) {
       await chain.isEthException(uFragments.setMonetaryPolicy(policy, { from: deployer }))
     ).to.be.false;
   });
+});
+
+contract('UFragments:setMonetaryPolicy:accessControl', function (accounts) {
+  const policy = accounts[1];
+  const user = accounts[2];
+
+  before('setup UFragments contract', setupContracts);
 
   it('should NOT be callable by non-owner', async function () {
     expect(

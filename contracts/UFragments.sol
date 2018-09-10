@@ -91,6 +91,7 @@ contract UFragments is DetailedERC20, Ownable {
      * @param monetaryPolicy_ The address of the monetary policy contract to use for authz.
      */
     function setMonetaryPolicy(address monetaryPolicy_) external onlyOwner {
+        require(monetaryPolicy == address(0x0));
         monetaryPolicy = monetaryPolicy_;
     }
 
