@@ -15,17 +15,19 @@ require('chai')
 
 let uFragmentsPolicy, mockUFragments, mockMarketOracle;
 let r, _epoch, _time;
+let deployer, user;
 const MAX_SUPPLY = new BigNumber('578960446186580977117854925043439539266349923328202820197');
 
 async function setupContracts () {
   const accounts = await chain.getUserAccounts();
-  const deployerAccount = accounts[0];
+  deployer = accounts[0];
+  user = accounts[1];
   mockUFragments = await MockUFragments.new();
   mockMarketOracle = await MockMarketOracle.new();
   uFragmentsPolicy = await UFragmentsPolicy.new();
   await uFragmentsPolicy.sendTransaction({
-    data: encodeCall('initialize', ['address', 'address', 'address'], [deployerAccount, mockUFragments.address, mockMarketOracle.address]),
-    from: deployerAccount
+    data: encodeCall('initialize', ['address', 'address', 'address'], [deployer, mockUFragments.address, mockMarketOracle.address]),
+    from: deployer
   });
 }
 
@@ -49,6 +51,22 @@ contract('UFragmentsPolicy:setDeviationThreshold', async function (accounts) {
   });
 });
 
+contract('UFragments:setDeviationThreshold:accessControl', function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setDeviationThreshold(0, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setDeviationThreshold(0, { from: user }))
+    ).to.be.true;
+  });
+});
+
 contract('UFragmentsPolicy:setRebaseLag', async function (accounts) {
   let _lag;
   before('setup UFragmentsPolicy contract', async function () {
@@ -58,7 +76,7 @@ contract('UFragmentsPolicy:setRebaseLag', async function (accounts) {
 
   describe('when rebaseLag is more than 0', async function () {
     it('should setRebaseLag', async function () {
-      const lag = _lag + 1;
+      const lag = _lag.plus(1);
       await uFragmentsPolicy.setRebaseLag(lag);
       (await uFragmentsPolicy.rebaseLag.call()).should.be.bignumber.eq(lag);
     });
@@ -70,6 +88,52 @@ contract('UFragmentsPolicy:setRebaseLag', async function (accounts) {
         await chain.isEthException(uFragmentsPolicy.setRebaseLag(0))
       ).to.be.true;
     });
+  });
+});
+
+contract('UFragments:setRebaseLag:accessControl', function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setRebaseLag(1, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setRebaseLag(1, { from: user }))
+    ).to.be.true;
+  });
+});
+
+contract('UFragmentsPolicy:setMinRebaseTimeIntervalSec', async function (accounts) {
+  let _interval;
+  before('setup UFragmentsPolicy contract', async function () {
+    await setupContracts();
+    _interval = await uFragmentsPolicy.minRebaseTimeIntervalSec.call();
+  });
+
+  it('should setMinRebaseTimeIntervalSec', async function () {
+    const interval = _interval.plus(1);
+    await uFragmentsPolicy.setMinRebaseTimeIntervalSec(interval);
+    (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(interval);
+  });
+});
+
+contract('UFragments:setMinRebaseTimeIntervalSec:accessControl', function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(0, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(0, { from: user }))
+    ).to.be.true;
   });
 });
 
