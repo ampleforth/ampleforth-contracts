@@ -124,12 +124,12 @@ contract('UFragments:PauseRebase', function (accounts) {
     await uFragments.transferFrom(deployer, B, 10, {from: A});
   });
 
-  it('should allow calling increaseApproval', async function () {
-    await uFragments.increaseApproval(A, 10, {from: deployer});
+  it('should allow calling increaseAllowance', async function () {
+    await uFragments.increaseAllowance(A, 10, {from: deployer});
   });
 
-  it('should allow calling decreaseApproval', async function () {
-    await uFragments.decreaseApproval(A, 10, {from: deployer});
+  it('should allow calling decreaseAllowance', async function () {
+    await uFragments.decreaseAllowance(A, 10, {from: deployer});
   });
 
   it('should allow calling balanceOf', async function () {
@@ -201,15 +201,15 @@ contract('UFragments:PauseToken', function (accounts) {
     ).to.be.true;
   });
 
-  it('should not allow calling increaseApproval', async function () {
+  it('should not allow calling increaseAllowance', async function () {
     expect(
-      await chain.isEthException(uFragments.increaseApproval(A, 10, {from: deployer}))
+      await chain.isEthException(uFragments.increaseAllowance(A, 10, {from: deployer}))
     ).to.be.true;
   });
 
-  it('should not allow calling decreaseApproval', async function () {
+  it('should not allow calling decreaseAllowance', async function () {
     expect(
-      await chain.isEthException(uFragments.decreaseApproval(A, 10, {from: deployer}))
+      await chain.isEthException(uFragments.decreaseAllowance(A, 10, {from: deployer}))
     ).to.be.true;
   });
 
