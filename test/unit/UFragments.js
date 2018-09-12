@@ -40,7 +40,7 @@ contract('UFragments:setMonetaryPolicy', function (accounts) {
 
   it('should set reference to policy contract', async function () {
     await uFragments.setMonetaryPolicy(policy, { from: deployer });
-    expect(await uFragments.monetaryPolicy.call()).to.eq(policy);
+    expect(await uFragments._monetaryPolicy.call()).to.eq(policy);
   });
 });
 

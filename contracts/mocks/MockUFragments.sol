@@ -4,11 +4,11 @@ import "./Mock.sol";
 
 
 contract MockUFragments is Mock {
-    uint256 private supply;
+    uint256 private _supply;
 
     // Methods to mock data on the chain
-    function storeSupply(uint256 _supply) public {
-        supply = _supply;
+    function storeSupply(uint256 supply) public {
+        _supply = supply;
     }
 
     // Mock methods
@@ -19,10 +19,10 @@ contract MockUFragments is Mock {
         int256[] memory intVals = new int256[](1);
         intVals[0] = supplyDelta;
         emit FunctionArguments(uintVals, intVals);
-        supply++;
+        _supply++;
     }
 
     function totalSupply() public view returns (uint256) {
-        return supply;
+        return _supply;
     }
 }

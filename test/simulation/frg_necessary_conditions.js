@@ -44,15 +44,15 @@ contract('UFragments', async function (accounts) {
   }
 
   async function checkBalancesAfterOperation (users, op, chk) {
-    const _bals = [ ];
+    const prevBals = [ ];
     const bals = [ ];
     let u;
     for (u in users) {
       if (Object.prototype.hasOwnProperty.call(users, u)) {
-        _bals.push(await uFragments.balanceOf.call(users[u]));
+        prevBals.push(await uFragments.balanceOf.call(users[u]));
       }
     }
-    const _supply = (await uFragments.totalSupply.call());
+    const prevSupply = (await uFragments.totalSupply.call());
     await op();
     const supply = (await uFragments.totalSupply.call());
     for (u in users) {
@@ -60,18 +60,18 @@ contract('UFragments', async function (accounts) {
         bals.push(await uFragments.balanceOf.call(users[u]));
       }
     }
-    chk(_bals, bals, [_supply, supply]);
+    chk(prevBals, bals, [prevSupply, supply]);
   }
 
   async function checkBalancesAfterTransfer (users, tAmt) {
     await checkBalancesAfterOperation(users, async () => {
       await uFragments.transfer(users[1], tAmt, { from: users[0] });
-    }, ([_u0Bal, _u1Bal], [u0Bal, u1Bal]) => {
-      const _sum = _u0Bal.plus(_u1Bal);
+    }, ([prevU0Bal, prevU1Bal], [u0Bal, u1Bal]) => {
+      const prevSum = prevU0Bal.plus(prevU1Bal);
       const sum = u0Bal.plus(u1Bal);
-      expect(_sum.eq(sum)).to.be.true;
-      expect(_u0Bal.minus(tAmt).eq(u0Bal)).to.be.true;
-      expect(_u1Bal.plus(tAmt).eq(u1Bal)).to.be.true;
+      expect(prevSum.eq(sum)).to.be.true;
+      expect(prevU0Bal.minus(tAmt).eq(u0Bal)).to.be.true;
+      expect(prevU1Bal.plus(tAmt).eq(u1Bal)).to.be.true;
     });
   }
 

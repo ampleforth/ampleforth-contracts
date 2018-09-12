@@ -29,28 +29,28 @@ contract UFragmentsPolicy is Ownable {
 
     event LogRebase(uint256 indexed epoch, uint256 exchangeRate, uint256 volume24hrs, int256 appliedSupplyAdjustment);
 
-    UFragments private uFrags;
-    IMarketOracle private marketOracle;
+    UFragments private _uFrags;
+    IMarketOracle private _marketOracle;
 
     // Block timestamp of last rebase operation
-    uint256 public lastRebaseTimestamp;
+    uint256 public _lastRebaseTimestamp;
 
     // At least this much time must pass between rebase operations.
-    uint256 public minRebaseTimeIntervalSec;
+    uint256 public _minRebaseTimeIntervalSec;
 
     // The rebase lag parameter controls how long it takes, in cycles, to approach an absolute
     // supply correction. If the lag equals the smallest value of 1, then we apply full
     // supply correction at each rebase cycle. If it is greater than 1, say n, then we apply
     // a correction of 1/n at every cycle so that by the end of n cycles we would have
     // approached an absolute supply correction.
-    uint32 public rebaseLag;
+    uint32 public _rebaseLag;
 
     // If the current exchange rate is within this tolerance, no supply update is performed.
     // 18 decimal fixed point format
-    uint256 public deviationThreshold;
+    uint256 public _deviationThreshold;
 
     // Keeps track of the number of rebase cycles since inception
-    uint256 public epoch;
+    uint256 public _epoch;
 
     // We cap the rate to avoid overflows in computations.
     // 18 decimal fixed point format
@@ -67,13 +67,13 @@ contract UFragmentsPolicy is Ownable {
      *         minimum time period has elapsed.
      */
     function rebase() external {
-        require(lastRebaseTimestamp.add(minRebaseTimeIntervalSec) <= now);
-        epoch = epoch.add(1);
-        lastRebaseTimestamp = now;
+        require(_lastRebaseTimestamp.add(_minRebaseTimeIntervalSec) <= now);
+        _epoch = _epoch.add(1);
+        _lastRebaseTimestamp = now;
 
         uint256 exchangeRate;
         uint256 volume;
-        (exchangeRate, volume) = marketOracle.getPriceAndVolume();
+        (exchangeRate, volume) = _marketOracle.getPriceAndVolume();
         if (exchangeRate > MAX_RATE) {
             exchangeRate = MAX_RATE;
         }
@@ -81,30 +81,30 @@ contract UFragmentsPolicy is Ownable {
         int256 supplyDelta = calcSupplyDelta(exchangeRate);
         supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 
-        if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
-            supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
+        if (supplyDelta > 0 && _uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
+            supplyDelta = (MAX_SUPPLY.sub(_uFrags.totalSupply())).toInt256Safe();
         }
 
-        uFrags.rebase(epoch, supplyDelta);
-        assert(uFrags.totalSupply() <= MAX_SUPPLY);
-        emit LogRebase(epoch, exchangeRate, volume, supplyDelta);
+        _uFrags.rebase(_epoch, supplyDelta);
+        assert(_uFrags.totalSupply() <= MAX_SUPPLY);
+        emit LogRebase(_epoch, exchangeRate, volume, supplyDelta);
     }
 
     /**
      * @notice Allows setting the Deviation Threshold. If the exchange rate given by the market
      *         oracle is within this threshold, then no supply modifications are made.
-     * @param _deviationThreshold The new exchange rate threshold.
+     * @param deviationThreshold The new exchange rate threshold.
      */
-    function setDeviationThreshold(uint128 _deviationThreshold) external onlyOwner {
-        deviationThreshold = _deviationThreshold;
+    function setDeviationThreshold(uint128 deviationThreshold) external onlyOwner {
+        _deviationThreshold = deviationThreshold;
     }
 
     /**
      * @notice Allows setting the minimum time period that must elapse between rebase cycles.
-     * @param _minRebaseTimeIntervalSec The new minimum time interval, in seconds.
+     * @param minRebaseTimeIntervalSec The new minimum time interval, in seconds.
      */
-    function setMinRebaseTimeIntervalSec(uint128 _minRebaseTimeIntervalSec) external onlyOwner {
-        minRebaseTimeIntervalSec = _minRebaseTimeIntervalSec;
+    function setMinRebaseTimeIntervalSec(uint128 minRebaseTimeIntervalSec) external onlyOwner {
+        _minRebaseTimeIntervalSec = minRebaseTimeIntervalSec;
     }
 
     /**
@@ -113,11 +113,11 @@ contract UFragmentsPolicy is Ownable {
      *         apply full supply correction at each rebase cycle. If it is greater than 1, say n,
      *         then we apply a correction of 1/n at every cycle so that by the end of n cycles
      *         we would have approached an absolute supply correction.
-     * @param _rebaseLag The new lag period for rebasing.
+     * @param rebaseLag The new lag period for rebasing.
      */
-    function setRebaseLag(uint32 _rebaseLag) external onlyOwner {
-        require(_rebaseLag > 0);
-        rebaseLag = _rebaseLag;
+    function setRebaseLag(uint32 rebaseLag) external onlyOwner {
+        require(rebaseLag > 0);
+        _rebaseLag = rebaseLag;
     }
 
     /**
@@ -125,18 +125,18 @@ contract UFragmentsPolicy is Ownable {
      *      This is where parent class initializers are invloked and contract storage variables
      *      are set with initial values.
      */
-    function initialize(address owner, UFragments _uFrags, IMarketOracle _marketOracle)
+    function initialize(address owner, UFragments uFrags, IMarketOracle marketOracle)
         public isInitializer("UFragmentsPolicy", "0") {
 
         Ownable.initialize(owner);
 
-        minRebaseTimeIntervalSec = 1 days;
-        rebaseLag = 30;
-        deviationThreshold = 0.05 * 10**18; // 5%
-        epoch = 0;
+        _minRebaseTimeIntervalSec = 1 days;
+        _rebaseLag = 30;
+        _deviationThreshold = 0.05 * 10**18; // 5%
+        _epoch = 0;
 
-        uFrags = _uFrags;
-        marketOracle = _marketOracle;
+        _uFrags = uFrags;
+        _marketOracle = marketOracle;
     }
 
     /**
@@ -149,15 +149,15 @@ contract UFragmentsPolicy is Ownable {
         }
 
         int256 target = 10**18;
-        return rate.toInt256Safe().sub(target).mul(uFrags.totalSupply().toInt256Safe()).div(target);
+        return rate.toInt256Safe().sub(target).mul(_uFrags.totalSupply().toInt256Safe()).div(target);
     }
 
     /**
      * @return Damps the supply delta value so that only small changes to supply are made.
-     *         This is currently set to supplyDelta / rebaseLag.
+     *         This is currently set to supplyDelta / _rebaseLag.
      */
     function calcDampenedSupplyDelta(int256 supplyDelta) private view returns (int256) {
-        return supplyDelta.div(rebaseLag);
+        return supplyDelta.div(_rebaseLag);
     }
 
     /**
@@ -166,7 +166,7 @@ contract UFragmentsPolicy is Ownable {
      */
     function withinDeviationThreshold(uint256 rate) private view returns (bool) {
         uint256 target = 10**18;
-        return (rate >= target && rate.sub(target) < deviationThreshold)
-            || (rate < target && target.sub(rate) < deviationThreshold);
+        return (rate >= target && rate.sub(target) < _deviationThreshold)
+            || (rate < target && target.sub(rate) < _deviationThreshold);
     }
 }
