@@ -264,9 +264,9 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       expect(log.args.volume24hrs.toNumber()).to.eq(100);
     });
 
-    it('should call getPriceAndVolume from the market oracle', async function () {
+    it('should call getPriceAnd24HourVolume from the market oracle', async function () {
       const fnCalled = mockUFragments.FunctionCalled().formatter(r.receipt.logs[0]);
-      expect(fnCalled.args.functionName).to.eq('MarketOracle:getPriceAndVolume');
+      expect(fnCalled.args.functionName).to.eq('MarketOracle:getPriceAnd24HourVolume');
       expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
     });
 

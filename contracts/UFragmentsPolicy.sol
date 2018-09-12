@@ -9,7 +9,7 @@ import "./UFragments.sol";
 
 
 interface IMarketOracle {
-    function getPriceAndVolume() external returns (uint256, uint256);
+    function getPriceAnd24HourVolume() external returns (uint256, uint256);
 }
 
 
@@ -73,7 +73,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 exchangeRate;
         uint256 volume;
-        (exchangeRate, volume) = _marketOracle.getPriceAndVolume();
+        (exchangeRate, volume) = _marketOracle.getPriceAnd24HourVolume();
         if (exchangeRate > MAX_RATE) {
             exchangeRate = MAX_RATE;
         }
