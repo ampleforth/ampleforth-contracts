@@ -38,36 +38,9 @@ BlockchainCaller.prototype.waitForSomeTime = async function (durationInSec) {
   }
 };
 
-BlockchainCaller.prototype.waitForOneBlock = function () {
-  return this.sendRawToBlockchain('evm_mine');
-};
-
-BlockchainCaller.prototype.waitForNBlocks = async function (n) {
-  for (let i = 0; i < n; i++) {
-    await this.waitForOneBlock();
-  }
-};
-
 BlockchainCaller.prototype.getUserAccounts = async function () {
   const accounts = await this.sendRawToBlockchain('eth_accounts');
   return accounts.result;
-};
-
-BlockchainCaller.prototype.snapshotChain = async function () {
-  const snapshot = await this.sendRawToBlockchain('evm_snapshot');
-  return snapshot;
-};
-
-BlockchainCaller.prototype.revertToSnapshot = async function (snapshot) {
-  const didRevert = await this.sendRawToBlockchain('evm_revert', [snapshot.result]);
-  if (!didRevert.result) throw new Error('Revert failed');
-  return didRevert.result;
-};
-
-BlockchainCaller.prototype.cleanRoom = async function (fn) {
-  const snapshot = await this.snapshotChain();
-  await fn();
-  await this.revertToSnapshot(snapshot);
 };
 
 BlockchainCaller.prototype.isEthException = async function (promise) {
@@ -97,12 +70,6 @@ BlockchainCaller.prototype.getTransactionMetrics = async function (hash) {
     gasPrice: tx.gasPrice,
     byteCodeSize: (tx.input.length * 4 / 8)
   };
-};
-
-BlockchainCaller.prototype.isContract = async function (address) {
-  // getCode returns '0x0' if address points to a wallet else it returns the contract bytecode
-  const code = await this.web3.eth.getCode(address);
-  return (code !== '0x0');
 };
 
 module.exports = BlockchainCaller;
