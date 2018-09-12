@@ -137,6 +137,8 @@ contract UFragments is DetailedERC20, Ownable {
         totalSupply_ = 50000000;  // 50M
         gonBalances[owner] = GONS;
         gonsPerFragment = GONS.div(totalSupply_);
+
+        emit Transfer(address(0x0), owner, totalSupply_);
     }
 
     /**
@@ -199,6 +201,8 @@ contract UFragments is DetailedERC20, Ownable {
      * @param value The amount of tokens to be spent.
      */
     function approve(address spender, uint256 value) public whenTokenNotPaused returns (bool) {
+        require(spender != address(0x0));
+
         allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;
@@ -214,7 +218,9 @@ contract UFragments is DetailedERC20, Ownable {
      * @param spender The address which will spend the funds.
      * @param addedValue The amount of tokens to increase the allowance by.
      */
-    function increaseApproval(address spender, uint256 addedValue) public whenTokenNotPaused returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) public whenTokenNotPaused returns (bool) {
+        require(spender != address(0x0));
+
         allowedFragments[msg.sender][spender] = allowedFragments[msg.sender][spender].add(addedValue);
         emit Approval(msg.sender, spender, allowedFragments[msg.sender][spender]);
         return true;
@@ -230,7 +236,9 @@ contract UFragments is DetailedERC20, Ownable {
      * @param spender The address which will spend the funds.
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
-    function decreaseApproval(address spender, uint256 subtractedValue) public whenTokenNotPaused returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) public whenTokenNotPaused returns (bool) {
+        require(spender != address(0x0));
+
         uint256 oldValue = allowedFragments[msg.sender][spender];
         if (subtractedValue >= oldValue) {
             allowedFragments[msg.sender][spender] = 0;

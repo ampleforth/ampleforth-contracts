@@ -242,24 +242,10 @@ contract('UFragments:ERC20', function (accounts) {
     });
 
     describe('when the spender is the zero address', function () {
-      const amount = transferAmount;
-      const spender = ZERO_ADDRESS;
-
-      it('approves the requested amount', async function () {
-        await token.approve(spender, amount, { from: owner });
-
-        const allowance = await token.allowance(owner, spender);
-        assert.equal(allowance, amount);
-      });
-
-      it('emits an approval event', async function () {
-        const { logs } = await token.approve(spender, amount, { from: owner });
-
-        assert.equal(logs.length, 1);
-        assert.equal(logs[0].event, 'Approval');
-        assert.equal(logs[0].args.owner, owner);
-        assert.equal(logs[0].args.spender, spender);
-        assert(logs[0].args.value.eq(amount));
+      it('should fail', async function () {
+        expect(
+          await chain.isEthException(token.approve(ZERO_ADDRESS, transferAmount, { from: owner }))
+        ).to.be.true;
       });
     });
   });
@@ -276,7 +262,7 @@ contract('UFragments:ERC20', function (accounts) {
         const amount = transferAmount;
 
         it('emits an approval event', async function () {
-          const { logs } = await token.decreaseApproval(spender, amount, { from: owner });
+          const { logs } = await token.decreaseAllowance(spender, amount, { from: owner });
 
           assert.equal(logs.length, 1);
           assert.equal(logs[0].event, 'Approval');
@@ -287,7 +273,7 @@ contract('UFragments:ERC20', function (accounts) {
 
         describe('when there was no approved amount before', function () {
           it('keeps the allowance to zero', async function () {
-            await token.decreaseApproval(spender, amount, { from: owner });
+            await token.decreaseAllowance(spender, amount, { from: owner });
 
             const allowance = await token.allowance(owner, spender);
             assert.equal(allowance, 0);
@@ -300,7 +286,7 @@ contract('UFragments:ERC20', function (accounts) {
           });
 
           it('decreases the spender allowance subtracting the requested amount', async function () {
-            await token.decreaseApproval(spender, amount, { from: owner });
+            await token.decreaseAllowance(spender, amount, { from: owner });
 
             const allowance = await token.allowance(owner, spender);
             assert.equal(allowance, 1);
@@ -312,7 +298,7 @@ contract('UFragments:ERC20', function (accounts) {
         const amount = erroneousAmount;
 
         it('emits an approval event', async function () {
-          const { logs } = await token.decreaseApproval(spender, amount, { from: owner });
+          const { logs } = await token.decreaseAllowance(spender, amount, { from: owner });
 
           assert.equal(logs.length, 1);
           assert.equal(logs[0].event, 'Approval');
@@ -323,7 +309,7 @@ contract('UFragments:ERC20', function (accounts) {
 
         describe('when there was no approved amount before', function () {
           it('keeps the allowance to zero', async function () {
-            await token.decreaseApproval(spender, amount, { from: owner });
+            await token.decreaseAllowance(spender, amount, { from: owner });
 
             const allowance = await token.allowance(owner, spender);
             assert.equal(allowance, 0);
@@ -336,7 +322,7 @@ contract('UFragments:ERC20', function (accounts) {
           });
 
           it('decreases the spender allowance subtracting the requested amount', async function () {
-            await token.decreaseApproval(spender, amount, { from: owner });
+            await token.decreaseAllowance(spender, amount, { from: owner });
 
             const allowance = await token.allowance(owner, spender);
             assert.equal(allowance, 1);
@@ -346,28 +332,10 @@ contract('UFragments:ERC20', function (accounts) {
     });
 
     describe('when the spender is the zero address', function () {
-      const amount = transferAmount;
-      const spender = ZERO_ADDRESS;
-
-      beforeEach(async () => {
-        await token.approve(spender, 0, { from: owner });
-      });
-
-      it('decreases the requested amount', async function () {
-        await token.decreaseApproval(spender, amount, { from: owner });
-
-        const allowance = await token.allowance(owner, spender);
-        assert.equal(allowance, 0);
-      });
-
-      it('emits an approval event', async function () {
-        const { logs } = await token.decreaseApproval(spender, amount, { from: owner });
-
-        assert.equal(logs.length, 1);
-        assert.equal(logs[0].event, 'Approval');
-        assert.equal(logs[0].args.owner, owner);
-        assert.equal(logs[0].args.spender, spender);
-        assert(logs[0].args.value.eq(0));
+      it('should fail', async function () {
+        expect(
+          await chain.isEthException(token.decreaseAllowance(ZERO_ADDRESS, transferAmount, { from: owner }))
+        ).to.be.true;
       });
     });
   });
@@ -384,7 +352,7 @@ contract('UFragments:ERC20', function (accounts) {
 
       describe('when the sender has enough balance', function () {
         it('emits an approval event', async function () {
-          const { logs } = await token.increaseApproval(spender, amount, { from: owner });
+          const { logs } = await token.increaseAllowance(spender, amount, { from: owner });
 
           assert.equal(logs.length, 1);
           assert.equal(logs[0].event, 'Approval');
@@ -395,7 +363,7 @@ contract('UFragments:ERC20', function (accounts) {
 
         describe('when there was no approved amount before', function () {
           it('approves the requested amount', async function () {
-            await token.increaseApproval(spender, amount, { from: owner });
+            await token.increaseAllowance(spender, amount, { from: owner });
             const allowance = await token.allowance(owner, spender);
             assert.equal(allowance.toNumber(), amount);
           });
@@ -407,7 +375,7 @@ contract('UFragments:ERC20', function (accounts) {
           });
 
           it('increases the spender allowance adding the requested amount', async function () {
-            await token.increaseApproval(spender, amount, { from: owner });
+            await token.increaseAllowance(spender, amount, { from: owner });
 
             const allowance = await token.allowance(owner, spender);
             assert.equal(allowance, amount + 1);
@@ -419,7 +387,7 @@ contract('UFragments:ERC20', function (accounts) {
         const amount = erroneousAmount;
 
         it('emits an approval event', async function () {
-          const { logs } = await token.increaseApproval(spender, amount, { from: owner });
+          const { logs } = await token.increaseAllowance(spender, amount, { from: owner });
 
           assert.equal(logs.length, 1);
           assert.equal(logs[0].event, 'Approval');
@@ -430,7 +398,7 @@ contract('UFragments:ERC20', function (accounts) {
 
         describe('when there was no approved amount before', function () {
           it('approves the requested amount', async function () {
-            await token.increaseApproval(spender, amount, { from: owner });
+            await token.increaseAllowance(spender, amount, { from: owner });
 
             const allowance = await token.allowance(owner, spender);
             assert.equal(allowance.toNumber(), amount);
@@ -443,7 +411,7 @@ contract('UFragments:ERC20', function (accounts) {
           });
 
           it('increases the spender allowance adding the requested amount', async function () {
-            await token.increaseApproval(spender, amount, { from: owner });
+            await token.increaseAllowance(spender, amount, { from: owner });
 
             const allowance = await token.allowance(owner, spender);
             assert.equal(allowance, amount + 1);
@@ -453,27 +421,10 @@ contract('UFragments:ERC20', function (accounts) {
     });
 
     describe('when the spender is the zero address', function () {
-      const spender = ZERO_ADDRESS;
-
-      beforeEach(async () => {
-        await token.approve(spender, 0, { from: owner });
-      });
-
-      it('approves the requested amount', async function () {
-        await token.increaseApproval(spender, amount, { from: owner });
-
-        const allowance = await token.allowance(owner, spender);
-        assert.equal(allowance, amount);
-      });
-
-      it('emits an approval event', async function () {
-        const { logs } = await token.increaseApproval(spender, amount, { from: owner });
-
-        assert.equal(logs.length, 1);
-        assert.equal(logs[0].event, 'Approval');
-        assert.equal(logs[0].args.owner, owner);
-        assert.equal(logs[0].args.spender, spender);
-        assert(logs[0].args.value.eq(amount));
+      it('should fail', async function () {
+        expect(
+          await chain.isEthException(token.increaseAllowance(ZERO_ADDRESS, amount, { from: owner }))
+        ).to.be.true;
       });
     });
   });
