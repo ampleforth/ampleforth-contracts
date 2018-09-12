@@ -15,14 +15,14 @@ import "./lib/SafeMathInt.sol";
  *      uFragment balances are internally represented with a hidden denomination, 'gons'. We support
  *      splitting the currency in expansion and combining the currency on contraction by changing
  *      the exchange rate between the hidden 'gons' and the public 'ufragments'. This exchange rate
- *      is determined by the internal properties 'GONS' and 'totalSupply_'.
+ *      is determined by the internal properties 'GONS' and '_totalSupply'.
  */
 contract UFragments is DetailedERC20, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
     // Anytime there is division, there is a risk of numerical instability from rounding errors. In
     // order to minimize this risk, we adhere to the following guidelines:
     // 1) The conversion rate adopted is the number of gons that equals 1 fragment. The inverse
-    //    rate must not be used--GONS is always the numerator and totalSupply_ is always the
+    //    rate must not be used--GONS is always the numerator and _totalSupply is always the
     //    denominator. (i.e. If you want to convert gons to fragments instead of multiplying by the
     //    inverse rate, you should divide by the normal rate)
     // 2) Gon balances converted into fragments are always rounded down (truncated).
@@ -49,24 +49,24 @@ contract UFragments is DetailedERC20, Ownable {
     event LogTokenPaused(bool paused);
 
     // Used for basic authz.
-    address public monetaryPolicy;
+    address public _monetaryPolicy;
 
     modifier onlyMonetaryPolicy() {
-        require(msg.sender == monetaryPolicy);
+        require(msg.sender == _monetaryPolicy);
         _;
     }
 
     // Emergency controls to bridge until system stability
-    bool public rebasePaused;
-    bool public tokenPaused;
+    bool public _rebasePaused;
+    bool public _tokenPaused;
 
     modifier whenRebaseNotPaused() {
-        require(!rebasePaused);
+        require(!_rebasePaused);
         _;
     }
 
     modifier whenTokenNotPaused() {
-        require(!tokenPaused);
+        require(!_tokenPaused);
         _;
     }
 
@@ -76,23 +76,23 @@ contract UFragments is DetailedERC20, Ownable {
         _;
     }
 
-    mapping(address => uint256) private gonBalances;
+    mapping(address => uint256) private _gonBalances;
 
     // Use max uint256 to get highest granularity
     uint256 private constant GONS = ~uint256(0);
-    uint256 private totalSupply_;
-    uint256 private gonsPerFragment;
+    uint256 private _totalSupply;
+    uint256 private _gonsPerFragment;
 
     // This is denominated in uFragments, because the gons-fragments conversion might change before
     // it's fully paid.
-    mapping (address => mapping (address => uint256)) private allowedFragments;
+    mapping (address => mapping (address => uint256)) private _allowedFragments;
 
     /**
-     * @param monetaryPolicy_ The address of the monetary policy contract to use for authz.
+     * @param monetaryPolicy The address of the monetary policy contract to use for authz.
      */
-    function setMonetaryPolicy(address monetaryPolicy_) external onlyOwner {
-        require(monetaryPolicy == address(0x0));
-        monetaryPolicy = monetaryPolicy_;
+    function setMonetaryPolicy(address monetaryPolicy) external onlyOwner {
+        require(_monetaryPolicy == address(0x0));
+        _monetaryPolicy = monetaryPolicy;
     }
 
     /**
@@ -100,7 +100,7 @@ contract UFragments is DetailedERC20, Ownable {
      * @param paused Pauses rebase operations if this is true.
      */
     function setRebasePaused(bool paused) external onlyOwner {
-        rebasePaused = paused;
+        _rebasePaused = paused;
         emit LogRebasePaused(paused);
     }
 
@@ -109,7 +109,7 @@ contract UFragments is DetailedERC20, Ownable {
      * @param paused Pauses ERC-20 transactions if this is true.
      */
     function setTokenPaused(bool paused) external onlyOwner {
-        tokenPaused = paused;
+        _tokenPaused = paused;
         emit LogTokenPaused(paused);
     }
 
@@ -119,33 +119,33 @@ contract UFragments is DetailedERC20, Ownable {
      */
     function rebase(uint256 epoch, int256 supplyDelta) external onlyMonetaryPolicy whenRebaseNotPaused {
         if (supplyDelta < 0) {
-            totalSupply_ = totalSupply_.sub(supplyDelta.abs().toUInt256Safe());
+            _totalSupply = _totalSupply.sub(supplyDelta.abs().toUInt256Safe());
         } else {
-            totalSupply_ = totalSupply_.add(uint256(supplyDelta));
+            _totalSupply = _totalSupply.add(uint256(supplyDelta));
         }
-        gonsPerFragment = GONS.div(totalSupply_);
-        emit LogRebase(epoch, totalSupply_);
+        _gonsPerFragment = GONS.div(_totalSupply);
+        emit LogRebase(epoch, _totalSupply);
     }
 
     function initialize(address owner) public isInitializer("UFragments", "0") {
         DetailedERC20.initialize("UFragments", "UFRG", 2);
         Ownable.initialize(owner);
 
-        rebasePaused = false;
-        tokenPaused = false;
+        _rebasePaused = false;
+        _tokenPaused = false;
 
-        totalSupply_ = 50000000;  // 50M
-        gonBalances[owner] = GONS;
-        gonsPerFragment = GONS.div(totalSupply_);
+        _totalSupply = 50000000;  // 50M
+        _gonBalances[owner] = GONS;
+        _gonsPerFragment = GONS.div(_totalSupply);
 
-        emit Transfer(address(0x0), owner, totalSupply_);
+        emit Transfer(address(0x0), owner, _totalSupply);
     }
 
     /**
      * @return The total number of fragments.
      */
     function totalSupply() public view returns (uint256) {
-        return totalSupply_;
+        return _totalSupply;
     }
 
     /**
@@ -153,7 +153,7 @@ contract UFragments is DetailedERC20, Ownable {
      * @return The balance of the specified address.
      */
     function balanceOf(address who) public view returns (uint256) {
-        return gonBalances[who].div(gonsPerFragment);
+        return _gonBalances[who].div(_gonsPerFragment);
     }
 
     /**
@@ -174,7 +174,7 @@ contract UFragments is DetailedERC20, Ownable {
      * @return The number of tokens still available for the spender.
      */
     function allowance(address owner, address spender) public view returns (uint256) {
-        return allowedFragments[owner][spender];
+        return _allowedFragments[owner][spender];
     }
 
     /**
@@ -184,8 +184,9 @@ contract UFragments is DetailedERC20, Ownable {
      * @param value The amount of tokens to be transferred.
      */
     function transferFrom(address from, address to, uint256 value) public whenTokenNotPaused returns (bool) {
-        require(value <= allowedFragments[from][msg.sender]);
-        allowedFragments[from][msg.sender] = allowedFragments[from][msg.sender].sub(value);
+        require(value <= _allowedFragments[from][msg.sender]);
+
+        _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value);
         transferHelper(from, to, value);
         return true;
     }
@@ -203,7 +204,7 @@ contract UFragments is DetailedERC20, Ownable {
     function approve(address spender, uint256 value) public whenTokenNotPaused returns (bool) {
         require(spender != address(0x0));
 
-        allowedFragments[msg.sender][spender] = value;
+        _allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;
     }
@@ -221,8 +222,8 @@ contract UFragments is DetailedERC20, Ownable {
     function increaseAllowance(address spender, uint256 addedValue) public whenTokenNotPaused returns (bool) {
         require(spender != address(0x0));
 
-        allowedFragments[msg.sender][spender] = allowedFragments[msg.sender][spender].add(addedValue);
-        emit Approval(msg.sender, spender, allowedFragments[msg.sender][spender]);
+        _allowedFragments[msg.sender][spender] = _allowedFragments[msg.sender][spender].add(addedValue);
+        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
         return true;
     }
 
@@ -239,13 +240,13 @@ contract UFragments is DetailedERC20, Ownable {
     function decreaseAllowance(address spender, uint256 subtractedValue) public whenTokenNotPaused returns (bool) {
         require(spender != address(0x0));
 
-        uint256 oldValue = allowedFragments[msg.sender][spender];
+        uint256 oldValue = _allowedFragments[msg.sender][spender];
         if (subtractedValue >= oldValue) {
-            allowedFragments[msg.sender][spender] = 0;
+            _allowedFragments[msg.sender][spender] = 0;
         } else {
-            allowedFragments[msg.sender][spender] = oldValue.sub(subtractedValue);
+            _allowedFragments[msg.sender][spender] = oldValue.sub(subtractedValue);
         }
-        emit Approval(msg.sender, spender, allowedFragments[msg.sender][spender]);
+        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
         return true;
     }
 
@@ -254,18 +255,18 @@ contract UFragments is DetailedERC20, Ownable {
      * the expectations when denominated in fragments.
      */
     function transferHelper(address from, address to, uint256 value) private validRecipient(to) {
-        uint256 senderMod = gonBalances[from] % gonsPerFragment;
-        uint256 receiverMod = gonBalances[to] % gonsPerFragment;
-        uint256 baseAmt = value.mul(gonsPerFragment);
+        uint256 senderMod = _gonBalances[from] % _gonsPerFragment;
+        uint256 receiverMod = _gonBalances[to] % _gonsPerFragment;
+        uint256 baseAmt = value.mul(_gonsPerFragment);
 
-        uint256 senderGonMinAmt = baseAmt.sub(gonsPerFragment.sub(senderMod).sub(1));
+        uint256 senderGonMinAmt = baseAmt.sub(_gonsPerFragment.sub(senderMod).sub(1));
         uint256 receiverGonMinAmt = baseAmt.sub(receiverMod);
 
         // Choose the max of the minimum viable transfer amounts on each side.
         uint256 gonValue = (senderGonMinAmt >= receiverGonMinAmt) ? senderGonMinAmt : receiverGonMinAmt;
 
-        gonBalances[from] = gonBalances[from].sub(gonValue);
-        gonBalances[to] = gonBalances[to].add(gonValue);
+        _gonBalances[from] = _gonBalances[from].sub(gonValue);
+        _gonBalances[to] = _gonBalances[to].add(gonValue);
         emit Transfer(from, to, value);
     }
 }
