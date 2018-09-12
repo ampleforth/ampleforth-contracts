@@ -19,8 +19,13 @@ run-unit-tests(){
 run-simulation-tests(){
   npx truffle \
     --network $1 \
-    test \
-    test/simulation/*.js
+    exec \
+    test/simulation/supply_precision.js
+
+  npx truffle \
+    --network $1 \
+    exec \
+    test/simulation/transfer_precision.js
 }
 
 run-all-tests(){
@@ -47,13 +52,14 @@ run-all-tests(){
   trap cleanup EXIT
 }
 
+npx truffle compile --reset
+
 run-all-tests "ganacheUnitTest"
 
 if [ "${TRAVIS_EVENT_TYPE}" == "cron" ]
 then
   run-simulation-tests "ganacheUnitTest"
   run-all-tests "gethUnitTest"
-  run-simulation-tests "gethUnitTest"
 fi
 
 exit 0
