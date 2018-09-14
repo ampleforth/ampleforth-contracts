@@ -54,13 +54,12 @@ contract UFragmentsPolicy is Ownable {
 
     // We cap the rate to avoid overflows in computations.
     // 18 decimal fixed point format
-    // MAX_RATE = 100 * 10**18
-    uint256 private constant MAX_RATE = 100000000000000000000;
+    uint256 private constant MAX_RATE = 100 * 10**18;
 
     // We cap the supply to avoid overflows in computations.
     // Due to the signed math in rebase(), MAX_RATE x MAX_SUPPLY must fit into an int256.
-    // MAX_SUPPLY = UInt256Lib.getMaxInt256() / MAX_RATE
-    uint256 private constant MAX_SUPPLY = 578960446186580977117854925043439539266349923328202820197;
+    // MAX_SUPPLY = MAX_INT256 / MAX_RATE
+    uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
 
     /**
      * @notice Anyone may call this function to initiate a new rebase operation, provided the
