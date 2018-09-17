@@ -27,7 +27,12 @@ contract UFragmentsPolicy is Ownable {
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
 
-    event LogRebase(uint256 indexed epoch, uint256 exchangeRate, uint256 volume24hrs, int256 appliedSupplyAdjustment);
+    event LogRebase(
+        uint256 indexed epoch,
+        uint256 exchangeRate,
+        uint256 volume24hrs,
+        int256 appliedSupplyAdjustment
+    );
 
     UFragments private _uFrags;
     IMarketOracle private _marketOracle;
@@ -94,7 +99,10 @@ contract UFragmentsPolicy is Ownable {
      *         oracle is within this threshold, then no supply modifications are made.
      * @param deviationThreshold The new exchange rate threshold.
      */
-    function setDeviationThreshold(uint128 deviationThreshold) external onlyOwner {
+    function setDeviationThreshold(uint128 deviationThreshold)
+        external
+        onlyOwner
+    {
         _deviationThreshold = deviationThreshold;
     }
 
@@ -102,7 +110,10 @@ contract UFragmentsPolicy is Ownable {
      * @notice Allows setting the minimum time period that must elapse between rebase cycles.
      * @param minRebaseTimeIntervalSec The new minimum time interval, in seconds.
      */
-    function setMinRebaseTimeIntervalSec(uint128 minRebaseTimeIntervalSec) external onlyOwner {
+    function setMinRebaseTimeIntervalSec(uint128 minRebaseTimeIntervalSec)
+        external
+        onlyOwner
+    {
         _minRebaseTimeIntervalSec = minRebaseTimeIntervalSec;
     }
 
@@ -114,7 +125,10 @@ contract UFragmentsPolicy is Ownable {
      *         we would have approached an absolute supply correction.
      * @param rebaseLag The new lag period for rebasing.
      */
-    function setRebaseLag(uint32 rebaseLag) external onlyOwner {
+    function setRebaseLag(uint32 rebaseLag)
+        external
+        onlyOwner
+    {
         require(rebaseLag > 0);
         _rebaseLag = rebaseLag;
     }
@@ -143,7 +157,11 @@ contract UFragmentsPolicy is Ownable {
      * @return The total supply adjustment that should be made in response to the exchange
      *         rate, as provided by the market oracle.
      */
-    function calcSupplyDelta(uint256 rate) private view returns (int256) {
+    function calcSupplyDelta(uint256 rate)
+        private
+        view
+        returns (int256)
+    {
         if (withinDeviationThreshold(rate)) {
             return 0;
         }
@@ -156,7 +174,11 @@ contract UFragmentsPolicy is Ownable {
      * @return Damps the supply delta value so that only small changes to supply are made.
      *         This is currently set to supplyDelta / _rebaseLag.
      */
-    function calcDampenedSupplyDelta(int256 supplyDelta) private view returns (int256) {
+    function calcDampenedSupplyDelta(int256 supplyDelta)
+        private
+        view
+        returns (int256)
+    {
         return supplyDelta.div(_rebaseLag);
     }
 
@@ -164,7 +186,11 @@ contract UFragmentsPolicy is Ownable {
      * @param rate The current exchange rate, in 18 decimal fixed point format.
      * @return True if the rate is within the deviation threshold and false otherwise.
      */
-    function withinDeviationThreshold(uint256 rate) private view returns (bool) {
+    function withinDeviationThreshold(uint256 rate)
+        private
+        view
+        returns (bool)
+    {
         uint256 target = 10**18;
         return (rate >= target && rate.sub(target) < _deviationThreshold)
             || (rate < target && target.sub(rate) < _deviationThreshold);

@@ -93,7 +93,10 @@ contract UFragments is DetailedERC20, Ownable {
     /**
      * @param monetaryPolicy The address of the monetary policy contract to use for authz.
      */
-    function setMonetaryPolicy(address monetaryPolicy) external onlyOwner {
+    function setMonetaryPolicy(address monetaryPolicy)
+        external
+        onlyOwner
+    {
         require(_monetaryPolicy == address(0x0));
         _monetaryPolicy = monetaryPolicy;
     }
@@ -102,7 +105,10 @@ contract UFragments is DetailedERC20, Ownable {
      * @dev Pauses or unpauses the execution of rebase operations.
      * @param paused Pauses rebase operations if this is true.
      */
-    function setRebasePaused(bool paused) external onlyOwner {
+    function setRebasePaused(bool paused)
+        external
+        onlyOwner
+    {
         _rebasePaused = paused;
         emit LogRebasePaused(paused);
     }
@@ -111,7 +117,10 @@ contract UFragments is DetailedERC20, Ownable {
      * @dev Pauses or unpauses execution of ERC-20 transactions.
      * @param paused Pauses ERC-20 transactions if this is true.
      */
-    function setTokenPaused(bool paused) external onlyOwner {
+    function setTokenPaused(bool paused)
+        external
+        onlyOwner
+    {
         _tokenPaused = paused;
         emit LogTokenPaused(paused);
     }
@@ -120,7 +129,11 @@ contract UFragments is DetailedERC20, Ownable {
      * @dev Notifies Fragments contract about a new rebase cycle.
      * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
      */
-    function rebase(uint256 epoch, int256 supplyDelta) external onlyMonetaryPolicy whenRebaseNotPaused {
+    function rebase(uint256 epoch, int256 supplyDelta)
+        external
+        onlyMonetaryPolicy
+        whenRebaseNotPaused
+    {
         if (supplyDelta < 0) {
             _totalSupply = _totalSupply.sub(supplyDelta.abs().toUInt256Safe());
         } else {
@@ -146,7 +159,10 @@ contract UFragments is DetailedERC20, Ownable {
         emit LogRebase(epoch, _totalSupply);
     }
 
-    function initialize(address owner) public isInitializer("UFragments", "0") {
+    function initialize(address owner)
+        public
+        isInitializer("UFragments", "0")
+    {
         DetailedERC20.initialize("UFragments", "UFRG", uint8(DECIMAL_POINTS));
         Ownable.initialize(owner);
 
@@ -171,7 +187,11 @@ contract UFragments is DetailedERC20, Ownable {
     /**
      * @return The total number of fragments.
      */
-    function totalSupply() public view returns (uint256) {
+    function totalSupply()
+        public
+        view
+        returns (uint256)
+    {
         return _totalSupply;
     }
 
@@ -179,7 +199,11 @@ contract UFragments is DetailedERC20, Ownable {
      * @param who The address to query.
      * @return The balance of the specified address.
      */
-    function balanceOf(address who) public view returns (uint256) {
+    function balanceOf(address who)
+        public
+        view
+        returns (uint256)
+    {
         return _gonBalances[who].div(_gonsPerFragment);
     }
 
@@ -208,7 +232,11 @@ contract UFragments is DetailedERC20, Ownable {
      * @param spender The address which will spend the funds.
      * @return The number of tokens still available for the spender.
      */
-    function allowance(address owner, address spender) public view returns (uint256) {
+    function allowance(address owner, address spender)
+        public
+        view
+        returns (uint256)
+    {
         return _allowedFragments[owner][spender];
     }
 
@@ -245,7 +273,11 @@ contract UFragments is DetailedERC20, Ownable {
      * @param spender The address which will spend the funds.
      * @param value The amount of tokens to be spent.
      */
-    function approve(address spender, uint256 value) public whenTokenNotPaused returns (bool) {
+    function approve(address spender, uint256 value)
+        public
+        whenTokenNotPaused
+        returns (bool)
+    {
         require(spender != address(0x0));
 
         _allowedFragments[msg.sender][spender] = value;
@@ -263,7 +295,11 @@ contract UFragments is DetailedERC20, Ownable {
      * @param spender The address which will spend the funds.
      * @param addedValue The amount of tokens to increase the allowance by.
      */
-    function increaseAllowance(address spender, uint256 addedValue) public whenTokenNotPaused returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue)
+        public
+        whenTokenNotPaused
+        returns (bool)
+    {
         require(spender != address(0x0));
 
         _allowedFragments[msg.sender][spender] = _allowedFragments[msg.sender][spender].add(addedValue);
@@ -281,7 +317,11 @@ contract UFragments is DetailedERC20, Ownable {
      * @param spender The address which will spend the funds.
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public whenTokenNotPaused returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue)
+        public
+        whenTokenNotPaused
+        returns (bool)
+    {
         require(spender != address(0x0));
 
         uint256 oldValue = _allowedFragments[msg.sender][spender];
