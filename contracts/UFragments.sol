@@ -6,6 +6,7 @@ import "openzeppelin-zos/contracts/token/ERC20/DetailedERC20.sol";
 
 import "./lib/SafeMathInt.sol";
 
+
 /**
  * @title uFragments ERC20 token
  * @dev This is an implementation of the uFragments Ideal Money protocol @ https://fragments.org/protocol

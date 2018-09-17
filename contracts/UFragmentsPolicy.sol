@@ -125,8 +125,9 @@ contract UFragmentsPolicy is Ownable {
      *      are set with initial values.
      */
     function initialize(address owner, UFragments uFrags, IMarketOracle marketOracle)
-        public isInitializer("UFragmentsPolicy", "0") {
-
+        public
+        isInitializer("UFragmentsPolicy", "0")
+    {
         Ownable.initialize(owner);
 
         _minRebaseTimeIntervalSec = 1 days;
