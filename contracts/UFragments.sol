@@ -80,7 +80,7 @@ contract UFragments is DetailedERC20, Ownable {
 
     uint256 private constant DECIMAL_POINTS = 2;
     uint256 private constant MAX_UINT256 = ~uint256(0);
-    uint256 private constant MAX_SUPPLY = ~uint128(0) - 1;
+    uint256 private constant MAX_SUPPLY = ~uint128(0);
     uint256 private _totalGons;
     uint256 private _totalSupply;
     uint256 private _gonsPerFragment;
