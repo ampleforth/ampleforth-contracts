@@ -131,7 +131,7 @@ contract UFragments is DetailedERC20, Ownable {
             _totalSupply = MAX_SUPPLY.sub(1);
         }
 
-        // _gonsPerFragment is considered an exact value. such that
+        // _gonsPerFragment is considered an exact value, such that
         // _gonsPerFragment can convert bidirectionally with no rounding errors.
         // If there is a remainder to this division, the precision loss is
         // assumed to be in _totalSupply and it can be up to
@@ -189,7 +189,8 @@ contract UFragments is DetailedERC20, Ownable {
      * @param value The amount to be transferred.
      * @return True on success, false otherwise.
      */
-    function transfer(address to, uint256 value) public
+    function transfer(address to, uint256 value)
+        public
         validRecipient(to)
         whenTokenNotPaused
         returns (bool)
@@ -217,7 +218,8 @@ contract UFragments is DetailedERC20, Ownable {
      * @param to The address you want to transfer to.
      * @param value The amount of tokens to be transferred.
      */
-    function transferFrom(address from, address to, uint256 value) public
+    function transferFrom(address from, address to, uint256 value)
+        public
         validRecipient(to)
         whenTokenNotPaused
         returns (bool)
@@ -245,6 +247,7 @@ contract UFragments is DetailedERC20, Ownable {
      */
     function approve(address spender, uint256 value) public whenTokenNotPaused returns (bool) {
         require(spender != address(0x0));
+
         _allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;
