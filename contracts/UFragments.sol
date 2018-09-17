@@ -15,14 +15,14 @@ import "./lib/SafeMathInt.sol";
  *      uFragment balances are internally represented with a hidden denomination, 'gons'. We support
  *      splitting the currency in expansion and combining the currency on contraction by changing
  *      the exchange rate between the hidden 'gons' and the public 'ufragments'. This exchange rate
- *      is determined by the internal properties 'GONS' and '_totalSupply'.
+ *      is determined by the internal properties '_totalGons' and '_totalSupply'.
  */
 contract UFragments is DetailedERC20, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
     // Anytime there is division, there is a risk of numerical instability from rounding errors. In
     // order to minimize this risk, we adhere to the following guidelines:
     // 1) The conversion rate adopted is the number of gons that equals 1 fragment. The inverse
-    //    rate must not be used--GONS is always the numerator and _totalSupply is always the
+    //    rate must not be used--_totalGons is always the numerator and _totalSupply is always the
     //    denominator. (i.e. If you want to convert gons to fragments instead of multiplying by the
     //    inverse rate, you should divide by the normal rate)
     // 2) Gon balances converted into fragments are always rounded down (truncated).
@@ -78,8 +78,10 @@ contract UFragments is DetailedERC20, Ownable {
 
     mapping(address => uint256) private _gonBalances;
 
-    // Use max uint256 to get highest granularity
-    uint256 private constant GONS = ~uint256(0);
+    uint8 private constant DECIMAL_POINTS = 2;
+    uint256 private constant MAX_UINT256 = ~uint256(0);
+    uint256 private constant MAX_SUPPLY = ~uint128(0);
+    uint256 private _totalGons;
     uint256 private _totalSupply;
     uint256 private _gonsPerFragment;
 
@@ -123,20 +125,45 @@ contract UFragments is DetailedERC20, Ownable {
         } else {
             _totalSupply = _totalSupply.add(uint256(supplyDelta));
         }
-        _gonsPerFragment = GONS.div(_totalSupply);
+
+        // Cap the supply to MAX_UINT128
+        if (_totalSupply >= MAX_SUPPLY) {
+            _totalSupply = MAX_SUPPLY.sub(1);
+        }
+
+        // _gonsPerFragment is considered an exact value, such that
+        // _gonsPerFragment can convert bidirectionally with no rounding errors.
+        // If there is a remainder to this division, the precision loss is
+        // assumed to be in _totalSupply and it can be up to
+        // (_totalSupply^2)/(_totalGons - _totalSupply)
+        _gonsPerFragment = _totalGons.div(_totalSupply);
+
+        // If supply is >= MAX_UINT128 - not possible due to MAX_SUPPLY cap -
+        // The assumed error in _totalSupply can be >= 1, and in that case
+        // _totalSupply needs to be adjusted to the nearest smaller integer as
+        // _totalSupply = _totalGons.div(_gonsPerFragment)
+        // to minimize precision loss.
         emit LogRebase(epoch, _totalSupply);
     }
 
     function initialize(address owner) public isInitializer("UFragments", "0") {
-        DetailedERC20.initialize("UFragments", "UFRG", 2);
+        DetailedERC20.initialize("UFragments", "UFRG", DECIMAL_POINTS);
         Ownable.initialize(owner);
 
         _rebasePaused = false;
         _tokenPaused = false;
 
-        _totalSupply = 50000000;  // 50M
-        _gonBalances[owner] = GONS;
-        _gonsPerFragment = GONS.div(_totalSupply);
+        // TODO(naguib): Correct this value to 50 * 10**6 * 10**2 and fix tests
+        // accordingly
+        _totalSupply = 50 * 10**6; // * 10**2;  // 50M
+
+        // Set _totalGons to a multiple of totalSupply so _gonsPerFragment can be
+        // computed exactly.
+        // For highest granularity, set it to the greatest multiple of
+        // _totalSupply that fits in a uint256
+        _totalGons = MAX_UINT256.sub(MAX_UINT256 % _totalSupply);
+        _gonBalances[owner] = _totalGons;
+        _gonsPerFragment = _totalGons.div(_totalSupply);
 
         emit Transfer(address(0x0), owner, _totalSupply);
     }
@@ -162,8 +189,16 @@ contract UFragments is DetailedERC20, Ownable {
      * @param value The amount to be transferred.
      * @return True on success, false otherwise.
      */
-    function transfer(address to, uint256 value) public whenTokenNotPaused returns (bool) {
-        transferHelper(msg.sender, to, value);
+    function transfer(address to, uint256 value)
+        public
+        validRecipient(to)
+        whenTokenNotPaused
+        returns (bool)
+    {
+        uint256 gonValue = value.mul(_gonsPerFragment);
+        _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
+        _gonBalances[to] = _gonBalances[to].add(gonValue);
+        emit Transfer(msg.sender, to, value);
         return true;
     }
 
@@ -183,11 +218,20 @@ contract UFragments is DetailedERC20, Ownable {
      * @param to The address you want to transfer to.
      * @param value The amount of tokens to be transferred.
      */
-    function transferFrom(address from, address to, uint256 value) public whenTokenNotPaused returns (bool) {
+    function transferFrom(address from, address to, uint256 value)
+        public
+        validRecipient(to)
+        whenTokenNotPaused
+        returns (bool)
+    {
         require(value <= _allowedFragments[from][msg.sender]);
-
         _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value);
-        transferHelper(from, to, value);
+
+        uint256 gonValue = value.mul(_gonsPerFragment);
+        _gonBalances[from] = _gonBalances[from].sub(gonValue);
+        _gonBalances[to] = _gonBalances[to].add(gonValue);
+        emit Transfer(from, to, value);
+
         return true;
     }
 
@@ -248,25 +292,5 @@ contract UFragments is DetailedERC20, Ownable {
         }
         emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
         return true;
-    }
-
-    /**
-     * @dev Transfers a number of gons between from and to, such that the resulting balances match
-     * the expectations when denominated in fragments.
-     */
-    function transferHelper(address from, address to, uint256 value) private validRecipient(to) {
-        uint256 senderMod = _gonBalances[from] % _gonsPerFragment;
-        uint256 receiverMod = _gonBalances[to] % _gonsPerFragment;
-        uint256 baseAmt = value.mul(_gonsPerFragment);
-
-        uint256 senderGonMinAmt = baseAmt.sub(_gonsPerFragment.sub(senderMod).sub(1));
-        uint256 receiverGonMinAmt = baseAmt.sub(receiverMod);
-
-        // Choose the max of the minimum viable transfer amounts on each side.
-        uint256 gonValue = (senderGonMinAmt >= receiverGonMinAmt) ? senderGonMinAmt : receiverGonMinAmt;
-
-        _gonBalances[from] = _gonBalances[from].sub(gonValue);
-        _gonBalances[to] = _gonBalances[to].add(gonValue);
-        emit Transfer(from, to, value);
     }
 }
