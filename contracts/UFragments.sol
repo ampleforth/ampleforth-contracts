@@ -78,7 +78,9 @@ contract UFragments is DetailedERC20, Ownable {
 
     mapping(address => uint256) private _gonBalances;
 
+    uint8 private constant DECIMAL_POINTS = 2;
     uint256 private constant MAX_UINT256 = ~uint256(0);
+    uint256 private constant MAX_SUPPLY = ~uint128(0);
     uint256 private _totalGons;
     uint256 private _totalSupply;
     uint256 private _gonsPerFragment;
@@ -115,36 +117,45 @@ contract UFragments is DetailedERC20, Ownable {
 
     /**
      * @dev Notifies Fragments contract about a new rebase cycle.
-     *      The applied delta might be more than the requested delta;
-     *      When the requested supply < MAX_UINT128, the applied supply is equal
-     *      the requested supply. When the requested supply is greater, the
-     *      applied supply can be more than the requested by at most
-     *      (RequestedSupply^2)/(_totalGons - RequestedSupply).
      * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
      */
     function rebase(uint256 epoch, int256 supplyDelta) external onlyMonetaryPolicy whenRebaseNotPaused {
-        uint256 totalRequestedSupply;
         if (supplyDelta < 0) {
-            totalRequestedSupply = _totalSupply.sub(supplyDelta.abs().toUInt256Safe());
+            _totalSupply = _totalSupply.sub(supplyDelta.abs().toUInt256Safe());
         } else {
-            totalRequestedSupply = _totalSupply.add(uint256(supplyDelta));
+            _totalSupply = _totalSupply.add(uint256(supplyDelta));
         }
-        _gonsPerFragment = _totalGons.div(totalRequestedSupply);
 
-        // Compute the _totalSupply closest to the requested, such that
+        // Cap the supply to MAX_UINT128
+        if (_totalSupply >= MAX_SUPPLY) {
+            _totalSupply = MAX_SUPPLY.sub(1);
+        }
+
+        // _gonsPerFragment is considered an exact value. such that
         // _gonsPerFragment can convert bidirectionally with no rounding errors.
-        _totalSupply = _totalGons.div(_gonsPerFragment);
+        // If there is a remainder to this division, the precision loss is
+        // assumed to be in _totalSupply and it can be up to
+        // (_totalSupply^2)/(_totalGons - _totalSupply)
+        _gonsPerFragment = _totalGons.div(_totalSupply);
+
+        // If supply is >= MAX_UINT128 - not possible due to MAX_SUPPLY cap -
+        // The assumed error in _totalSupply can be >= 1, and in that case
+        // _totalSupply needs to be adjusted to the nearest smaller integer as
+        // _totalSupply = _totalGons.div(_gonsPerFragment)
+        // to minimize precision loss.
         emit LogRebase(epoch, _totalSupply);
     }
 
     function initialize(address owner) public isInitializer("UFragments", "0") {
-        DetailedERC20.initialize("UFragments", "UFRG", 2);
+        DetailedERC20.initialize("UFragments", "UFRG", DECIMAL_POINTS);
         Ownable.initialize(owner);
 
         _rebasePaused = false;
         _tokenPaused = false;
 
-        _totalSupply = 50000000;  // 50M
+        // TODO(naguib): Correct this value to 50 * 10**6 * 10**2 and fix tests
+        // accordingly
+        _totalSupply = 50 * 10**6; // * 10**2;  // 50M
 
         // Set _totalGons to a multiple of totalSupply so _gonsPerFragment can be
         // computed exactly.
@@ -153,6 +164,8 @@ contract UFragments is DetailedERC20, Ownable {
         _totalGons = MAX_UINT256.sub(MAX_UINT256 % _totalSupply);
         _gonBalances[owner] = _totalGons;
         _gonsPerFragment = _totalGons.div(_totalSupply);
+
+        emit Transfer(address(0x0), owner, _totalSupply);
     }
 
     /**
