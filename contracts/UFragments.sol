@@ -78,9 +78,9 @@ contract UFragments is DetailedERC20, Ownable {
 
     mapping(address => uint256) private _gonBalances;
 
-    uint8 private constant DECIMAL_POINTS = 2;
+    uint256 private constant DECIMAL_POINTS = 2;
     uint256 private constant MAX_UINT256 = ~uint256(0);
-    uint256 private constant MAX_SUPPLY = ~uint128(0);
+    uint256 private constant MAX_SUPPLY = ~uint128(0) - 1;
     uint256 private _totalGons;
     uint256 private _totalSupply;
     uint256 private _gonsPerFragment;
@@ -126,28 +126,27 @@ contract UFragments is DetailedERC20, Ownable {
             _totalSupply = _totalSupply.add(uint256(supplyDelta));
         }
 
-        // Cap the supply to MAX_UINT128
-        if (_totalSupply >= MAX_SUPPLY) {
-            _totalSupply = MAX_SUPPLY.sub(1);
+        if (_totalSupply > MAX_SUPPLY) {
+            _totalSupply = MAX_SUPPLY;
         }
 
-        // _gonsPerFragment is considered an exact value, such that
-        // _gonsPerFragment can convert bidirectionally with no rounding errors.
-        // If there is a remainder to this division, the precision loss is
-        // assumed to be in _totalSupply and it can be up to
-        // (_totalSupply^2)/(_totalGons - _totalSupply)
         _gonsPerFragment = _totalGons.div(_totalSupply);
+        // From this point forward, _gonsPerFragment is taken as the source of truth.
+        // We recalculate a new _totalSupply to be in agreement with the _gonsPerFragment
+        // conversion rate.
+        // This means our applied supplyDelta can deviate from the requested supplyDelta,
+        // but this deviation is guaranteed to be <= (_totalSupply^2)/(_totalGons - _totalSupply).
 
-        // If supply is >= MAX_UINT128 - not possible due to MAX_SUPPLY cap -
-        // The assumed error in _totalSupply can be >= 1, and in that case
-        // _totalSupply needs to be adjusted to the nearest smaller integer as
+        // In the case of _totalSupply <= MAX_UINT128 (our current supply cap), this
+        // deviation is guaranteed to be < 1, so we can omit this step. If the supply cap is
+        // ever increased, it must be re-included.
         // _totalSupply = _totalGons.div(_gonsPerFragment)
-        // to minimize precision loss.
+
         emit LogRebase(epoch, _totalSupply);
     }
 
     function initialize(address owner) public isInitializer("UFragments", "0") {
-        DetailedERC20.initialize("UFragments", "UFRG", DECIMAL_POINTS);
+        DetailedERC20.initialize("UFragments", "UFRG", uint8(DECIMAL_POINTS));
         Ownable.initialize(owner);
 
         _rebasePaused = false;
