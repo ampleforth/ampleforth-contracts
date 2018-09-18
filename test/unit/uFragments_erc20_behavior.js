@@ -170,17 +170,6 @@ contract('UFragments:ERC20:transferFrom', function (accounts) {
       });
     });
   });
-
-  describe('when the recipient is the zero address', function () {
-    it('should fail', async function () {
-      expect(
-        await chain.isEthException(token.approve(ZERO_ADDRESS, transferAmount, { from: owner }))
-      ).to.be.true;
-      expect(
-        await chain.isEthException(token.transferFrom(owner, ZERO_ADDRESS, transferAmount, { from: anotherAccount }))
-      ).to.be.true;
-    });
-  });
 });
 
 contract('UFragments:ERC20:approve', function (accounts) {
@@ -267,14 +256,6 @@ contract('UFragments:ERC20:approve', function (accounts) {
           r.logs[0].args.value.should.be.bignumber.eq(overdraftAmount);
         });
       });
-    });
-  });
-
-  describe('when the spender is the zero address', function () {
-    it('should fail', async function () {
-      expect(
-        await chain.isEthException(token.approve(ZERO_ADDRESS, transferAmount, { from: owner }))
-      ).to.be.true;
     });
   });
 });
@@ -364,14 +345,6 @@ contract('UFragments:ERC20:increaseAllowance', function (accounts) {
       });
     });
   });
-
-  describe('when the spender is the zero address', function () {
-    it('should fail', async function () {
-      expect(
-        await chain.isEthException(token.increaseAllowance(ZERO_ADDRESS, transferAmount, { from: owner }))
-      ).to.be.true;
-    });
-  });
 });
 
 contract('UFragments:ERC20:decreaseAllowance', function (accounts) {
@@ -457,14 +430,6 @@ contract('UFragments:ERC20:decreaseAllowance', function (accounts) {
           r.logs[0].args.value.should.be.bignumber.eq(unitTokenAmount);
         });
       });
-    });
-  });
-
-  describe('when the spender is the zero address', function () {
-    it('should fail', async function () {
-      expect(
-        await chain.isEthException(token.decreaseAllowance(ZERO_ADDRESS, transferAmount, { from: owner }))
-      ).to.be.true;
     });
   });
 });

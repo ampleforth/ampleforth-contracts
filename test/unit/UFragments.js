@@ -14,6 +14,9 @@ function toUFrgDenomination (x) {
 }
 const DECIMALS = 9;
 const INTIAL_SUPPLY = toUFrgDenomination(50 * 10 ** 6);
+const transferAmount = toUFrgDenomination(10);
+const unitTokenAmount = toUFrgDenomination(1);
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 let uFragments, b, r, deployer, user, initialSupply;
 async function setupContracts () {
@@ -118,11 +121,11 @@ contract('UFragments:PauseRebase', function (accounts) {
   });
 
   it('should allow calling transfer', async function () {
-    await uFragments.transfer(A, toUFrgDenomination(10), { from: deployer });
+    await uFragments.transfer(A, transferAmount, { from: deployer });
   });
 
   it('should allow calling approve', async function () {
-    await uFragments.approve(A, toUFrgDenomination(10), { from: deployer });
+    await uFragments.approve(A, transferAmount, { from: deployer });
   });
 
   it('should allow calling allowance', async function () {
@@ -130,11 +133,11 @@ contract('UFragments:PauseRebase', function (accounts) {
   });
 
   it('should allow calling transferFrom', async function () {
-    await uFragments.transferFrom(deployer, B, toUFrgDenomination(10), {from: A});
+    await uFragments.transferFrom(deployer, B, transferAmount, {from: A});
   });
 
   it('should allow calling increaseAllowance', async function () {
-    await uFragments.increaseAllowance(A, toUFrgDenomination(10), {from: deployer});
+    await uFragments.increaseAllowance(A, transferAmount, {from: deployer});
   });
 
   it('should allow calling decreaseAllowance', async function () {
@@ -190,13 +193,13 @@ contract('UFragments:PauseToken', function (accounts) {
 
   it('should not allow calling transfer', async function () {
     expect(
-      await chain.isEthException(uFragments.transfer(A, toUFrgDenomination(10), { from: deployer }))
+      await chain.isEthException(uFragments.transfer(A, transferAmount, { from: deployer }))
     ).to.be.true;
   });
 
   it('should not allow calling approve', async function () {
     expect(
-      await chain.isEthException(uFragments.approve(A, toUFrgDenomination(10), { from: deployer }))
+      await chain.isEthException(uFragments.approve(A, transferAmount, { from: deployer }))
     ).to.be.true;
   });
 
@@ -206,19 +209,19 @@ contract('UFragments:PauseToken', function (accounts) {
 
   it('should not allow calling transferFrom', async function () {
     expect(
-      await chain.isEthException(uFragments.transferFrom(deployer, B, toUFrgDenomination(10), {from: A}))
+      await chain.isEthException(uFragments.transferFrom(deployer, B, transferAmount, {from: A}))
     ).to.be.true;
   });
 
   it('should not allow calling increaseAllowance', async function () {
     expect(
-      await chain.isEthException(uFragments.increaseAllowance(A, toUFrgDenomination(10), {from: deployer}))
+      await chain.isEthException(uFragments.increaseAllowance(A, transferAmount, {from: deployer}))
     ).to.be.true;
   });
 
   it('should not allow calling decreaseAllowance', async function () {
     expect(
-      await chain.isEthException(uFragments.decreaseAllowance(A, toUFrgDenomination(10), {from: deployer}))
+      await chain.isEthException(uFragments.decreaseAllowance(A, transferAmount, {from: deployer}))
     ).to.be.true;
   });
 
@@ -255,13 +258,13 @@ contract('UFragments:Rebase:accessControl', function (accounts) {
 
   it('should be callable by monetary policy', async function () {
     expect(
-      await chain.isEthException(uFragments.rebase(1, toUFrgDenomination(10), { from: user }))
+      await chain.isEthException(uFragments.rebase(1, transferAmount, { from: user }))
     ).to.be.false;
   });
 
   it('should not be callable by others', async function () {
     expect(
-      await chain.isEthException(uFragments.rebase(1, toUFrgDenomination(10), { from: deployer }))
+      await chain.isEthException(uFragments.rebase(1, transferAmount, { from: deployer }))
     ).to.be.true;
   });
 });
@@ -421,13 +424,34 @@ contract('UFragments:Transfer', function (accounts) {
 
     it('reverts on transfer', async function () {
       expect(
-        await chain.isEthException(uFragments.transfer(uFragments.address, toUFrgDenomination(1), { from: owner }))
+        await chain.isEthException(uFragments.transfer(uFragments.address, unitTokenAmount, { from: owner }))
       ).to.be.true;
     });
 
     it('reverts on transferFrom', async function () {
       expect(
-        await chain.isEthException(uFragments.transferFrom(owner, uFragments.address, toUFrgDenomination(1), { from: owner }))
+        await chain.isEthException(uFragments.transferFrom(owner, uFragments.address, unitTokenAmount, { from: owner }))
+      ).to.be.true;
+    });
+  });
+
+  describe('when the recipient is the zero address', function () {
+    const owner = A;
+
+    before(async function () {
+      r = await uFragments.approve(ZERO_ADDRESS, transferAmount, { from: owner });
+    });
+    it('emits an approval event', async function () {
+      expect(r.logs.length).to.eq(1);
+      expect(r.logs[0].event).to.eq('Approval');
+      expect(r.logs[0].args.owner).to.eq(owner);
+      expect(r.logs[0].args.spender).to.eq(ZERO_ADDRESS);
+      r.logs[0].args.value.should.be.bignumber.eq(transferAmount);
+    });
+
+    it('transferFrom should fail', async function () {
+      expect(
+        await chain.isEthException(uFragments.transferFrom(owner, ZERO_ADDRESS, transferAmount, { from: C }))
       ).to.be.true;
     });
   });
