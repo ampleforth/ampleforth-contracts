@@ -17,7 +17,7 @@ const chain = new BlockchainCaller(web3);
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const BigNumber = web3.BigNumber;
 
-const endSupply = new BigNumber(2).pow(128);
+const endSupply = new BigNumber(2).pow(128).minus(1);
 
 let uFragments, preRebaseSupply, postRebaseSupply;
 preRebaseSupply = new BigNumber(0);
@@ -49,7 +49,7 @@ async function exec () {
     console.log('Doubling supply');
     await uFragments.rebase(2 * i + 1, postRebaseSupply, {from: deployer});
     i++;
-  } while ((await uFragments.totalSupply.call()).lte(endSupply));
+  } while ((await uFragments.totalSupply.call()).lt(endSupply));
 }
 
 module.exports = function (done) {

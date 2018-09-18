@@ -23,7 +23,7 @@ const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const Stochasm = require('stochasm');
 const BigNumber = web3.BigNumber;
 
-const endSupply = new BigNumber(2).pow(255);
+const endSupply = new BigNumber(2).pow(128).minus(1);
 const uFragmentsGrowth = new Stochasm({ min: -0.5, max: 2.5, seed: 'fragments.org' });
 
 let uFragments, rebaseAmt, inflation, preRebaseSupply, postRebaseSupply;
@@ -94,7 +94,7 @@ async function exec () {
     preRebaseSupply = await uFragments.totalSupply.call();
     inflation = uFragmentsGrowth.next().toFixed(5);
     rebaseAmt = preRebaseSupply.mul(inflation).dividedToIntegerBy(1);
-  } while ((await uFragments.totalSupply.call()).plus(rebaseAmt).lte(endSupply));
+  } while ((await uFragments.totalSupply.call()).plus(rebaseAmt).lt(endSupply));
 }
 
 module.exports = function (done) {
