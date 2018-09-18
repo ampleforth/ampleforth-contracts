@@ -8,7 +8,10 @@ contract MockMarketOracle is Mock {
     uint128 private _volume;
 
     // Mock methods
-    function getPriceAnd24HourVolume() external returns (uint128, uint128) {
+    function getPriceAnd24HourVolume()
+        external
+        returns (uint128, uint128)
+    {
         emit FunctionCalled("MarketOracle:getPriceAnd24HourVolume", msg.sender);
         uint256[] memory uintVals = new uint256[](0);
         int256[] memory intVals = new int256[](0);
@@ -17,11 +20,15 @@ contract MockMarketOracle is Mock {
     }
 
     // Methods to mock data on the chain
-    function storeRate(uint128 exchangeRate) public {
+    function storeRate(uint128 exchangeRate)
+        public
+    {
         _exchangeRate = exchangeRate;
     }
 
-    function storeVolume(uint128 volume) public {
+    function storeVolume(uint128 volume)
+        public
+    {
         _volume = volume;
     }
 }

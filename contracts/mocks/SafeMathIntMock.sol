@@ -5,37 +5,55 @@ import "../lib/SafeMathInt.sol";
 
 
 contract SafeMathIntMock is Mock {
-    function mul(int256 a, int256 b) external returns (int256) {
+    function mul(int256 a, int256 b)
+        external
+        returns (int256)
+    {
         int256 result = SafeMathInt.mul(a, b);
         emit ReturnValueInt256(result);
         return result;
     }
 
-    function div(int256 a, int256 b) external returns (int256) {
+    function div(int256 a, int256 b)
+        external
+        returns (int256)
+    {
         int256 result = SafeMathInt.div(a, b);
         emit ReturnValueInt256(result);
         return result;
     }
 
-    function sub(int256 a, int256 b) external returns (int256) {
+    function sub(int256 a, int256 b)
+        external
+        returns (int256)
+    {
         int256 result = SafeMathInt.sub(a, b);
         emit ReturnValueInt256(result);
         return result;
     }
 
-    function add(int256 a, int256 b) external returns (int256) {
+    function add(int256 a, int256 b)
+        external
+        returns (int256)
+    {
         int256 result = SafeMathInt.add(a, b);
         emit ReturnValueInt256(result);
         return result;
     }
 
-    function abs(int256 a) external returns (int256) {
+    function abs(int256 a)
+        external
+        returns (int256)
+    {
         int256 result = SafeMathInt.abs(a);
         emit ReturnValueInt256(result);
         return result;
     }
 
-    function toUInt256Safe(int256 a) external returns (uint256) {
+    function toUInt256Safe(int256 a)
+        external
+        returns (uint256)
+    {
         uint256 result = SafeMathInt.toUInt256Safe(a);
         emit ReturnValueUInt256(result);
         return result;
