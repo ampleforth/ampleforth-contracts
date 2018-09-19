@@ -42,6 +42,21 @@ BlockchainCaller.prototype.getUserAccounts = async function () {
   return accounts.result;
 };
 
+BlockchainCaller.prototype.getBlockGasLimit = async function () {
+  const block = await this.web3.eth.getBlock('latest');
+  return block.gasLimit;
+};
+
+BlockchainCaller.prototype.getTransactionMetrics = async function (hash) {
+  const txR = await this.web3.eth.getTransactionReceipt(hash);
+  const tx = await this.web3.eth.getTransaction(hash);
+  return {
+    gasUsed: txR.gasUsed,
+    gasPrice: tx.gasPrice,
+    byteCodeSize: (tx.input.length * 4 / 8)
+  };
+};
+
 /*
   Inspired loosely by Openzeppelin's assertRevert.
   https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/test/helpers/assertRevert.js
@@ -58,21 +73,6 @@ BlockchainCaller.prototype.isEthException = async function (promise) {
     msg.includes('invalid opcode') ||
     msg.includes('exited with an error (status 0)')
   );
-};
-
-BlockchainCaller.prototype.getBlockGasLimit = async function () {
-  const block = await this.web3.eth.getBlock('latest');
-  return block.gasLimit;
-};
-
-BlockchainCaller.prototype.getTransactionMetrics = async function (hash) {
-  const txR = await this.web3.eth.getTransactionReceipt(hash);
-  const tx = await this.web3.eth.getTransaction(hash);
-  return {
-    gasUsed: txR.gasUsed,
-    gasPrice: tx.gasPrice,
-    byteCodeSize: (tx.input.length * 4 / 8)
-  };
 };
 
 module.exports = BlockchainCaller;
