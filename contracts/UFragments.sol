@@ -133,7 +133,10 @@ contract UFragments is DetailedERC20, Ownable {
         external
         onlyMonetaryPolicy
         whenRebaseNotPaused
+        returns (int256)
     {
+        uint256 totalSupplyBeforeRebase = _totalSupply;
+
         if (supplyDelta < 0) {
             _totalSupply = _totalSupply.sub(supplyDelta.abs().toUInt256Safe());
         } else {
@@ -155,8 +158,10 @@ contract UFragments is DetailedERC20, Ownable {
         // deviation is guaranteed to be < 1, so we can omit this step. If the supply cap is
         // ever increased, it must be re-included.
         // _totalSupply = _totalGons.div(_gonsPerFragment)
-
         emit LogRebase(epoch, _totalSupply);
+
+        int256 appliedSupplyAdjustment = int256(_totalSupply) - int256(totalSupplyBeforeRebase);
+        return appliedSupplyAdjustment;
     }
 
     function initialize(address owner)

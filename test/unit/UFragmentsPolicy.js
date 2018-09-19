@@ -16,7 +16,6 @@ require('chai')
 let uFragmentsPolicy, mockUFragments, mockMarketOracle;
 let r, prevEpoch, prevTime;
 let deployer, user;
-const MAX_SUPPLY = new BigNumber('578960446186580977117854925043439539266349923328202820197');
 
 async function setupContracts () {
   const accounts = await chain.getUserAccounts();
@@ -194,39 +193,6 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       await mockExternalData(1000e18, 100, 1000);
       r = await uFragmentsPolicy.rebase();
       expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(supplyChange);
-    });
-  });
-});
-
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
-
-  describe('when uFragments grows beyond MAX_SUPPLY', function () {
-    before(async function () {
-      await mockExternalData(2e18, 100, MAX_SUPPLY.minus(1));
-    });
-
-    it('should apply SupplyAdjustment {MAX_SUPPLY - totalSupply}', async function () {
-      // Supply is MAX_SUPPLY-1, exchangeRate is 2x; resulting in a new supply more than MAX_SUPPLY
-      // However, supply is ONLY increased by 1 to MAX_SUPPLY
-      r = await uFragmentsPolicy.rebase();
-      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(1);
-    });
-  });
-});
-
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
-
-  describe('when uFragments supply equals MAX_SUPPLY and rebase attempts to grow', function () {
-    before(async function () {
-      await mockExternalData(2e18, 100, MAX_SUPPLY);
-    });
-
-    it('should fail', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase())
-      ).to.be.true;
     });
   });
 });
