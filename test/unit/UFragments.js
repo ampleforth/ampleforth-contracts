@@ -303,6 +303,46 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
   });
 });
 
+contract('UFragments:Rebase:Expansion', function (accounts) {
+  const policy = accounts[1];
+  const MAX_SUPPLY = new BigNumber(2).pow(128).minus(1);
+
+  before('setup UFragments contract', async function () {
+    await setupContracts();
+    await uFragments.setMonetaryPolicy(policy, {from: deployer});
+  });
+
+  describe('when the totalSupply is less than MAX_SUPPLY and expands beyond', function () {
+    before(async function () {
+      const rebaseAmt = MAX_SUPPLY.minus(initialSupply).minus(toUFrgDenomination(1));
+      await uFragments.rebase(1, rebaseAmt, {from: policy});
+    });
+
+    it('should return appliedSupplyDelta=1', async function () {
+      r = await uFragments.rebase.call(2, toUFrgDenomination(2), {from: policy});
+      r.should.be.bignumber.eq(toUFrgDenomination(1));
+    });
+
+    it('should increase the totalSupply to MAX_SUPPLY', async function () {
+      await uFragments.rebase(2, toUFrgDenomination(2), {from: policy})
+      b = await uFragments.totalSupply.call();
+      b.should.be.bignumber.eq(MAX_SUPPLY);
+    });
+  });
+
+  describe('when the totalSupply MAX_SUPPLY and expands beyond', function () {
+    it('should return appliedSupplyDelta=0', async function () {
+      r = await uFragments.rebase.call(3, toUFrgDenomination(1), {from: policy});
+      r.should.be.bignumber.eq(0);
+    });
+
+    it('should not change totalSupply', async function () {
+      await uFragments.rebase(3, toUFrgDenomination(1), {from: policy});
+      b.should.be.bignumber.eq(MAX_SUPPLY);
+    });
+  });
+});
+
 contract('UFragments:Rebase:NoChange', function (accounts) {
   // Rebase (0%), with starting balances A:750 and B:250.
   const A = accounts[2];
