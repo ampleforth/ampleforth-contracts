@@ -29,8 +29,7 @@ BlockchainCaller.prototype.sendRawToBlockchain = function (method, params) {
 
 BlockchainCaller.prototype.waitForSomeTime = async function (durationInSec) {
   try {
-    const r = await this.sendRawToBlockchain('evm_increaseTime', [durationInSec]);
-    return r;
+    await this.sendRawToBlockchain('evm_increaseTime', [durationInSec]);
   } catch (e) {
     return new Promise((resolve, reject) => {
       setTimeout(() => resolve(), durationInSec * 1000);
@@ -41,20 +40,6 @@ BlockchainCaller.prototype.waitForSomeTime = async function (durationInSec) {
 BlockchainCaller.prototype.getUserAccounts = async function () {
   const accounts = await this.sendRawToBlockchain('eth_accounts');
   return accounts.result;
-};
-
-BlockchainCaller.prototype.isEthException = async function (promise) {
-  let msg = 'No Exception';
-  try {
-    if (promise.then) { await promise; } else { await promise(); }
-  } catch (e) {
-    msg = e.message;
-  }
-  return (
-    msg.includes('VM Exception while processing transaction: revert') ||
-    msg.includes('invalid opcode') ||
-    msg.includes('exited with an error (status 0)')
-  );
 };
 
 BlockchainCaller.prototype.getBlockGasLimit = async function () {
@@ -70,6 +55,24 @@ BlockchainCaller.prototype.getTransactionMetrics = async function (hash) {
     gasPrice: tx.gasPrice,
     byteCodeSize: (tx.input.length * 4 / 8)
   };
+};
+
+/*
+  Inspired loosely by Openzeppelin's assertRevert.
+  https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/test/helpers/assertRevert.js
+*/
+BlockchainCaller.prototype.isEthException = async function (promise) {
+  let msg = 'No Exception';
+  try {
+    await promise;
+  } catch (e) {
+    msg = e.message;
+  }
+  return (
+    msg.includes('VM Exception while processing transaction: revert') ||
+    msg.includes('invalid opcode') ||
+    msg.includes('exited with an error (status 0)')
+  );
 };
 
 module.exports = BlockchainCaller;
