@@ -43,6 +43,10 @@ BlockchainCaller.prototype.getUserAccounts = async function () {
   return accounts.result;
 };
 
+/*
+  Inspired loosely by Openzeppelin's assertRevert.
+  https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/test/helpers/assertRevert.js
+*/
 BlockchainCaller.prototype.isEthException = async function (promise) {
   let msg = 'No Exception';
   try {
