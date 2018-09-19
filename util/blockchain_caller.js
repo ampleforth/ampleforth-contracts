@@ -29,8 +29,7 @@ BlockchainCaller.prototype.sendRawToBlockchain = function (method, params) {
 
 BlockchainCaller.prototype.waitForSomeTime = async function (durationInSec) {
   try {
-    const r = await this.sendRawToBlockchain('evm_increaseTime', [durationInSec]);
-    return r;
+    await this.sendRawToBlockchain('evm_increaseTime', [durationInSec]);
   } catch (e) {
     return new Promise((resolve, reject) => {
       setTimeout(() => resolve(), durationInSec * 1000);
@@ -50,7 +49,7 @@ BlockchainCaller.prototype.getUserAccounts = async function () {
 BlockchainCaller.prototype.isEthException = async function (promise) {
   let msg = 'No Exception';
   try {
-    if (promise.then) { await promise; } else { await promise(); }
+    await promise;
   } catch (e) {
     msg = e.message;
   }
