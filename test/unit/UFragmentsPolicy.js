@@ -9,6 +9,8 @@ const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 
+const MAX_SUPPLY = new BigNumber('578960446186580977117854925043439539266349923328202820197');
+
 require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should();
@@ -163,7 +165,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
     it('should return 0', async function () {
       r = await uFragmentsPolicy.rebase();
-      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(0);
+      expect(r.logs[0].args.appliedSupplyDelta.toNumber()).to.eq(0);
     });
   });
 });
@@ -180,19 +182,35 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       // Any exchangeRate >= (MAX_RATE=100x) would result in the same supply increase
       await mockExternalData(100e18, 100, 1000);
       r = await uFragmentsPolicy.rebase();
-      const supplyChange = r.logs[0].args.appliedSupplyAdjustment.toNumber();
+      const supplyChange = r.logs[0].args.appliedSupplyDelta.toNumber();
 
       await mockExternalData(100.000000000000000001e18, 100, 1000);
       r = await uFragmentsPolicy.rebase();
-      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(supplyChange);
+      expect(r.logs[0].args.appliedSupplyDelta.toNumber()).to.eq(supplyChange);
 
       await mockExternalData(200e18, 100, 1000);
       r = await uFragmentsPolicy.rebase();
-      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(supplyChange);
+      expect(r.logs[0].args.appliedSupplyDelta.toNumber()).to.eq(supplyChange);
 
       await mockExternalData(1000e18, 100, 1000);
       r = await uFragmentsPolicy.rebase();
-      expect(r.logs[0].args.appliedSupplyAdjustment.toNumber()).to.eq(supplyChange);
+      expect(r.logs[0].args.appliedSupplyDelta.toNumber()).to.eq(supplyChange);
+    });
+  });
+});
+
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  describe('when uFragments supply equals MAX_SUPPLY and rebase attempts to grow', function () {
+    before(async function () {
+      await mockExternalData(2e18, 100, MAX_SUPPLY);
+    });
+
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(uFragmentsPolicy.rebase())
+      ).to.be.true;
     });
   });
 });
@@ -222,11 +240,11 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       expect(time.minus(prevTime).gte(5)).to.be.true;
     });
 
-    it('should emit Rebase with positive appliedSupplyAdjustment', async function () {
+    it('should emit Rebase with positive appliedSupplyDelta', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
       expect(log.args.epoch.eq(prevEpoch.plus(1))).to.be.true;
-      expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(20);
+      expect(log.args.appliedSupplyDelta.toNumber()).to.eq(20);
       expect(log.args.volume24hrs.toNumber()).to.eq(100);
     });
 
@@ -259,10 +277,10 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       r = await uFragmentsPolicy.rebase();
     });
 
-    it('should emit Rebase with negative appliedSupplyAdjustment', async function () {
+    it('should emit Rebase with negative appliedSupplyDelta', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(-10);
+      expect(log.args.appliedSupplyDelta.toNumber()).to.eq(-10);
     });
   });
 });
@@ -277,10 +295,10 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       r = await uFragmentsPolicy.rebase();
     });
 
-    it('should emit Rebase with 0 appliedSupplyAdjustment', async function () {
+    it('should emit Rebase with 0 appliedSupplyDelta', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      expect(log.args.appliedSupplyAdjustment.toNumber()).to.eq(0);
+      expect(log.args.appliedSupplyDelta.toNumber()).to.eq(0);
     });
   });
 });

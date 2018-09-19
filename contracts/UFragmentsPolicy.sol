@@ -31,7 +31,7 @@ contract UFragmentsPolicy is Ownable {
         uint256 indexed epoch,
         uint256 exchangeRate,
         uint256 volume24hrs,
-        int256 appliedSupplyAdjustment
+        int256 appliedSupplyDelta
     );
 
     UFragments private _uFrags;
@@ -85,9 +85,9 @@ contract UFragmentsPolicy is Ownable {
         int256 supplyDelta = calcSupplyDelta(exchangeRate);
         supplyDelta = calcDampenedSupplyDelta(supplyDelta);
 
-        int256 appliedSupplyAdjustment = _uFrags.rebase(_epoch, supplyDelta);
+        int256 appliedSupplyDelta = _uFrags.rebase(_epoch, supplyDelta);
         assert(_uFrags.totalSupply() <= MAX_SUPPLY);
-        emit LogRebase(_epoch, exchangeRate, volume, appliedSupplyAdjustment);
+        emit LogRebase(_epoch, exchangeRate, volume, appliedSupplyDelta);
     }
 
     /**

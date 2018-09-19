@@ -136,6 +136,7 @@ contract UFragments is DetailedERC20, Ownable {
         returns (int256)
     {
         uint256 totalSupplyBeforeRebase = _totalSupply;
+        int256 appliedSupplyDelta = supplyDelta;
 
         if (supplyDelta < 0) {
             _totalSupply = _totalSupply.sub(supplyDelta.abs().toUInt256Safe());
@@ -145,6 +146,7 @@ contract UFragments is DetailedERC20, Ownable {
 
         if (_totalSupply > MAX_SUPPLY) {
             _totalSupply = MAX_SUPPLY;
+            appliedSupplyDelta = int256(MAX_SUPPLY.sub(totalSupplyBeforeRebase));
         }
 
         _gonsPerFragment = _totalGons.div(_totalSupply);
@@ -160,8 +162,7 @@ contract UFragments is DetailedERC20, Ownable {
         // _totalSupply = _totalGons.div(_gonsPerFragment)
         emit LogRebase(epoch, _totalSupply);
 
-        int256 appliedSupplyAdjustment = int256(_totalSupply) - int256(totalSupplyBeforeRebase);
-        return appliedSupplyAdjustment;
+        return appliedSupplyDelta;
     }
 
     function initialize(address owner)
