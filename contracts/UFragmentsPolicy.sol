@@ -5,11 +5,16 @@ import "openzeppelin-zos/contracts/ownership/Ownable.sol";
 
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
-import "./UFragments.sol";
 
 
 interface IMarketOracle {
     function getPriceAnd24HourVolume() external returns (uint256, uint256);
+}
+
+
+interface IUFragments {
+    function rebase(uint256 epoch, int256 supplyDelta) external;
+    function totalSupply() public view returns (uint256);
 }
 
 
@@ -34,7 +39,7 @@ contract UFragmentsPolicy is Ownable {
         int256 appliedSupplyAdjustment
     );
 
-    UFragments private _uFrags;
+    IUFragments private _uFrags;
     IMarketOracle private _marketOracle;
 
     // Block timestamp of last rebase operation
@@ -138,7 +143,7 @@ contract UFragmentsPolicy is Ownable {
      *      This is where parent class initializers are invloked and contract storage variables
      *      are set with initial values.
      */
-    function initialize(address owner, UFragments uFrags, IMarketOracle marketOracle)
+    function initialize(address owner, IUFragments uFrags, IMarketOracle marketOracle)
         public
         isInitializer("UFragmentsPolicy", "0")
     {
