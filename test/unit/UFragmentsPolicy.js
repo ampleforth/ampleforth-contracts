@@ -3,7 +3,6 @@ const MockUFragments = artifacts.require('MockUFragments.sol');
 const MockMarketOracle = artifacts.require('MockMarketOracle.sol');
 
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
-const _ = require('lodash');
 const BigNumber = web3.BigNumber;
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
@@ -302,8 +301,8 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       expect(fnCalled.args.functionName).to.eq('UFragments:rebase');
       expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
       const fnArgs = mockUFragments.FunctionArguments().formatter(r.receipt.logs[3]);
-      const parsedFnArgs = _.reduce(fnArgs.args, function (m, v, k) {
-        return _.map(v, d => d.toNumber()).concat(m);
+      const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
+        return fnArgs.args[k].map(d => d.toNumber()).concat(m);
       }, [ ]);
       expect(parsedFnArgs).to.include.members([prevEpoch.toNumber(), 20]);
     });
