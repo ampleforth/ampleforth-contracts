@@ -57,9 +57,15 @@ contract UFragmentsPolicy is Ownable {
     // Keeps track of the number of rebase cycles since inception
     uint256 public _epoch;
 
+    uint256 private constant RATE_DECIMALS = 18;
+
+    uint256 private constant TARGET_RATE = 1 * 10 ** RATE_DECIMALS;
+
+    int256 private constant TARGET_RATE_SIGNED = int256(TARGET_RATE);
+
     // We cap the rate to avoid overflows in computations.
-    // 18 decimal fixed point format
-    uint256 private constant MAX_RATE = 100 * 10**18;
+    // 18 decimals fixed point format
+    uint256 private constant MAX_RATE = 100 * 10 ** RATE_DECIMALS;
 
     // We cap the supply to avoid overflows in computations.
     // Due to the signed math in rebase(), MAX_RATE x MAX_SUPPLY must fit into an int256.
@@ -146,7 +152,7 @@ contract UFragmentsPolicy is Ownable {
 
     /**
      * @dev ZOS upgradable contract initialization method, called at the time of contract creation.
-     *      This is where parent class initializers are invloked and contract storage variables
+     *      This is where parent class initializers are invoked and contract storage variables
      *      are set with initial values.
      */
     function initialize(address owner, UFragments uFrags)
@@ -155,9 +161,10 @@ contract UFragmentsPolicy is Ownable {
     {
         Ownable.initialize(owner);
 
-        _minRebaseTimeIntervalSec = 1 days;
+        _deviationThreshold = (10 ** RATE_DECIMALS * 5) / 100;
+        // 5%
         _rebaseLag = 30;
-        _deviationThreshold = 0.05 * 10**18; // 5%
+        _minRebaseTimeIntervalSec = 1 days;
         _epoch = 0;
 
         _uFrags = uFrags;
@@ -176,8 +183,10 @@ contract UFragmentsPolicy is Ownable {
             return 0;
         }
 
-        int256 target = 10**18;
-        return rate.toInt256Safe().sub(target).mul(_uFrags.totalSupply().toInt256Safe()).div(target);
+        // (totalSupply * (rate - target)) / target
+        return _uFrags.totalSupply().toInt256Safe().mul(
+            rate.toInt256Safe().sub(TARGET_RATE_SIGNED)
+        ).div(TARGET_RATE_SIGNED);
     }
 
     /**
@@ -201,8 +210,7 @@ contract UFragmentsPolicy is Ownable {
         view
         returns (bool)
     {
-        uint256 target = 10**18;
-        return (rate >= target && rate.sub(target) < _deviationThreshold)
-            || (rate < target && target.sub(rate) < _deviationThreshold);
+        return (rate >= TARGET_RATE && rate.sub(TARGET_RATE) < _deviationThreshold)
+        || (rate < TARGET_RATE && TARGET_RATE.sub(rate) < _deviationThreshold);
     }
 }

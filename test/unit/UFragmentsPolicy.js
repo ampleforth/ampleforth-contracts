@@ -37,11 +37,28 @@ async function mockExternalData (exchangeRate, volume, uFragSupply) {
   await mockMarketOracle.storeVolume(volume);
   await mockUFragments.storeSupply(uFragSupply);
 }
+contract('UFragmentsPolicy:initialize', async function (accounts) {
+  describe('initial values set correctly', function () {
+    before('setup UFragmentsPolicy contract', setupContracts);
 
+    it('_deviationThreshold', async function () {
+      (await uFragmentsPolicy._deviationThreshold.call()).should.be.bignumber.eq((5 / 100) * (10 ** 18));
+    });
+    it('_rebaseLag', async function () {
+      (await uFragmentsPolicy._rebaseLag.call()).should.be.bignumber.eq(30);
+    });
+    it('_minRebaseTimeIntervalSec', async function () {
+      (await uFragmentsPolicy._minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(24 * 60 * 60);
+    });
+    it('_epoch', async function () {
+      (await uFragmentsPolicy._epoch.call()).should.be.bignumber.eq(0);
+    });
+  });
+});
 contract('UFragmentsPolicy:setMarketOracle', async function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
-  it('should set deviationThreshold', async function () {
+  it('should set marketOracle', async function () {
     await uFragmentsPolicy.setMarketOracle(deployer);
     expect(await uFragmentsPolicy._marketOracle.call()).to.eq(deployer);
   });
