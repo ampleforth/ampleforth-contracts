@@ -43,6 +43,16 @@ contract('UFragments:Initialization', function (accounts) {
     b = await uFragments.totalSupply.call();
     b.should.be.bignumber.eq(INTIAL_SUPPLY);
   });
+
+  it('should have 9 decimals', async function () {
+    const decimals = await uFragments.decimals.call();
+    decimals.should.be.bignumber.eq(DECIMALS);
+  });
+
+  it('should have UFRG symbol', async function () {
+    const symbol = await uFragments.symbol.call();
+    symbol.should.be.eq('UFRG');
+  });
 });
 
 contract('UFragments:setMonetaryPolicy', function (accounts) {
