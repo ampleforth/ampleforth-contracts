@@ -40,8 +40,9 @@ contract UFragmentsPolicy is Ownable {
     // Block timestamp of last rebase operation
     uint256 public _lastRebaseTimestamp;
 
-    // At least this much time must pass between rebase operations.
-    uint256 public _minRebaseTimeIntervalSec;
+    // If the current exchange rate is within this tolerance, no supply update is performed.
+    // 18 decimal fixed point format
+    uint256 public _deviationThreshold;
 
     // The rebase lag parameter controls how long it takes, in cycles, to approach an absolute
     // supply correction. If the lag equals the smallest value of 1, then we apply full
@@ -50,9 +51,8 @@ contract UFragmentsPolicy is Ownable {
     // approached an absolute supply correction.
     uint32 public _rebaseLag;
 
-    // If the current exchange rate is within this tolerance, no supply update is performed.
-    // 18 decimal fixed point format
-    uint256 public _deviationThreshold;
+    // At least this much time must pass between rebase operations.
+    uint256 public _minRebaseTimeIntervalSec;
 
     // Keeps track of the number of rebase cycles since inception
     uint256 public _epoch;
@@ -161,7 +161,7 @@ contract UFragmentsPolicy is Ownable {
     {
         Ownable.initialize(owner);
 
-        _deviationThreshold = (10 ** RATE_DECIMALS * 5) / 100;
+        _deviationThreshold = (5 * TARGET_RATE) / 100;
         // 5%
         _rebaseLag = 30;
         _minRebaseTimeIntervalSec = 1 days;
