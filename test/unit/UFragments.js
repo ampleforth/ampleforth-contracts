@@ -24,7 +24,7 @@ async function setupContracts () {
   deployer = accounts[0];
   user = accounts[1];
   uFragments = await UFragments.new();
-  await uFragments.sendTransaction({
+  r = await uFragments.sendTransaction({
     data: encodeCall('initialize', ['address'], [deployer]),
     from: deployer
   });
@@ -34,14 +34,28 @@ async function setupContracts () {
 contract('UFragments:Initialization', function (accounts) {
   before('setup UFragments contract', setupContracts);
 
-  it('should add 50M uFragments to the deployer', async function () {
-    b = await uFragments.balanceOf.call(deployer);
-    b.should.be.bignumber.eq(INTIAL_SUPPLY);
+  it('should transfer 50M uFragments to the deployer', async function () {
+    (await uFragments.balanceOf.call(deployer)).should.be.bignumber.eq(INTIAL_SUPPLY);
+    const log = r.logs[2];
+    expect(log).to.exist;
+    expect(log.event).to.eq('Transfer');
+    expect(log.args.from).to.eq(ZERO_ADDRESS);
+    expect(log.args.to).to.eq(deployer);
+    log.args.value.should.be.bignumber.eq(INTIAL_SUPPLY);
   });
 
   it('should set the totalSupply to 50M', async function () {
-    b = await uFragments.totalSupply.call();
-    b.should.be.bignumber.eq(INTIAL_SUPPLY);
+    initialSupply.should.be.bignumber.eq(INTIAL_SUPPLY);
+  });
+
+  it('should set the owner', async function () {
+    expect(await uFragments.owner.call()).to.eq(deployer);
+  });
+
+  it('should set detailed ERC20 parameters', async function () {
+    expect(await uFragments.name.call()).to.eq('UFragments');
+    expect(await uFragments.symbol.call()).to.eq('UFRG');
+    (await uFragments.decimals.call()).should.be.bignumber.eq(DECIMALS);
   });
 
   it('should have 9 decimals', async function () {

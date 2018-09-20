@@ -52,6 +52,12 @@ contract('UFragmentsPolicy:initialize', async function (accounts) {
     it('_epoch', async function () {
       (await uFragmentsPolicy._epoch.call()).should.be.bignumber.eq(0);
     });
+    it('should set owner', async function () {
+      expect(await uFragmentsPolicy.owner.call()).to.eq(deployer);
+    });
+    it('should set reference to uFragments', async function () {
+      expect(await uFragmentsPolicy._uFrags.call()).to.eq(mockUFragments.address);
+    });
   });
 });
 contract('UFragmentsPolicy:setMarketOracle', async function (accounts) {
