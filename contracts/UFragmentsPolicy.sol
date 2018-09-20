@@ -211,6 +211,6 @@ contract UFragmentsPolicy is Ownable {
         returns (bool)
     {
         return (rate >= TARGET_RATE && rate.sub(TARGET_RATE) < _deviationThreshold)
-        || (rate < TARGET_RATE && TARGET_RATE.sub(rate) < _deviationThreshold);
+            || (rate < TARGET_RATE && TARGET_RATE.sub(rate) < _deviationThreshold);
     }
 }
