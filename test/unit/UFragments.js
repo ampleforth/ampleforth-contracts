@@ -45,12 +45,12 @@ contract('UFragments:Initialization', function (accounts) {
   });
 
   it('should have 9 decimals', async function () {
-    decimals = await uFragments.decimals.call();
+    const decimals = await uFragments.decimals.call();
     decimals.should.be.bignumber.eq(DECIMALS);
   });
 
   it('should have UFRG symbol', async function () {
-    symbol = await uFragments.symbol.call();
+    const symbol = await uFragments.symbol.call();
     symbol.should.be.eq('UFRG');
   });
 });
