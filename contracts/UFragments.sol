@@ -73,7 +73,7 @@ contract UFragments is DetailedERC20, Ownable {
 
     mapping(address => uint256) private _gonBalances;
 
-    uint256 private constant DECIMAL_POINTS = 9;
+    uint256 private constant DECIMALS = 9;
     uint256 private constant MAX_UINT256 = ~uint256(0);
     uint256 private constant MAX_SUPPLY = ~uint128(0);
     uint256 private _totalGons;
@@ -157,7 +157,7 @@ contract UFragments is DetailedERC20, Ownable {
         public
         isInitializer("UFragments", "0" /* Version ID */)
     {
-        DetailedERC20.initialize("UFragments", "UFRG", uint8(DECIMAL_POINTS));
+        DetailedERC20.initialize("UFragments", "UFRG", uint8(DECIMALS));
         Ownable.initialize(owner);
 
         _rebasePaused = false;
@@ -165,7 +165,8 @@ contract UFragments is DetailedERC20, Ownable {
 
         // TODO(naguib): Correct this value to 50 * 10**6 * 10**2 and fix tests
         // accordingly
-        _totalSupply = 50 * 10**6 * 10**DECIMAL_POINTS;  // 50M
+        _totalSupply = 50 * 10 ** 6 * 10 ** DECIMALS;
+        // 50M
 
         // Set _totalGons to a multiple of totalSupply so _gonsPerFragment can be
         // computed exactly.
