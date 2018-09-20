@@ -325,7 +325,7 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
     const log = r.logs[0];
     expect(log).to.exist;
     expect(log.event).to.eq('LogRebase');
-    expect(log.args.epoch.toNumber()).to.eq(1);
+    log.args.epoch.should.be.bignumber.eq(1);
     log.args.totalSupply.should.be.bignumber.eq(initialSupply.plus(rebaseAmt));
   });
 });
@@ -395,7 +395,7 @@ contract('UFragments:Rebase:NoChange', function (accounts) {
 
   it('should NOT CHANGE the totalSupply', async function () {
     b = await uFragments.totalSupply.call();
-    expect(b.toNumber()).to.eq(initialSupply.toNumber());
+    b.should.be.bignumber.eq(initialSupply);
   });
 
   it('should NOT CHANGE individual balances', async function () {
@@ -410,7 +410,7 @@ contract('UFragments:Rebase:NoChange', function (accounts) {
     const log = r.logs[0];
     expect(log).to.exist;
     expect(log.event).to.eq('LogRebase');
-    expect(log.args.epoch.toNumber()).to.eq(1);
+    log.args.epoch.should.be.bignumber.eq(1);
     log.args.totalSupply.should.be.bignumber.eq(initialSupply);
   });
 });
@@ -447,7 +447,7 @@ contract('UFragments:Rebase:Contraction', function (accounts) {
     const log = r.logs[0];
     expect(log).to.exist;
     expect(log.event).to.eq('LogRebase');
-    expect(log.args.epoch.toNumber()).to.eq(1);
+    log.args.epoch.should.be.bignumber.eq(1);
     log.args.totalSupply.should.be.bignumber.eq(initialSupply.minus(rebaseAmt));
   });
 });
