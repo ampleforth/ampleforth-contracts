@@ -9,39 +9,33 @@ import "./lib/SafeMathInt.sol";
 
 /**
  * @title uFragments ERC20 token
- * @dev This is an implementation of the uFragments Ideal Money protocol @ https://fragments.org/protocol
+ * @dev This is an implementation of the uFragments Ideal Money protocol
  *      uFragments operates symmetrically on expansion and contraction. It will both split and
  *      combine coins to maintain a stable unit price.
  *
- *      uFragment balances are internally represented with a hidden denomination, 'gons'. We support
- *      splitting the currency in expansion and combining the currency on contraction by changing
- *      the exchange rate between the hidden 'gons' and the public 'ufragments'. This exchange rate
- *      is determined by the internal properties '_totalGons' and '_totalSupply'.
+ *      uFragment balances are internally represented with a hidden denomination, 'gons'.
+ *      We support splitting the currency in expansion and combining the currency on contraction by
+ *      changing the exchange rate between the hidden 'gons' and the public 'fragments'.
+ *      The exchange rate is determined by the internal properties '_totalGons' and '_totalSupply'.
  */
 contract UFragments is DetailedERC20, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
     // Anytime there is division, there is a risk of numerical instability from rounding errors. In
     // order to minimize this risk, we adhere to the following guidelines:
-    // 1) The conversion rate adopted is the number of gons that equals 1 fragment. The inverse
-    //    rate must not be used--_totalGons is always the numerator and _totalSupply is always the
-    //    denominator. (i.e. If you want to convert gons to fragments instead of multiplying by the
-    //    inverse rate, you should divide by the normal rate)
-    // 2) Gon balances converted into fragments are always rounded down (truncated).
-    // 3) Fragment values converted to gon values (such as in transfers) are chosen such that the
-    //    below guarantees are upheld.
+    // 1) The conversion rate adopted is the number of gons that equals 1 fragment.
+    //    The inverse rate must not be used--_totalGons is always the numerator and _totalSupply is
+    //    always the denominator. (i.e. If you want to convert gons to fragments instead of
+    //    multiplying by the inverse rate, you should divide by the normal rate)
+    // 2) Gon balances converted into Fragments are always rounded down (truncated).
     //
     // We make the following guarantees:
-    // - If address 'A' transfers x fragments to address 'B'. A's resulting external balance will
-    //   be decreased by precisely x fragments, and B's external balance will be precisely
-    //   increased by x fragments.
+    // - If address 'A' transfers x Fragments to address 'B'. A's resulting external balance will
+    //   be decreased by precisely x Fragments, and B's external balance will be precisely
+    //   increased by x Fragments.
     //
     // We do not guarantee that the sum of all balances equals the result of calling totalSupply().
     // This is because, for any conversion function 'f()' that has non-zero rounding error,
     // f(x0) + f(x1) + ... + f(xn) is not always equal to f(x0 + x1 + ... xn).
-    //
-    // 'The Introduction of the Euro and the Rounding of Currency Amounts (1999)' is a good starting
-    // reference for practices related to currency conversions.
-    // http://ec.europa.eu/economy_finance/publications/pages/publication1224_en.pdf
     using SafeMath for uint256;
     using SafeMathInt for int256;
 
@@ -49,7 +43,7 @@ contract UFragments is DetailedERC20, Ownable {
     event LogRebasePaused(bool paused);
     event LogTokenPaused(bool paused);
 
-    // Used for basic authz.
+    // Used for authentication
     address public _monetaryPolicy;
 
     modifier onlyMonetaryPolicy() {
@@ -57,7 +51,7 @@ contract UFragments is DetailedERC20, Ownable {
         _;
     }
 
-    // Emergency controls to bridge until system stability
+    // Precautionary emergency controls.
     bool public _rebasePaused;
     bool public _tokenPaused;
 
@@ -86,12 +80,12 @@ contract UFragments is DetailedERC20, Ownable {
     uint256 private _totalSupply;
     uint256 private _gonsPerFragment;
 
-    // This is denominated in uFragments, because the gons-fragments conversion might change before
+    // This is denominated in Fragments, because the gons-fragments conversion might change before
     // it's fully paid.
     mapping (address => mapping (address => uint256)) private _allowedFragments;
 
     /**
-     * @param monetaryPolicy The address of the monetary policy contract to use for authz.
+     * @param monetaryPolicy The address of the monetary policy contract to use for authentication.
      */
     function setMonetaryPolicy(address monetaryPolicy)
         external
@@ -161,7 +155,7 @@ contract UFragments is DetailedERC20, Ownable {
 
     function initialize(address owner)
         public
-        isInitializer("UFragments", "0")
+        isInitializer("UFragments", "0" /* Version ID */)
     {
         DetailedERC20.initialize("UFragments", "UFRG", uint8(DECIMAL_POINTS));
         Ownable.initialize(owner);
@@ -264,12 +258,13 @@ contract UFragments is DetailedERC20, Ownable {
     }
 
     /**
-     * @dev Approve the passed address to spend the specified amount of tokens on behalf of msg.sender.
+     * @dev Approve the passed address to spend the specified amount of tokens on behalf of
+     * msg.sender. This method is included for ERC20 compatibility.
+     * increaseApproval and decreaseApproval should be used instead.
+     * Changing an allowance with this method brings the risk that someone may transfer both
+     * the old and the new allowance - if they are both greater than zero - if a transfer
+     * transaction is mined before the later approve() call is mined.
      *
-     * Beware that changing an allowance with this method brings the risk that someone may use both the old
-     * and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this
-     * race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
      * @param spender The address which will spend the funds.
      * @param value The amount of tokens to be spent.
      */
@@ -278,7 +273,6 @@ contract UFragments is DetailedERC20, Ownable {
         whenTokenNotPaused
         returns (bool)
     {
-        require(spender != address(0x0));
 
         _allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
@@ -287,11 +281,8 @@ contract UFragments is DetailedERC20, Ownable {
 
     /**
      * @dev Increase the amount of tokens that an owner has allowed to a spender.
-     *
-     * approve should be called when allowed[spender] == 0. To increment
-     * allowed value is better to use this function to avoid 2 calls (and wait until
-     * the first transaction is mined)
-     * From MonolithDAO Token.sol
+     * This method should be used instead of approve() to avoid the double approval vulnerability
+     * described above.
      * @param spender The address which will spend the funds.
      * @param addedValue The amount of tokens to increase the allowance by.
      */
@@ -300,9 +291,8 @@ contract UFragments is DetailedERC20, Ownable {
         whenTokenNotPaused
         returns (bool)
     {
-        require(spender != address(0x0));
-
-        _allowedFragments[msg.sender][spender] = _allowedFragments[msg.sender][spender].add(addedValue);
+        _allowedFragments[msg.sender][spender] =
+            _allowedFragments[msg.sender][spender].add(addedValue);
         emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
         return true;
     }
@@ -310,10 +300,6 @@ contract UFragments is DetailedERC20, Ownable {
     /**
      * @dev Decrease the amount of tokens that an owner has allowed to a spender.
      *
-     * approve should be called when allowed[spender] == 0. To decrement
-     * allowed value is better to use this function to avoid 2 calls (and wait until
-     * the first transaction is mined)
-     * From MonolithDAO Token.sol
      * @param spender The address which will spend the funds.
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
@@ -322,8 +308,6 @@ contract UFragments is DetailedERC20, Ownable {
         whenTokenNotPaused
         returns (bool)
     {
-        require(spender != address(0x0));
-
         uint256 oldValue = _allowedFragments[msg.sender][spender];
         if (subtractedValue >= oldValue) {
             _allowedFragments[msg.sender][spender] = 0;
