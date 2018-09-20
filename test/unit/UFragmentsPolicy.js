@@ -26,9 +26,10 @@ async function setupContracts () {
   mockMarketOracle = await MockMarketOracle.new();
   uFragmentsPolicy = await UFragmentsPolicy.new();
   await uFragmentsPolicy.sendTransaction({
-    data: encodeCall('initialize', ['address', 'address', 'address'], [deployer, mockUFragments.address, mockMarketOracle.address]),
+    data: encodeCall('initialize', ['address', 'address'], [deployer, mockUFragments.address]),
     from: deployer
   });
+  await uFragmentsPolicy.setMarketOracle(mockMarketOracle.address);
 }
 
 async function mockExternalData (exchangeRate, volume, uFragSupply) {
@@ -36,6 +37,31 @@ async function mockExternalData (exchangeRate, volume, uFragSupply) {
   await mockMarketOracle.storeVolume(volume);
   await mockUFragments.storeSupply(uFragSupply);
 }
+
+contract('UFragmentsPolicy:setMarketOracle', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should set deviationThreshold', async function () {
+    await uFragmentsPolicy.setMarketOracle(deployer);
+    expect(await uFragmentsPolicy._marketOracle.call()).to.eq(deployer);
+  });
+});
+
+contract('UFragments:setMarketOracle:accessControl', function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setMarketOracle(deployer, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setMarketOracle(deployer, { from: user }))
+    ).to.be.true;
+  });
+});
 
 contract('UFragmentsPolicy:setDeviationThreshold', async function (accounts) {
   let prevThreshold, threshold;
