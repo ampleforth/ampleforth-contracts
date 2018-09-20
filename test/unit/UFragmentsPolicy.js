@@ -15,7 +15,8 @@ require('chai')
 let uFragmentsPolicy, mockUFragments, mockMarketOracle;
 let r, prevEpoch, prevTime;
 let deployer, user;
-const MAX_SUPPLY = new BigNumber('578960446186580977117854925043439539266349923328202820197');
+const MAX_RATE = (new BigNumber('1')).mul(10 ** 6 * 10 ** 18);
+const MAX_SUPPLY = (new BigNumber(2).pow(255).minus(1)).div(MAX_RATE);
 
 async function setupContracts () {
   const accounts = await chain.getUserAccounts();
@@ -225,21 +226,17 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       await uFragmentsPolicy.setMinRebaseTimeIntervalSec(0);
     });
 
-    it('should return 3300', async function () {
+    it('should return same supply delta as delta for MAX_RATE', async function () {
       // Any exchangeRate >= (MAX_RATE=100x) would result in the same supply increase
-      await mockExternalData(100e18, 100, 1000);
+      await mockExternalData(MAX_RATE, 100, 1000);
       r = await uFragmentsPolicy.rebase();
       const supplyChange = r.logs[0].args.appliedSupplyAdjustment;
 
-      await mockExternalData(100.000000000000000001e18, 100, 1000);
+      await mockExternalData(MAX_RATE.add(1e17), 100, 1000);
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
 
-      await mockExternalData(200e18, 100, 1000);
-      r = await uFragmentsPolicy.rebase();
-      r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
-
-      await mockExternalData(1000e18, 100, 1000);
+      await mockExternalData(MAX_RATE.mul(2), 100, 1000);
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
     });
