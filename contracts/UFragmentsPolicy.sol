@@ -34,8 +34,8 @@ contract UFragmentsPolicy is Ownable {
         int256 appliedSupplyAdjustment
     );
 
-    UFragments private _uFrags;
-    IMarketOracle private _marketOracle;
+    UFragments public _uFrags;
+    IMarketOracle public _marketOracle;
 
     // Block timestamp of last rebase operation
     uint256 public _lastRebaseTimestamp;
@@ -95,6 +95,17 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
+     * @notice Allows setting the reference to the market oracle.
+     * @param marketOracle The address of the market oracle contract.
+     */
+    function setMarketOracle(IMarketOracle marketOracle)
+        external
+        onlyOwner
+    {
+        _marketOracle = marketOracle;
+    }
+
+    /**
      * @notice Allows setting the Deviation Threshold. If the exchange rate given by the market
      *         oracle is within this threshold, then no supply modifications are made.
      * @param deviationThreshold The new exchange rate threshold.
@@ -138,7 +149,7 @@ contract UFragmentsPolicy is Ownable {
      *      This is where parent class initializers are invloked and contract storage variables
      *      are set with initial values.
      */
-    function initialize(address owner, UFragments uFrags, IMarketOracle marketOracle)
+    function initialize(address owner, UFragments uFrags)
         public
         isInitializer("UFragmentsPolicy", "0")
     {
@@ -150,7 +161,6 @@ contract UFragmentsPolicy is Ownable {
         _epoch = 0;
 
         _uFrags = uFrags;
-        _marketOracle = marketOracle;
     }
 
     /**
