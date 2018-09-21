@@ -37,9 +37,6 @@ contract UFragmentsPolicy is Ownable {
     UFragments public _uFrags;
     IMarketOracle public _marketOracle;
 
-    // Block timestamp of last rebase operation
-    uint256 public _lastRebaseTimestamp;
-
     // If the current exchange rate is within this tolerance, no supply update is performed.
     // 18 decimal fixed point format
     uint256 public _deviationThreshold;
@@ -53,6 +50,9 @@ contract UFragmentsPolicy is Ownable {
 
     // At least this much time must pass between rebase operations.
     uint256 public _minRebaseTimeIntervalSec;
+
+    // Block timestamp of last rebase operation
+    uint256 public _lastRebaseTimestamp;
 
     // Keeps track of the number of rebase cycles since inception
     uint256 public _epoch;
