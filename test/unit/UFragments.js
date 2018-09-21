@@ -316,6 +316,55 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
   });
 });
 
+contract('UFragments:Rebase:Expansion', function (accounts) {
+  const policy = accounts[1];
+  const MAX_SUPPLY = new BigNumber(2).pow(128).minus(1);
+
+  describe('when totalSupply is less than MAX_SUPPLY and expands beyond', function () {
+    before('setup UFragments contract', async function () {
+      await setupContracts();
+      await uFragments.setMonetaryPolicy(policy, {from: deployer});
+      const totalSupply = await uFragments.totalSupply.call();
+      await uFragments.rebase(1, MAX_SUPPLY.minus(totalSupply).minus(toUFrgDenomination(1)), {from: policy});
+      r = await uFragments.rebase(2, toUFrgDenomination(2), {from: policy});
+    });
+
+    it('should increase the totalSupply to MAX_SUPPLY', async function () {
+      b = await uFragments.totalSupply.call();
+      b.should.be.bignumber.eq(MAX_SUPPLY);
+    });
+
+    it('should emit Rebase', async function () {
+      const log = r.logs[0];
+      expect(log).to.exist;
+      expect(log.event).to.eq('LogRebase');
+      expect(log.args.epoch.toNumber()).to.eq(2);
+      log.args.totalSupply.should.be.bignumber.eq(MAX_SUPPLY);
+    });
+  });
+
+  describe('when totalSupply is MAX_SUPPLY and expands', function () {
+    before(async function () {
+      b = await uFragments.totalSupply.call();
+      b.should.be.bignumber.eq(MAX_SUPPLY);
+      r = await uFragments.rebase(3, toUFrgDenomination(2), {from: policy});
+    });
+
+    it('should NOT change the totalSupply', async function () {
+      b = await uFragments.totalSupply.call();
+      b.should.be.bignumber.eq(MAX_SUPPLY);
+    });
+
+    it('should emit Rebase', async function () {
+      const log = r.logs[0];
+      expect(log).to.exist;
+      expect(log.event).to.eq('LogRebase');
+      expect(log.args.epoch.toNumber()).to.eq(3);
+      log.args.totalSupply.should.be.bignumber.eq(MAX_SUPPLY);
+    });
+  });
+});
+
 contract('UFragments:Rebase:NoChange', function (accounts) {
   // Rebase (0%), with starting balances A:750 and B:250.
   const A = accounts[2];
