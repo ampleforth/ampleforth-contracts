@@ -161,8 +161,7 @@ contract UFragmentsPolicy is Ownable {
     {
         Ownable.initialize(owner);
 
-        _deviationThreshold = (5 * TARGET_RATE) / 100;
-        // 5%
+        _deviationThreshold = (5 * TARGET_RATE) / 100;  // 5%
         _rebaseLag = 30;
         _minRebaseTimeIntervalSec = 1 days;
         _epoch = 0;
