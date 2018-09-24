@@ -286,7 +286,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       await uFragmentsPolicy.rebase();
       await chain.waitForSomeTime(5); // 5 sec
       prevEpoch = await uFragmentsPolicy._epoch.call();
-      prevTime = await uFragmentsPolicy._lastRebaseTimestamp.call();
+      prevTime = await uFragmentsPolicy._lastRebaseTimestampSec.call();
       await mockExternalData(1.6e18, 100, 1010);
       r = await uFragmentsPolicy.rebase();
     });
@@ -297,7 +297,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     });
 
     it('should update lastRebaseTimestamp', async function () {
-      const time = await uFragmentsPolicy._lastRebaseTimestamp.call();
+      const time = await uFragmentsPolicy._lastRebaseTimestampSec.call();
       expect(time.minus(prevTime).gte(5)).to.be.true;
     });
 
