@@ -163,10 +163,7 @@ contract UFragments is DetailedERC20, Ownable {
         _rebasePaused = false;
         _tokenPaused = false;
 
-        // TODO(naguib): Correct this value to 50 * 10**6 * 10**2 and fix tests
-        // accordingly
-        _totalSupply = 50 * 10 ** 6 * 10 ** DECIMALS;
-        // 50M
+        _totalSupply = 50 * 10**6 * 10**DECIMALS; // 50M
 
         // Set _totalGons to a multiple of totalSupply so _gonsPerFragment can be
         // computed exactly.
