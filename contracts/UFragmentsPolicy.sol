@@ -59,13 +59,13 @@ contract UFragmentsPolicy is Ownable {
 
     uint256 private constant RATE_DECIMALS = 18;
 
-    uint256 private constant TARGET_RATE = 1 * 10 ** RATE_DECIMALS;
+    uint256 private constant TARGET_RATE = 1 * 10**RATE_DECIMALS;
 
     int256 private constant TARGET_RATE_SIGNED = int256(TARGET_RATE);
 
     // We cap the rate to avoid overflows in computations.
     // 18 decimals fixed point format
-    uint256 private constant MAX_RATE = 100 * 10 ** RATE_DECIMALS;
+    uint256 private constant MAX_RATE = 10**6 * 10**RATE_DECIMALS;
 
     // We cap the supply to avoid overflows in computations.
     // Due to the signed math in rebase(), MAX_RATE x MAX_SUPPLY must fit into an int256.
