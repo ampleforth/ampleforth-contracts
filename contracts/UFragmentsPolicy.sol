@@ -116,7 +116,7 @@ contract UFragmentsPolicy is Ownable {
      *         oracle is within this threshold, then no supply modifications are made.
      * @param deviationThreshold The new exchange rate threshold.
      */
-    function setDeviationThreshold(uint128 deviationThreshold)
+    function setDeviationThreshold(uint256 deviationThreshold)
         external
         onlyOwner
     {
@@ -127,7 +127,7 @@ contract UFragmentsPolicy is Ownable {
      * @notice Allows setting the minimum time period that must elapse between rebase cycles.
      * @param minRebaseTimeIntervalSec The new minimum time interval, in seconds.
      */
-    function setMinRebaseTimeIntervalSec(uint128 minRebaseTimeIntervalSec)
+    function setMinRebaseTimeIntervalSec(uint256 minRebaseTimeIntervalSec)
         external
         onlyOwner
     {
