@@ -15,7 +15,7 @@ interface IMarketOracle {
 
 /**
  * @title uFragments Monetary Supply Policy
- * @dev This is an implementation of the uFragments Ideal Money protocol @ https://fragments.org/protocol
+ * @dev This is an implementation of the uFragments Ideal Money protocol.
  *      uFragments operates symmetrically on expansion and contraction. It will both split and
  *      combine coins to maintain a stable unit price.
  *
@@ -38,23 +38,20 @@ contract UFragmentsPolicy is Ownable {
     IMarketOracle public _marketOracle;
 
     // If the current exchange rate is within this tolerance, no supply update is performed.
-    // 18 decimal fixed point format
+    // 18 decimal fixed point number.
     uint256 public _deviationThreshold;
 
-    // The rebase lag parameter controls how long it takes, in cycles, to approach an absolute
-    // supply correction. If the lag equals the smallest value of 1, then we apply full
-    // supply correction at each rebase cycle. If it is greater than 1, say n, then we apply
-    // a correction of 1/n at every cycle so that by the end of n cycles we would have
-    // approached an absolute supply correction.
+    // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / _rebaseLag
+    // Check setRebaseLag comments for more details.
     uint32 public _rebaseLag;
 
     // At least this much time must pass between rebase operations.
     uint256 public _minRebaseTimeIntervalSec;
 
     // Block timestamp of last rebase operation
-    uint256 public _lastRebaseTimestamp;
+    uint256 public _lastRebaseTimestampSec;
 
-    // Keeps track of the number of rebase cycles since inception
+    // The number of rebase cycles since inception
     uint256 public _epoch;
 
     uint256 private constant RATE_DECIMALS = 18;
@@ -63,23 +60,22 @@ contract UFragmentsPolicy is Ownable {
 
     int256 private constant TARGET_RATE_SIGNED = int256(TARGET_RATE);
 
-    // We cap the rate to avoid overflows in computations.
-    // 18 decimals fixed point format
+    // Due to the expression in computeSupplyDelta(), MAX_RATE * MAX_SUPPLY must fit into an int256.
+    // Both are 18 decimals fixed point numbers.
     uint256 private constant MAX_RATE = 10**6 * 10**RATE_DECIMALS;
-
-    // We cap the supply to avoid overflows in computations.
-    // Due to the signed math in rebase(), MAX_RATE x MAX_SUPPLY must fit into an int256.
     // MAX_SUPPLY = MAX_INT256 / MAX_RATE
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
 
     /**
-     * @notice Anyone may call this function to initiate a new rebase operation, provided the
+     * @notice Anyone can call this function to initiate a new rebase operation, provided the
      *         minimum time period has elapsed.
+     * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / _rebaseLag
+     *      Where DeviationFromTargetRate is (MarketOracleRate - TARGET_RATE) / TARGET_RATE
      */
     function rebase() external {
-        require(_lastRebaseTimestamp.add(_minRebaseTimeIntervalSec) <= now);
+        require(_lastRebaseTimestampSec.add(_minRebaseTimeIntervalSec) <= now);
         _epoch = _epoch.add(1);
-        _lastRebaseTimestamp = now;
+        _lastRebaseTimestampSec = now;
 
         uint256 exchangeRate;
         uint256 volume;
@@ -88,8 +84,9 @@ contract UFragmentsPolicy is Ownable {
             exchangeRate = MAX_RATE;
         }
 
-        int256 supplyDelta = calcSupplyDelta(exchangeRate);
-        supplyDelta = calcDampenedSupplyDelta(supplyDelta);
+        int256 supplyDelta = computeSupplyDelta(exchangeRate);
+        // Apply the Dampening factor.
+        supplyDelta = supplyDelta.div(_rebaseLag);
 
         if (supplyDelta > 0 && _uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
             supplyDelta = (MAX_SUPPLY.sub(_uFrags.totalSupply())).toInt256Safe();
@@ -101,7 +98,7 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice Allows setting the reference to the market oracle.
+     * @notice Sets the reference to the market oracle.
      * @param marketOracle The address of the market oracle contract.
      */
     function setMarketOracle(IMarketOracle marketOracle)
@@ -112,7 +109,7 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice Allows setting the Deviation Threshold. If the exchange rate given by the market
+     * @notice Sets the deviation threshold. If the exchange rate given by the market
      *         oracle is within this threshold, then no supply modifications are made.
      * @param deviationThreshold The new exchange rate threshold.
      */
@@ -124,7 +121,7 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice Allows setting the minimum time period that must elapse between rebase cycles.
+     * @notice Sets the minimum time period that must elapse between rebase cycles.
      * @param minRebaseTimeIntervalSec The new minimum time interval, in seconds.
      */
     function setMinRebaseTimeIntervalSec(uint256 minRebaseTimeIntervalSec)
@@ -135,12 +132,12 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice The rebase lag parameter controls how long it takes, in cycles, to approach an
-     *         absolute supply correction. If the lag equals the smallest value of 1, then we
-     *         apply full supply correction at each rebase cycle. If it is greater than 1, say n,
-     *         then we apply a correction of 1/n at every cycle so that by the end of n cycles
-     *         we would have approached an absolute supply correction.
-     * @param rebaseLag The new lag period for rebasing.
+     * @notice Sets the rebase lag parameter.
+               It is used to dampen the applied supply adjustment by 1 / _rebaseLag
+               If the rebase lag R, equals 1, the smallest value for R, then the full supply
+               correction is applied on each rebase cycle.
+               If it is greater than 1, then a correction of 1/R of is applied on each rebase.
+     * @param rebaseLag The new rebase lag parameter.
      */
     function setRebaseLag(uint32 rebaseLag)
         external
@@ -151,13 +148,13 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @dev ZOS upgradable contract initialization method, called at the time of contract creation.
-     *      This is where parent class initializers are invoked and contract storage variables
-     *      are set with initial values.
+     * @dev ZOS upgradable contract initialization method.
+     *      It is called at the time of contract creation to invoke parent class initializers and
+     *      initialize the contract's state variables.
      */
     function initialize(address owner, UFragments uFrags)
         public
-        isInitializer("UFragmentsPolicy", "0")
+        isInitializer("UFragmentsPolicy", "0" /* Version ID */)
     {
         Ownable.initialize(owner);
 
@@ -170,10 +167,9 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @return The total supply adjustment that should be made in response to the exchange
-     *         rate, as provided by the market oracle.
+     * @return Computes the total supply adjustment in response to the exchange rate.
      */
-    function calcSupplyDelta(uint256 rate)
+    function computeSupplyDelta(uint256 rate)
         private
         view
         returns (int256)
@@ -189,20 +185,9 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @return Damps the supply delta value so that only small changes to supply are made.
-     *         This is currently set to supplyDelta / _rebaseLag.
-     */
-    function calcDampenedSupplyDelta(int256 supplyDelta)
-        private
-        view
-        returns (int256)
-    {
-        return supplyDelta.div(_rebaseLag);
-    }
-
-    /**
-     * @param rate The current exchange rate, in 18 decimal fixed point format.
-     * @return True if the rate is within the deviation threshold and false otherwise.
+     * @param rate The current exchange rate, an 18 decimal fixed point number.
+     * @return If the rate is within the deviation threshold from the target rate, returns true.
+     *         Otherwise, returns false.
      */
     function withinDeviationThreshold(uint256 rate)
         private
