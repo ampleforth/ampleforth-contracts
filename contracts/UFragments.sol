@@ -9,14 +9,13 @@ import "./lib/SafeMathInt.sol";
 
 /**
  * @title uFragments ERC20 token
- * @dev This is an implementation of the uFragments Ideal Money protocol
- *      uFragments operates symmetrically on expansion and contraction. It will both split and
- *      combine coins to maintain a stable unit price.
+ * @dev This is part of an implementation of the uFragments Ideal Money protocol.
+ *      uFragments is a normal ERC20 token, but its supply can be adjusted by splitting and
+ *      combining tokens proportionally across all wallets.
  *
  *      uFragment balances are internally represented with a hidden denomination, 'gons'.
  *      We support splitting the currency in expansion and combining the currency on contraction by
  *      changing the exchange rate between the hidden 'gons' and the public 'fragments'.
- *      The exchange rate is determined by the internal properties '_totalGons' and '_totalSupply'.
  */
 contract UFragments is DetailedERC20, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
