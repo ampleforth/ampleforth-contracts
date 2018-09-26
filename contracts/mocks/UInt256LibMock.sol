@@ -4,7 +4,7 @@ import "./Mock.sol";
 import "../lib/UInt256Lib.sol";
 
 
-contract SafeMathUIntMock is Mock {
+contract UInt256LibMock is Mock {
     function toInt256Safe(uint256 a)
         external
         returns (int256)
