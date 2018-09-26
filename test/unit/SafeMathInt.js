@@ -10,8 +10,8 @@ require('chai')
   .should();
 
 contract('SafeMathInt', () => {
-  const MIN_INT256 = new BigNumber('-57896044618658097711785492504343953926634992332820282019728792003956564819968');
-  const MAX_INT256 = new BigNumber('57896044618658097711785492504343953926634992332820282019728792003956564819967');
+  const MIN_INT256 = new BigNumber(-2).pow(255);
+  const MAX_INT256 = new BigNumber(2).pow(255).minus(1);
 
   let safeMathInt;
 
@@ -34,6 +34,18 @@ contract('SafeMathInt', () => {
     it('should fail on addition overflow', async function () {
       const a = MAX_INT256;
       const b = new BigNumber(1);
+
+      expect(
+        await chain.isEthException(safeMathInt.add(a, b))
+      ).to.be.true;
+      expect(
+        await chain.isEthException(safeMathInt.add(b, a))
+      ).to.be.true;
+    });
+
+    it('should fail on addition overflow, swapped args', async function () {
+      const a = new BigNumber(1);
+      const b = MAX_INT256;
 
       expect(
         await chain.isEthException(safeMathInt.add(a, b))

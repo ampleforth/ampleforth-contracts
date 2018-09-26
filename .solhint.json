@@ -3,6 +3,7 @@
     "rules": {
         "not-rely-on-time": [false],
         "no-simple-event-func-name": [false],
-        "indent": ["warn", 4]
+        "indent": ["warn", 4],
+        "max-line-length": ["error", 100]
     }
 }

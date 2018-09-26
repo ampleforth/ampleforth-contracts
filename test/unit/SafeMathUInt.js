@@ -10,7 +10,7 @@ require('chai')
   .should();
 
 contract('SafeMathUInt', () => {
-  const MAX_INT256 = new BigNumber('57896044618658097711785492504343953926634992332820282019728792003956564819967');
+  const MAX_INT256 = new BigNumber(2).pow(255).minus(1);
 
   let safeMathUInt;
 
