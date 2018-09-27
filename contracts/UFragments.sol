@@ -22,7 +22,7 @@ contract UFragments is DetailedERC20, Ownable {
     // Anytime there is division, there is a risk of numerical instability from rounding errors. In
     // order to minimize this risk, we adhere to the following guidelines:
     // 1) The conversion rate adopted is the number of gons that equals 1 fragment.
-    //    The inverse rate must not be used--_totalGons is always the numerator and _totalSupply is
+    //    The inverse rate must not be used--TOTAL_GONS is always the numerator and _totalSupply is
     //    always the denominator. (i.e. If you want to convert gons to fragments instead of
     //    multiplying by the inverse rate, you should divide by the normal rate)
     // 2) Gon balances converted into Fragments are always rounded down (truncated).
@@ -70,14 +70,20 @@ contract UFragments is DetailedERC20, Ownable {
         _;
     }
 
-    mapping(address => uint256) private _gonBalances;
-
     uint256 private constant DECIMALS = 9;
     uint256 private constant MAX_UINT256 = ~uint256(0);
-    uint256 private constant MAX_SUPPLY = ~uint128(0);
-    uint256 private _totalGons;
+    uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 50 * 10**6 * 10**DECIMALS;
+
+    // TOTAL_GONS is a multiple of INITIAL_FRAGMENTS_SUPPLY so that _gonsPerFragment is an integer.
+    // Use the highest value that fits in a uint256 for max granularity.
+    uint256 private constant TOTAL_GONS = MAX_UINT256.sub(MAX_UINT256 % INITIAL_FRAGMENTS_SUPPLY);
+
+    // MAX_SUPPLY = maximum integer < (sqrt(4*TOTAL_GONS + 1) - 1) / 2
+    uint256 private constant MAX_SUPPLY = ~uint128(0);  // (2^128) - 1
+
     uint256 private _totalSupply;
     uint256 private _gonsPerFragment;
+    mapping(address => uint256) private _gonBalances;
 
     // This is denominated in Fragments, because the gons-fragments conversion might change before
     // it's fully paid.
@@ -137,17 +143,18 @@ contract UFragments is DetailedERC20, Ownable {
             _totalSupply = MAX_SUPPLY;
         }
 
-        _gonsPerFragment = _totalGons.div(_totalSupply);
+        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
+
         // From this point forward, _gonsPerFragment is taken as the source of truth.
         // We recalculate a new _totalSupply to be in agreement with the _gonsPerFragment
         // conversion rate.
         // This means our applied supplyDelta can deviate from the requested supplyDelta,
-        // but this deviation is guaranteed to be <= (_totalSupply^2)/(_totalGons - _totalSupply).
-
+        // but this deviation is guaranteed to be < (_totalSupply^2)/(TOTAL_GONS - _totalSupply).
+        //
         // In the case of _totalSupply <= MAX_UINT128 (our current supply cap), this
         // deviation is guaranteed to be < 1, so we can omit this step. If the supply cap is
         // ever increased, it must be re-included.
-        // _totalSupply = _totalGons.div(_gonsPerFragment)
+        // _totalSupply = TOTAL_GONS.div(_gonsPerFragment)
 
         emit LogRebase(epoch, _totalSupply);
     }
@@ -162,15 +169,9 @@ contract UFragments is DetailedERC20, Ownable {
         _rebasePaused = false;
         _tokenPaused = false;
 
-        _totalSupply = 50 * 10**6 * 10**DECIMALS; // 50M
-
-        // Set _totalGons to a multiple of totalSupply so _gonsPerFragment can be
-        // computed exactly.
-        // For highest granularity, set it to the greatest multiple of
-        // _totalSupply that fits in a uint256
-        _totalGons = MAX_UINT256.sub(MAX_UINT256 % _totalSupply);
-        _gonBalances[owner] = _totalGons;
-        _gonsPerFragment = _totalGons.div(_totalSupply);
+        _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
+        _gonBalances[owner] = TOTAL_GONS;
+        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
 
         emit Transfer(address(0x0), owner, _totalSupply);
     }
