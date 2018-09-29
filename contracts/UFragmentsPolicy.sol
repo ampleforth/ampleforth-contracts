@@ -31,7 +31,7 @@ contract UFragmentsPolicy is Ownable {
         uint256 indexed epoch,
         uint256 exchangeRate,
         uint256 volume24hrs,
-        int256 appliedSupplyAdjustment
+        int256 requestedSupplyAdjustment
     );
 
     UFragments public _uFrags;
@@ -43,7 +43,7 @@ contract UFragmentsPolicy is Ownable {
 
     // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / _rebaseLag
     // Check setRebaseLag comments for more details.
-    uint32 public _rebaseLag;
+    uint256 public _rebaseLag;
 
     // At least this much time must pass between rebase operations.
     uint256 public _minRebaseTimeIntervalSec;
@@ -86,7 +86,7 @@ contract UFragmentsPolicy is Ownable {
 
         int256 supplyDelta = computeSupplyDelta(exchangeRate);
         // Apply the Dampening factor.
-        supplyDelta = supplyDelta.div(_rebaseLag);
+        supplyDelta = supplyDelta.div(_rebaseLag.toInt256Safe());
 
         if (supplyDelta > 0 && _uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
             supplyDelta = (MAX_SUPPLY.sub(_uFrags.totalSupply())).toInt256Safe();
@@ -139,7 +139,7 @@ contract UFragmentsPolicy is Ownable {
                If it is greater than 1, then a correction of 1/R of is applied on each rebase.
      * @param rebaseLag The new rebase lag parameter.
      */
-    function setRebaseLag(uint32 rebaseLag)
+    function setRebaseLag(uint256 rebaseLag)
         external
         onlyOwner
     {
@@ -154,13 +154,14 @@ contract UFragmentsPolicy is Ownable {
      */
     function initialize(address owner, UFragments uFrags)
         public
-        isInitializer("UFragmentsPolicy", "0" /* Version ID */)
+        isInitializer("UFragmentsPolicy", "1.0.0" /* Version ID */)
     {
         Ownable.initialize(owner);
 
         _deviationThreshold = (5 * TARGET_RATE) / 100;  // 5%
         _rebaseLag = 30;
         _minRebaseTimeIntervalSec = 1 days;
+        _lastRebaseTimestampSec = 0;
         _epoch = 0;
 
         _uFrags = uFrags;

@@ -80,21 +80,6 @@ contract('UFragments:setMonetaryPolicy', function (accounts) {
   });
 });
 
-contract('UFragments:setMonetaryPolicy', function (accounts) {
-  const policy = accounts[1];
-
-  before('setup UFragments contract', setupContracts);
-
-  it('should not be callable after reference is set', async function () {
-    expect(
-      await chain.isEthException(uFragments.setMonetaryPolicy(policy, { from: deployer }))
-    ).to.be.false;
-    expect(
-      await chain.isEthException(uFragments.setMonetaryPolicy(policy, { from: deployer }))
-    ).to.be.true;
-  });
-});
-
 contract('UFragments:setMonetaryPolicy:accessControl', function (accounts) {
   const policy = accounts[1];
 

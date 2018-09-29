@@ -102,17 +102,4 @@ library SafeMathInt {
         require(a != MIN_INT256);
         return a < 0 ? -a : a;
     }
-
-    /**
-     * @dev Converts an int256 variable to uint256. Fails if the integer
-     * is less than 0.
-     */
-    function toUInt256Safe(int256 a)
-        internal
-        pure
-        returns (uint256)
-    {
-        require(a >= 0);
-        return uint256(a);
-    }
 }
