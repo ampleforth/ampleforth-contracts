@@ -49,13 +49,4 @@ contract SafeMathIntMock is Mock {
         emit ReturnValueInt256(result);
         return result;
     }
-
-    function toUInt256Safe(int256 a)
-        external
-        returns (uint256)
-    {
-        uint256 result = SafeMathInt.toUInt256Safe(a);
-        emit ReturnValueUInt256(result);
-        return result;
-    }
 }

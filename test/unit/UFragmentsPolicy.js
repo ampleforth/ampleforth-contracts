@@ -206,14 +206,14 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
-  describe('when rate is withinDeviationThreshold', function () {
+  describe('when rate is within deviationThreshold', function () {
     before(async function () {
       await mockExternalData(1.0499e18, 100, 1000);
     });
 
     it('should return 0', async function () {
       r = await uFragmentsPolicy.rebase();
-      r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(0);
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
     });
   });
 });
@@ -230,15 +230,15 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       // Any exchangeRate >= (MAX_RATE=100x) would result in the same supply increase
       await mockExternalData(MAX_RATE, 100, 1000);
       r = await uFragmentsPolicy.rebase();
-      const supplyChange = r.logs[0].args.appliedSupplyAdjustment;
+      const supplyChange = r.logs[0].args.requestedSupplyAdjustment;
 
       await mockExternalData(MAX_RATE.add(1e17), 100, 1000);
       r = await uFragmentsPolicy.rebase();
-      r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
 
       await mockExternalData(MAX_RATE.mul(2), 100, 1000);
       r = await uFragmentsPolicy.rebase();
-      r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
     });
   });
 });
@@ -255,7 +255,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       // Supply is MAX_SUPPLY-1, exchangeRate is 2x; resulting in a new supply more than MAX_SUPPLY
       // However, supply is ONLY increased by 1 to MAX_SUPPLY
       r = await uFragmentsPolicy.rebase();
-      r.logs[0].args.appliedSupplyAdjustment.should.be.bignumber.eq(1);
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(1);
     });
   });
 });
@@ -301,11 +301,11 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       expect(time.minus(prevTime).gte(5)).to.be.true;
     });
 
-    it('should emit Rebase with positive appliedSupplyAdjustment', async function () {
+    it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
       expect(log.args.epoch.eq(prevEpoch.plus(1))).to.be.true;
-      log.args.appliedSupplyAdjustment.should.be.bignumber.eq(20);
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(20);
       log.args.volume24hrs.should.be.bignumber.eq(100);
     });
 
@@ -338,10 +338,10 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       r = await uFragmentsPolicy.rebase();
     });
 
-    it('should emit Rebase with negative appliedSupplyAdjustment', async function () {
+    it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      log.args.appliedSupplyAdjustment.should.be.bignumber.eq(-10);
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-10);
     });
   });
 });
@@ -356,10 +356,10 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       r = await uFragmentsPolicy.rebase();
     });
 
-    it('should emit Rebase with 0 appliedSupplyAdjustment', async function () {
+    it('should emit Rebase with 0 requestedSupplyAdjustment', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      log.args.appliedSupplyAdjustment.should.be.bignumber.eq(0);
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
     });
   });
 });

@@ -96,7 +96,6 @@ contract UFragments is DetailedERC20, Ownable {
         external
         onlyOwner
     {
-        require(_monetaryPolicy == address(0x0));
         _monetaryPolicy = monetaryPolicy;
     }
 
@@ -134,7 +133,7 @@ contract UFragments is DetailedERC20, Ownable {
         whenRebaseNotPaused
     {
         if (supplyDelta < 0) {
-            _totalSupply = _totalSupply.sub(supplyDelta.abs().toUInt256Safe());
+            _totalSupply = _totalSupply.sub(uint256(supplyDelta.abs()));
         } else {
             _totalSupply = _totalSupply.add(uint256(supplyDelta));
         }
@@ -161,7 +160,7 @@ contract UFragments is DetailedERC20, Ownable {
 
     function initialize(address owner)
         public
-        isInitializer("UFragments", "0" /* Version ID */)
+        isInitializer("UFragments", "1.0.0" /* Version ID */)
     {
         DetailedERC20.initialize("UFragments", "UFRG", uint8(DECIMALS));
         Ownable.initialize(owner);
@@ -244,7 +243,6 @@ contract UFragments is DetailedERC20, Ownable {
         whenTokenNotPaused
         returns (bool)
     {
-        require(value <= _allowedFragments[from][msg.sender]);
         _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value);
 
         uint256 gonValue = value.mul(_gonsPerFragment);
@@ -271,7 +269,6 @@ contract UFragments is DetailedERC20, Ownable {
         whenTokenNotPaused
         returns (bool)
     {
-
         _allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;
