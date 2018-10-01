@@ -323,6 +323,13 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
     log.args.epoch.should.be.bignumber.eq(1);
     log.args.totalSupply.should.be.bignumber.eq(initialSupply.plus(rebaseAmt));
   });
+
+  it('should return the new supply', async function () {
+    const returnVal = await uFragments.rebase.call(2, rebaseAmt, {from: policy});
+    await uFragments.rebase(2, rebaseAmt, {from: policy});
+    const supply = await uFragments.totalSupply.call();
+    returnVal.should.be.bignumber.eq(supply);
+  });
 });
 
 contract('UFragments:Rebase:Expansion', function (accounts) {
