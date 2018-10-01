@@ -92,8 +92,8 @@ contract UFragmentsPolicy is Ownable {
             supplyDelta = (MAX_SUPPLY.sub(_uFrags.totalSupply())).toInt256Safe();
         }
 
-        _uFrags.rebase(_epoch, supplyDelta);
-        assert(_uFrags.totalSupply() <= MAX_SUPPLY);
+        uint256 supplyAfterRebase = _uFrags.rebase(_epoch, supplyDelta);
+        assert(supplyAfterRebase <= MAX_SUPPLY);
         emit LogRebase(_epoch, exchangeRate, volume, supplyDelta);
     }
 

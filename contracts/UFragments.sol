@@ -126,12 +126,19 @@ contract UFragments is DetailedERC20, Ownable {
     /**
      * @dev Notifies Fragments contract about a new rebase cycle.
      * @param supplyDelta The number of new fragment tokens to add into circulation via expansion.
+     * @return The total number of fragments after the supply adjustment.
      */
     function rebase(uint256 epoch, int256 supplyDelta)
         external
         onlyMonetaryPolicy
         whenRebaseNotPaused
+        returns (uint256)
     {
+        if (supplyDelta == 0) {
+            emit LogRebase(epoch, _totalSupply);
+            return _totalSupply;
+        }
+
         if (supplyDelta < 0) {
             _totalSupply = _totalSupply.sub(uint256(supplyDelta.abs()));
         } else {
@@ -156,6 +163,7 @@ contract UFragments is DetailedERC20, Ownable {
         // _totalSupply = TOTAL_GONS.div(_gonsPerFragment)
 
         emit LogRebase(epoch, _totalSupply);
+        return _totalSupply;
     }
 
     function initialize(address owner)
