@@ -31,6 +31,16 @@ async function setupContracts () {
   initialSupply = await uFragments.totalSupply.call();
 }
 
+contract('UFragments', function (accounts) {
+  before('setup UFragments contract', setupContracts);
+
+  it('should reject any ether sent to it', async function () {
+    expect(
+      await chain.isEthException(uFragments.sendTransaction({ from: user, value: 1 }))
+    ).to.be.true;
+  });
+});
+
 contract('UFragments:Initialization', function (accounts) {
   before('setup UFragments contract', setupContracts);
 
