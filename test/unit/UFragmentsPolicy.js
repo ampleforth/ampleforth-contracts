@@ -37,6 +37,17 @@ async function mockExternalData (exchangeRate, volume, uFragSupply) {
   await mockMarketOracle.storeVolume(volume);
   await mockUFragments.storeSupply(uFragSupply);
 }
+
+contract('UFragmentsPolicy', function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should reject any ether sent to it', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.sendTransaction({ from: user, value: 1 }))
+    ).to.be.true;
+  });
+});
+
 contract('UFragmentsPolicy:initialize', async function (accounts) {
   describe('initial values set correctly', function () {
     before('setup UFragmentsPolicy contract', setupContracts);
