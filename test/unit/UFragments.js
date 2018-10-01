@@ -284,13 +284,19 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
   const B = accounts[3];
   const policy = accounts[1];
   const rebaseAmt = INTIAL_SUPPLY / 10;
+  let returnVal;
 
   before('setup UFragments contract', async function () {
     await setupContracts();
     await uFragments.setMonetaryPolicy(policy, {from: deployer});
     await uFragments.transfer(A, toUFrgDenomination(750), { from: deployer });
     await uFragments.transfer(B, toUFrgDenomination(250), { from: deployer });
+    returnVal = await uFragments.rebase.call(1, rebaseAmt, {from: policy});
     r = await uFragments.rebase(1, rebaseAmt, {from: policy});
+  });
+
+  it('should return the new supply', async function () {
+    returnVal.should.be.bignumber.eq(initialSupply.plus(rebaseAmt));
   });
 
   it('should increase the totalSupply', async function () {

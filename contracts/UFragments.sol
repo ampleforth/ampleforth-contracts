@@ -131,10 +131,11 @@ contract UFragments is DetailedERC20, Ownable {
         external
         onlyMonetaryPolicy
         whenRebaseNotPaused
+        returns (uint256)
     {
         if (supplyDelta == 0) {
             emit LogRebase(epoch, _totalSupply);
-            return;
+            return _totalSupply;
         }
 
         if (supplyDelta < 0) {
@@ -161,6 +162,7 @@ contract UFragments is DetailedERC20, Ownable {
         // _totalSupply = TOTAL_GONS.div(_gonsPerFragment)
 
         emit LogRebase(epoch, _totalSupply);
+        return _totalSupply;
     }
 
     function initialize(address owner)
