@@ -132,6 +132,11 @@ contract UFragments is DetailedERC20, Ownable {
         onlyMonetaryPolicy
         whenRebaseNotPaused
     {
+        if (supplyDelta == 0) {
+            emit LogRebase(epoch, _totalSupply);
+            return;
+        }
+
         if (supplyDelta < 0) {
             _totalSupply = _totalSupply.sub(uint256(supplyDelta.abs()));
         } else {
