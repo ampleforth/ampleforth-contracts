@@ -37,8 +37,8 @@ contract UFragmentsPolicy is Ownable {
     UFragments public _uFrags;
     IMarketOracle public _marketOracle;
 
-    // If the current exchange rate is within this tolerance, no supply update is performed.
-    // 18 decimal fixed point number.
+    // If the current exchange rate is within this distance from the target, no supply update is
+    // performed. Fixed point number--same format as the rate.
     uint256 public _deviationThreshold;
 
     // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / _rebaseLag
@@ -110,7 +110,8 @@ contract UFragmentsPolicy is Ownable {
 
     /**
      * @notice Sets the deviation threshold. If the exchange rate given by the market
-     *         oracle is within this threshold, then no supply modifications are made.
+     *         oracle is within this distance from the target, then no supply modifications are
+     *         made.
      * @param deviationThreshold The new exchange rate threshold.
      */
     function setDeviationThreshold(uint256 deviationThreshold)
