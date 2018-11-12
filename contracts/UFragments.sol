@@ -1,8 +1,8 @@
 pragma solidity 0.4.24;
 
-import "openzeppelin-zos/contracts/math/SafeMath.sol";
-import "openzeppelin-zos/contracts/ownership/Ownable.sol";
-import "openzeppelin-zos/contracts/token/ERC20/DetailedERC20.sol";
+import "openzeppelin-eth/contracts/math/SafeMath.sol";
+import "openzeppelin-eth/contracts/ownership/Ownable.sol";
+import "openzeppelin-eth/contracts/token/ERC20/ERC20Detailed.sol";
 
 import "./lib/SafeMathInt.sol";
 
@@ -17,7 +17,7 @@ import "./lib/SafeMathInt.sol";
  *      We support splitting the currency in expansion and combining the currency on contraction by
  *      changing the exchange rate between the hidden 'gons' and the public 'fragments'.
  */
-contract UFragments is DetailedERC20, Ownable {
+contract UFragments is ERC20Detailed, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
     // Anytime there is division, there is a risk of numerical instability from rounding errors. In
     // order to minimize this risk, we adhere to the following guidelines:
@@ -168,9 +168,9 @@ contract UFragments is DetailedERC20, Ownable {
 
     function initialize(address owner)
         public
-        isInitializer("UFragments", "1.0.0" /* Version ID */)
+        initializer
     {
-        DetailedERC20.initialize("UFragments", "UFRG", uint8(DECIMALS));
+        ERC20Detailed.initialize("UFragments", "UFRG", uint8(DECIMALS));
         Ownable.initialize(owner);
 
         _rebasePaused = false;

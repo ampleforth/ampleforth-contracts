@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
-import "openzeppelin-zos/contracts/math/SafeMath.sol";
-import "openzeppelin-zos/contracts/ownership/Ownable.sol";
+import "openzeppelin-eth/contracts/math/SafeMath.sol";
+import "openzeppelin-eth/contracts/ownership/Ownable.sol";
 
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
@@ -155,7 +155,7 @@ contract UFragmentsPolicy is Ownable {
      */
     function initialize(address owner, UFragments uFrags)
         public
-        isInitializer("UFragmentsPolicy", "1.0.0" /* Version ID */)
+        initializer
     {
         Ownable.initialize(owner);
 
