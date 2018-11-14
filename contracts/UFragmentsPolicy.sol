@@ -41,6 +41,10 @@ contract UFragmentsPolicy is Ownable {
     // update is performed. Fixed point number--same format as the rate.
     uint256 public _deviationThreshold;
 
+    // If the current market volume is within this threshold, no supply update is performed.
+    // Measured in Token volume over last 24hrs.
+    uint256 public _volumeThreshold;
+
     // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / _rebaseLag
     // Check setRebaseLag comments for more details.
     uint256 public _rebaseLag;
@@ -84,7 +88,7 @@ contract UFragmentsPolicy is Ownable {
             exchangeRate = MAX_RATE;
         }
 
-        int256 supplyDelta = computeSupplyDelta(exchangeRate);
+        int256 supplyDelta = computeSupplyDelta(exchangeRate, volume);
         // Apply the Dampening factor.
         supplyDelta = supplyDelta.div(_rebaseLag.toInt256Safe());
 
@@ -160,6 +164,7 @@ contract UFragmentsPolicy is Ownable {
         Ownable.initialize(owner);
 
         _deviationThreshold = (5 * TARGET_RATE) / 100;  // 5% of target
+        _volumeThreshold = 0;
         _rebaseLag = 30;
         _minRebaseTimeIntervalSec = 1 days;
         _lastRebaseTimestampSec = 0;
@@ -171,12 +176,12 @@ contract UFragmentsPolicy is Ownable {
     /**
      * @return Computes the total supply adjustment in response to the exchange rate.
      */
-    function computeSupplyDelta(uint256 rate)
+    function computeSupplyDelta(uint256 rate, uint256 volume)
         private
         view
         returns (int256)
     {
-        if (withinDeviationThreshold(rate)) {
+        if (withinDeviationThreshold(rate) || withinVolumeThreshold(volume)) {
             return 0;
         }
 
@@ -198,5 +203,17 @@ contract UFragmentsPolicy is Ownable {
     {
         return (rate >= TARGET_RATE && rate.sub(TARGET_RATE) < _deviationThreshold)
             || (rate < TARGET_RATE && TARGET_RATE.sub(rate) < _deviationThreshold);
+    }
+
+    /**
+     * @param volume Total trade volume of the last reported 24 hours in Token volume.
+     * return If the volume is within the volume threshold, returns true. Otherwise, returns false.
+     */
+    function withinVolumeThreshold(uint256 volume)
+        private
+        view
+        returns (bool)
+    {
+        return volume <= _volumeThreshold;
     }
 }
