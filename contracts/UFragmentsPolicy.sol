@@ -41,9 +41,8 @@ contract UFragmentsPolicy is Ownable {
     // update is performed. Fixed point number--same format as the rate.
     uint256 public _deviationThreshold;
 
-    // If the current market volume is within this threshold, no supply update is performed.
-    // Measured in Token volume over last 24hrs.
-    uint256 public _volumeThreshold;
+    // The 24hr market volume must be at least this value before any supply adjustments occur.
+    uint256 public _minimumVolume;
 
     // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / _rebaseLag
     // Check setRebaseLag comments for more details.
@@ -126,6 +125,18 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
+     * @notice Sets the minimum volume. During rebase, the volume must be at least this value before
+     * any supply adjustment is made.
+     * @param minimumVolume The new minimum volume, measured in 24hr market Token Volume.
+     */
+    function setMinimumVolume(uint256 minimumVolume)
+        external
+        onlyOwner
+    {
+        _minimumVolume = minimumVolume;
+    }
+
+    /**
      * @notice Sets the minimum time period that must elapse between rebase cycles.
      * @param minRebaseTimeIntervalSec The new minimum time interval, in seconds.
      */
@@ -164,7 +175,7 @@ contract UFragmentsPolicy is Ownable {
         Ownable.initialize(owner);
 
         _deviationThreshold = (5 * TARGET_RATE) / 100;  // 5% of target
-        _volumeThreshold = 0;
+        _minimumVolume = 1;
         _rebaseLag = 30;
         _minRebaseTimeIntervalSec = 1 days;
         _lastRebaseTimestampSec = 0;
@@ -181,7 +192,7 @@ contract UFragmentsPolicy is Ownable {
         view
         returns (int256)
     {
-        if (withinDeviationThreshold(rate) || withinVolumeThreshold(volume)) {
+        if (withinDeviationThreshold(rate) || !enoughVolume(volume)) {
             return 0;
         }
 
@@ -207,13 +218,13 @@ contract UFragmentsPolicy is Ownable {
 
     /**
      * @param volume Total trade volume of the last reported 24 hours in Token volume.
-     * return If the volume is within the volume threshold, returns true. Otherwise, returns false.
+     * return True, if the volume meets requirements for a supply adjustment. False otherwise.
      */
-    function withinVolumeThreshold(uint256 volume)
+    function enoughVolume(uint256 volume)
         private
         view
         returns (bool)
     {
-        return volume <= _volumeThreshold;
+        return volume >= _minimumVolume;
     }
 }

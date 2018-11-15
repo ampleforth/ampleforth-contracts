@@ -55,6 +55,9 @@ contract('UFragmentsPolicy:initialize', async function (accounts) {
     it('_deviationThreshold', async function () {
       (await uFragmentsPolicy._deviationThreshold.call()).should.be.bignumber.eq((5 / 100) * (10 ** 18));
     });
+    it('_minimumVolume', async function () {
+      (await uFragmentsPolicy._minimumVolume.call()).should.be.bignumber.eq(1);
+    });
     it('_rebaseLag', async function () {
       (await uFragmentsPolicy._rebaseLag.call()).should.be.bignumber.eq(30);
     });
@@ -72,6 +75,7 @@ contract('UFragmentsPolicy:initialize', async function (accounts) {
     });
   });
 });
+
 contract('UFragmentsPolicy:setMarketOracle', async function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
@@ -123,6 +127,36 @@ contract('UFragments:setDeviationThreshold:accessControl', function (accounts) {
   it('should NOT be callable by non-owner', async function () {
     expect(
       await chain.isEthException(uFragmentsPolicy.setDeviationThreshold(0, { from: user }))
+    ).to.be.true;
+  });
+});
+
+contract('UFragmentsPolicy:setMinimumVolume', async function (accounts) {
+  let prevVol, vol;
+  before('setup UFragmentsPolicy contract', async function () {
+    await setupContracts();
+    prevVol = await uFragmentsPolicy._minimumVolume.call();
+    vol = prevVol.plus(1);
+    await uFragmentsPolicy.setMinimumVolume(vol);
+  });
+
+  it('should set minimumVolume', async function () {
+    (await uFragmentsPolicy._minimumVolume.call()).should.be.bignumber.eq(vol);
+  });
+});
+
+contract('UFragments:setMinimumVolume:accessControl', function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setMinimumVolume(0, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setMinimumVolume(0, { from: user }))
     ).to.be.true;
   });
 });
@@ -220,6 +254,21 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
   describe('when rate is within deviationThreshold', function () {
     before(async function () {
       await mockExternalData(1.0499e18, 100, 1000);
+    });
+
+    it('should return 0', async function () {
+      r = await uFragmentsPolicy.rebase();
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
+    });
+  });
+});
+
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  describe('when volume is too low', function () {
+    before(async function () {
+      await mockExternalData(1.06e18, 0, 1000);
     });
 
     it('should return 0', async function () {
