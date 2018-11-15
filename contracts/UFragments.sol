@@ -264,7 +264,7 @@ contract UFragments is ERC20Detailed, Ownable {
     /**
      * @dev Approve the passed address to spend the specified amount of tokens on behalf of
      * msg.sender. This method is included for ERC20 compatibility.
-     * increaseApproval and decreaseApproval should be used instead.
+     * increaseAllowance and decreaseAllowance should be used instead.
      * Changing an allowance with this method brings the risk that someone may transfer both
      * the old and the new allowance - if they are both greater than zero - if a transfer
      * transaction is mined before the later approve() call is mined.
