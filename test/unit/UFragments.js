@@ -46,7 +46,7 @@ contract('UFragments:Initialization', function (accounts) {
 
   it('should transfer 50M uFragments to the deployer', async function () {
     (await uFragments.balanceOf.call(deployer)).should.be.bignumber.eq(INTIAL_SUPPLY);
-    const log = r.logs[2];
+    const log = r.logs[0];
     expect(log).to.exist;
     expect(log.event).to.eq('Transfer');
     expect(log.args.from).to.eq(ZERO_ADDRESS);
