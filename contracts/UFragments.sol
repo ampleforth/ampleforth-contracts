@@ -43,24 +43,24 @@ contract UFragments is ERC20Detailed, Ownable {
     event LogTokenPaused(bool paused);
 
     // Used for authentication
-    address public _monetaryPolicy;
+    address public monetaryPolicy;
 
     modifier onlyMonetaryPolicy() {
-        require(msg.sender == _monetaryPolicy);
+        require(msg.sender == monetaryPolicy);
         _;
     }
 
     // Precautionary emergency controls.
-    bool public _rebasePaused;
-    bool public _tokenPaused;
+    bool public rebasePaused;
+    bool public tokenPaused;
 
     modifier whenRebaseNotPaused() {
-        require(!_rebasePaused);
+        require(!rebasePaused);
         _;
     }
 
     modifier whenTokenNotPaused() {
-        require(!_tokenPaused);
+        require(!tokenPaused);
         _;
     }
 
@@ -90,13 +90,13 @@ contract UFragments is ERC20Detailed, Ownable {
     mapping (address => mapping (address => uint256)) private _allowedFragments;
 
     /**
-     * @param monetaryPolicy The address of the monetary policy contract to use for authentication.
+     * @param monetaryPolicy_ The address of the monetary policy contract to use for authentication.
      */
-    function setMonetaryPolicy(address monetaryPolicy)
+    function setMonetaryPolicy(address monetaryPolicy_)
         external
         onlyOwner
     {
-        _monetaryPolicy = monetaryPolicy;
+        monetaryPolicy = monetaryPolicy_;
     }
 
     /**
@@ -107,7 +107,7 @@ contract UFragments is ERC20Detailed, Ownable {
         external
         onlyOwner
     {
-        _rebasePaused = paused;
+        rebasePaused = paused;
         emit LogRebasePaused(paused);
     }
 
@@ -119,7 +119,7 @@ contract UFragments is ERC20Detailed, Ownable {
         external
         onlyOwner
     {
-        _tokenPaused = paused;
+        tokenPaused = paused;
         emit LogTokenPaused(paused);
     }
 
@@ -173,8 +173,8 @@ contract UFragments is ERC20Detailed, Ownable {
         ERC20Detailed.initialize("UFragments", "UFRG", uint8(DECIMALS));
         Ownable.initialize(owner);
 
-        _rebasePaused = false;
-        _tokenPaused = false;
+        rebasePaused = false;
+        tokenPaused = false;
 
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonBalances[owner] = TOTAL_GONS;

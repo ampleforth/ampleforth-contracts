@@ -53,25 +53,25 @@ contract('UFragmentsPolicy:initialize', async function (accounts) {
     before('setup UFragmentsPolicy contract', setupContracts);
 
     it('_deviationThreshold', async function () {
-      (await uFragmentsPolicy._deviationThreshold.call()).should.be.bignumber.eq((5 / 100) * (10 ** 18));
+      (await uFragmentsPolicy.deviationThreshold.call()).should.be.bignumber.eq((5 / 100) * (10 ** 18));
     });
     it('_minimumVolume', async function () {
-      (await uFragmentsPolicy._minimumVolume.call()).should.be.bignumber.eq(1);
+      (await uFragmentsPolicy.minimumVolume.call()).should.be.bignumber.eq(1);
     });
     it('_rebaseLag', async function () {
-      (await uFragmentsPolicy._rebaseLag.call()).should.be.bignumber.eq(30);
+      (await uFragmentsPolicy.rebaseLag.call()).should.be.bignumber.eq(30);
     });
     it('_minRebaseTimeIntervalSec', async function () {
-      (await uFragmentsPolicy._minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(24 * 60 * 60);
+      (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(24 * 60 * 60);
     });
     it('_epoch', async function () {
-      (await uFragmentsPolicy._epoch.call()).should.be.bignumber.eq(0);
+      (await uFragmentsPolicy.epoch.call()).should.be.bignumber.eq(0);
     });
     it('should set owner', async function () {
       expect(await uFragmentsPolicy.owner.call()).to.eq(deployer);
     });
     it('should set reference to uFragments', async function () {
-      expect(await uFragmentsPolicy._uFrags.call()).to.eq(mockUFragments.address);
+      expect(await uFragmentsPolicy.uFrags.call()).to.eq(mockUFragments.address);
     });
   });
 });
@@ -81,7 +81,7 @@ contract('UFragmentsPolicy:setMarketOracle', async function (accounts) {
 
   it('should set marketOracle', async function () {
     await uFragmentsPolicy.setMarketOracle(deployer);
-    expect(await uFragmentsPolicy._marketOracle.call()).to.eq(deployer);
+    expect(await uFragmentsPolicy.marketOracle.call()).to.eq(deployer);
   });
 });
 
@@ -105,13 +105,13 @@ contract('UFragmentsPolicy:setDeviationThreshold', async function (accounts) {
   let prevThreshold, threshold;
   before('setup UFragmentsPolicy contract', async function () {
     await setupContracts();
-    prevThreshold = await uFragmentsPolicy._deviationThreshold.call();
+    prevThreshold = await uFragmentsPolicy.deviationThreshold.call();
     threshold = prevThreshold.plus(0.1 * 10 ** 18);
     await uFragmentsPolicy.setDeviationThreshold(threshold);
   });
 
   it('should set deviationThreshold', async function () {
-    (await uFragmentsPolicy._deviationThreshold.call()).should.be.bignumber.eq(threshold);
+    (await uFragmentsPolicy.deviationThreshold.call()).should.be.bignumber.eq(threshold);
   });
 });
 
@@ -135,13 +135,13 @@ contract('UFragmentsPolicy:setMinimumVolume', async function (accounts) {
   let prevVol, vol;
   before('setup UFragmentsPolicy contract', async function () {
     await setupContracts();
-    prevVol = await uFragmentsPolicy._minimumVolume.call();
+    prevVol = await uFragmentsPolicy.minimumVolume.call();
     vol = prevVol.plus(1);
     await uFragmentsPolicy.setMinimumVolume(vol);
   });
 
   it('should set minimumVolume', async function () {
-    (await uFragmentsPolicy._minimumVolume.call()).should.be.bignumber.eq(vol);
+    (await uFragmentsPolicy.minimumVolume.call()).should.be.bignumber.eq(vol);
   });
 });
 
@@ -165,14 +165,14 @@ contract('UFragmentsPolicy:setRebaseLag', async function (accounts) {
   let prevLag;
   before('setup UFragmentsPolicy contract', async function () {
     await setupContracts();
-    prevLag = await uFragmentsPolicy._rebaseLag.call();
+    prevLag = await uFragmentsPolicy.rebaseLag.call();
   });
 
   describe('when rebaseLag is more than 0', async function () {
     it('should setRebaseLag', async function () {
       const lag = prevLag.plus(1);
       await uFragmentsPolicy.setRebaseLag(lag);
-      (await uFragmentsPolicy._rebaseLag.call()).should.be.bignumber.eq(lag);
+      (await uFragmentsPolicy.rebaseLag.call()).should.be.bignumber.eq(lag);
     });
   });
 
@@ -205,13 +205,13 @@ contract('UFragmentsPolicy:setMinRebaseTimeIntervalSec', async function (account
   let prevInterval;
   before('setup UFragmentsPolicy contract', async function () {
     await setupContracts();
-    prevInterval = await uFragmentsPolicy._minRebaseTimeIntervalSec.call();
+    prevInterval = await uFragmentsPolicy.minRebaseTimeIntervalSec.call();
   });
 
   it('should setMinRebaseTimeIntervalSec', async function () {
     const interval = prevInterval.plus(1);
     await uFragmentsPolicy.setMinRebaseTimeIntervalSec(interval);
-    (await uFragmentsPolicy._minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(interval);
+    (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(interval);
   });
 });
 
@@ -345,19 +345,19 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       await uFragmentsPolicy.setMinRebaseTimeIntervalSec(5); // 5 sec
       await uFragmentsPolicy.rebase();
       await chain.waitForSomeTime(5); // 5 sec
-      prevEpoch = await uFragmentsPolicy._epoch.call();
-      prevTime = await uFragmentsPolicy._lastRebaseTimestampSec.call();
+      prevEpoch = await uFragmentsPolicy.epoch.call();
+      prevTime = await uFragmentsPolicy.lastRebaseTimestampSec.call();
       await mockExternalData(1.6e18, 100, 1010);
       r = await uFragmentsPolicy.rebase();
     });
 
     it('should increment epoch', async function () {
-      const epoch = await uFragmentsPolicy._epoch.call();
+      const epoch = await uFragmentsPolicy.epoch.call();
       expect(prevEpoch.plus(1).eq(epoch));
     });
 
     it('should update lastRebaseTimestamp', async function () {
-      const time = await uFragmentsPolicy._lastRebaseTimestampSec.call();
+      const time = await uFragmentsPolicy.lastRebaseTimestampSec.call();
       expect(time.minus(prevTime).gte(5)).to.be.true;
     });
 
@@ -376,7 +376,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     });
 
     it('should call uFrag Rebase', async function () {
-      prevEpoch = await uFragmentsPolicy._epoch.call();
+      prevEpoch = await uFragmentsPolicy.epoch.call();
       const fnCalled = mockUFragments.FunctionCalled().formatter(r.receipt.logs[2]);
       expect(fnCalled.args.functionName).to.eq('UFragments:rebase');
       expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
