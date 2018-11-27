@@ -76,9 +76,10 @@ contract UFragmentsPolicy is Ownable {
      *      Where DeviationFromTargetRate is (MarketOracleRate - TARGET_RATE) / TARGET_RATE
      */
     function rebase() external {
-        require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) <= now);
-        epoch = epoch.add(1);
+        // This comparison also ensures there is no reentrancy.
+        require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
         lastRebaseTimestampSec = now;
+        epoch = epoch.add(1);
 
         uint256 exchangeRate;
         uint256 volume;
@@ -144,6 +145,7 @@ contract UFragmentsPolicy is Ownable {
         external
         onlyOwner
     {
+        require(minRebaseTimeIntervalSec_ > 0);
         minRebaseTimeIntervalSec = minRebaseTimeIntervalSec_;
     }
 
