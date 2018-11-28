@@ -220,13 +220,13 @@ contract('UFragments:setMinRebaseTimeIntervalSec:accessControl', function (accou
 
   it('should be callable by owner', async function () {
     expect(
-      await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(0, { from: deployer }))
+      await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(1, { from: deployer }))
     ).to.be.false;
   });
 
   it('should NOT be callable by non-owner', async function () {
     expect(
-      await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(0, { from: user }))
+      await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(1, { from: user }))
     ).to.be.true;
   });
 });
@@ -283,7 +283,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
   describe('when rate is more than MAX_RATE', function () {
     before(async function () {
-      await uFragmentsPolicy.setMinRebaseTimeIntervalSec(0);
+      await uFragmentsPolicy.setMinRebaseTimeIntervalSec(1);
     });
 
     it('should return same supply delta as delta for MAX_RATE', async function () {
@@ -292,9 +292,13 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       r = await uFragmentsPolicy.rebase();
       const supplyChange = r.logs[0].args.requestedSupplyAdjustment;
 
+      await chain.waitForSomeTime(2); // 2 sec
+
       await mockExternalData(MAX_RATE.add(1e17), 100, 1000);
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
+
+      await chain.waitForSomeTime(2); // 2 sec
 
       await mockExternalData(MAX_RATE.mul(2), 100, 1000);
       r = await uFragmentsPolicy.rebase();
@@ -344,7 +348,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       await mockExternalData(1.3e18, 100, 1000);
       await uFragmentsPolicy.setMinRebaseTimeIntervalSec(5); // 5 sec
       await uFragmentsPolicy.rebase();
-      await chain.waitForSomeTime(5); // 5 sec
+      await chain.waitForSomeTime(6); // 6 sec
       prevEpoch = await uFragmentsPolicy.epoch.call();
       prevTime = await uFragmentsPolicy.lastRebaseTimestampSec.call();
       await mockExternalData(1.6e18, 100, 1010);

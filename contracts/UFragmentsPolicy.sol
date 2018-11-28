@@ -48,7 +48,7 @@ contract UFragmentsPolicy is Ownable {
     // Check setRebaseLag comments for more details.
     uint256 public rebaseLag;
 
-    // At least this much time must pass between rebase operations.
+    // More than this much time must pass between rebase operations.
     uint256 public minRebaseTimeIntervalSec;
 
     // Block timestamp of last rebase operation
@@ -70,15 +70,16 @@ contract UFragmentsPolicy is Ownable {
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
 
     /**
-     * @notice Anyone can call this function to initiate a new rebase operation, provided the
-     *         minimum time period has elapsed.
+     * @notice Anyone can call this function to initiate a new rebase operation, provided more than
+     *         the minimum time period has elapsed.
      * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag
      *      Where DeviationFromTargetRate is (MarketOracleRate - TARGET_RATE) / TARGET_RATE
      */
     function rebase() external {
-        require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) <= now);
-        epoch = epoch.add(1);
+        // This comparison also ensures there is no reentrancy.
+        require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
         lastRebaseTimestampSec = now;
+        epoch = epoch.add(1);
 
         uint256 exchangeRate;
         uint256 volume;
@@ -138,12 +139,14 @@ contract UFragmentsPolicy is Ownable {
 
     /**
      * @notice Sets the minimum time period that must elapse between rebase cycles.
-     * @param minRebaseTimeIntervalSec_ The new minimum time interval, in seconds.
+     * @param minRebaseTimeIntervalSec_ More than this much time must pass between rebase
+     *        operations, in seconds.
      */
     function setMinRebaseTimeIntervalSec(uint256 minRebaseTimeIntervalSec_)
         external
         onlyOwner
     {
+        require(minRebaseTimeIntervalSec_ > 0);
         minRebaseTimeIntervalSec = minRebaseTimeIntervalSec_;
     }
 
