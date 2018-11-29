@@ -208,10 +208,20 @@ contract('UFragmentsPolicy:setMinRebaseTimeIntervalSec', async function (account
     prevInterval = await uFragmentsPolicy.minRebaseTimeIntervalSec.call();
   });
 
-  it('should setMinRebaseTimeIntervalSec', async function () {
-    const interval = prevInterval.plus(1);
-    await uFragmentsPolicy.setMinRebaseTimeIntervalSec(interval);
-    (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(interval);
+  describe('when interval = 0', function () {
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(0))
+      ).to.be.true;
+    });
+  });
+
+  describe('when interval > 0', function () {
+    it('should setMinRebaseTimeIntervalSec', async function () {
+      const interval = prevInterval.plus(1);
+      await uFragmentsPolicy.setMinRebaseTimeIntervalSec(interval);
+      (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(interval);
+    });
   });
 });
 
