@@ -1,13 +1,13 @@
-# uFragments
+# Ampleforth
 
 <img src="https://frgs3.s3.amazonaws.com/logo_centered_small.jpg" alt="Banner" width="100" />
 
 
 [![Build Status](https://travis-ci.com/frgprotocol/uFragments.svg?token=xxNsLhLrTiyG3pc78i5v&branch=master)](https://travis-ci.com/frgprotocol/uFragments)&nbsp;&nbsp;[![Coverage Status](https://coveralls.io/repos/github/frgprotocol/uFragments/badge.svg?branch=master&t=GiWi8p)](https://coveralls.io/github/frgprotocol/uFragments?branch=master)
 
-uFragments (μFragments or micro-Fragments) is a decentralized store of value protocol which attempts to create an Ideal money. It maintains a stable unit price by adjusting supply. You can read our [whitepaper](https://drive.google.com/file/d/1ESn7e-si7tCoEB7N9G9GKr-Y1cEwJnWC/preview) for the motivation and complete description of the protocol.
+Ampleforth (code name uFragments) is a decentralized elastic supply protocol. It maintains a stable unit price by adjusting supply directly to and from wallet holders. You can read the [whitepaper](https://www.ampleforth.org/paper/) for the motivation and a complete description of the protocol.
 
-This repository is a collection of [smart contracts](http://fragments.org/docs) that implement the uFragments protocol on the Ethereum blockchain.
+This repository is a collection of [smart contracts](http://ampleforth.org/docs) that implement the Ampleforth protocol on the Ethereum blockchain.
 
 
 ## Table of Contents
