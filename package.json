@@ -1,19 +1,19 @@
 {
   "name": "uFragments",
   "version": "0.0.1",
-  "description": "μFragments protocol smart contracts on Ethereum.",
+  "description": "Ampleforth protocol smart contracts on Ethereum.",
   "keywords": [
-    "etheruem",
+    "ethereum",
     "smart-contracts",
     "solidity"
   ],
-  "homepage": "https://github.com/frgprotocol/uFragments#readme",
+  "homepage": "https://github.com/ampleforth/uFragments#readme",
   "bugs": {
-    "url": "https://github.com/frgprotocol/uFragments/issues"
+    "url": "https://github.com/ampleforth/uFragments/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/frgprotocol/uFragments.git"
+    "url": "git+https://github.com/ampleforth/uFragments.git"
   },
   "license": "ISC",
   "author": "eng@fragments.org",
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "app-root-path": "^2.0.1",
-    "frg-ethereum-runners": "git+ssh://git@github.com/frgprotocol/frg-ethereum-runners.git#v1.0.0-alpha",
+    "frg-ethereum-runners": "git+ssh://git@github.com/ampleforth/frg-ethereum-runners.git#v1.0.0-alpha",
     "js-yaml": "^3.11.0",
     "openzeppelin-eth": "2.0.2",
     "truffle": "^4.1.14"
