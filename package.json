@@ -16,7 +16,7 @@
     "url": "git+https://github.com/ampleforth/uFragments.git"
   },
   "license": "ISC",
-  "author": "eng@fragments.org",
+  "author": "dev-support@ampleforth.org",
   "scripts": {
     "precommit": "./scripts/pre-commit.sh",
     "coverage": "npx frg-coverage",
