@@ -50,7 +50,7 @@ module.exports = {
               // project-specific
               "rebase", "gons", "frg", "rng", "blockchain", "minlot",
               "redemptions", "rebased", "ganache", "ethclient",
-              "bytecode", "Binance", "ethereum", "opcode",
+              "bytecode", "Binance", "ethereum", "opcode", "cpi",
 
               // names
               "nithin",

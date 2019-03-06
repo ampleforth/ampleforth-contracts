@@ -3,32 +3,37 @@ pragma solidity 0.4.24;
 import "./Mock.sol";
 
 
-contract MockMarketOracle is Mock {
-    uint128 private _exchangeRate;
-    uint128 private _volume;
+contract MockOracle is Mock {
+    bool private _validity = true;
+    uint256 private _data;
+    string public name;
+
+    constructor(string name_) public {
+        name = name_;
+    }
 
     // Mock methods
-    function getPriceAnd24HourVolume()
+    function getData()
         external
-        returns (uint128, uint128)
+        returns (uint256, bool)
     {
-        emit FunctionCalled("MarketOracle:getPriceAnd24HourVolume", msg.sender);
+        emit FunctionCalled(name, "getData", msg.sender);
         uint256[] memory uintVals = new uint256[](0);
         int256[] memory intVals = new int256[](0);
         emit FunctionArguments(uintVals, intVals);
-        return (_exchangeRate, _volume);
+        return (_data, _validity);
     }
 
     // Methods to mock data on the chain
-    function storeRate(uint128 exchangeRate)
+    function storeData(uint256 data)
         public
     {
-        _exchangeRate = exchangeRate;
+        _data = data;
     }
 
-    function storeVolume(uint128 volume)
+    function storeValidity(bool validity)
         public
     {
-        _volume = volume;
+        _validity = validity;
     }
 }

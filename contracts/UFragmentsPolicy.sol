@@ -8,8 +8,8 @@ import "./lib/UInt256Lib.sol";
 import "./UFragments.sol";
 
 
-interface IMarketOracle {
-    function getPriceAnd24HourVolume() external returns (uint256, uint256);
+interface IOracle {
+    function getData() external returns (uint256, bool);
 }
 
 
@@ -30,19 +30,24 @@ contract UFragmentsPolicy is Ownable {
     event LogRebase(
         uint256 indexed epoch,
         uint256 exchangeRate,
-        uint256 volume24hrs,
+        uint256 cpi,
         int256 requestedSupplyAdjustment
     );
 
     UFragments public uFrags;
-    IMarketOracle public marketOracle;
 
-    // If the current exchange rate is within this absolute distance from the target, no supply
+    // Cpi oracle provides the current CPI-U, seasonally adjusted data,
+    // as a 18 decimal fixed point number
+    IOracle public cpiOracle;
+
+    // Market oracle provides the token/USD exchange rate as a 18 decimal fixed point number
+    // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
+    IOracle public marketOracle;
+
+    // If the current exchange rate is within this fractional distance from the target, no supply
     // update is performed. Fixed point number--same format as the rate.
+    // (ie) abs(rate - targetRate) / targetRate < deviationThreshold, then no supply change.
     uint256 public deviationThreshold;
-
-    // The 24hr market volume must be at least this value before any supply adjustments occur.
-    uint256 public minimumVolume;
 
     // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / rebaseLag
     // Check setRebaseLag comments for more details.
@@ -57,23 +62,23 @@ contract UFragmentsPolicy is Ownable {
     // The number of rebase cycles since inception
     uint256 public epoch;
 
-    uint256 private constant RATE_DECIMALS = 18;
-
-    uint256 private constant TARGET_RATE = 1 * 10**RATE_DECIMALS;
-
-    int256 private constant TARGET_RATE_SIGNED = int256(TARGET_RATE);
+    uint256 private constant DECIMALS = 18;
 
     // Due to the expression in computeSupplyDelta(), MAX_RATE * MAX_SUPPLY must fit into an int256.
     // Both are 18 decimals fixed point numbers.
-    uint256 private constant MAX_RATE = 10**6 * 10**RATE_DECIMALS;
+    uint256 private constant MAX_RATE = 10**6 * 10**DECIMALS;
     // MAX_SUPPLY = MAX_INT256 / MAX_RATE
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
+
+    // CPI-U value July 10th 1983 100, DECIMALS Fixed point number
+    uint256 private constant BASE_CPI = 100 * (10**DECIMALS);
 
     /**
      * @notice Anyone can call this function to initiate a new rebase operation, provided more than
      *         the minimum time period has elapsed.
      * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag
-     *      Where DeviationFromTargetRate is (MarketOracleRate - TARGET_RATE) / TARGET_RATE
+     *      Where DeviationFromTargetRate is (MarketOracleRate - targetRate) / targetRate
+     *      and targetRate is CpiOracleRate / BASE_CPI
      */
     function rebase() external {
         // This comparison also ensures there is no reentrancy.
@@ -81,14 +86,24 @@ contract UFragmentsPolicy is Ownable {
         lastRebaseTimestampSec = now;
         epoch = epoch.add(1);
 
+        uint256 cpi;
+        bool cpiValid;
+        (cpi, cpiValid) = cpiOracle.getData();
+        require(cpiValid);
+
+        uint256 targetRate = cpi.mul(10 ** DECIMALS).div(BASE_CPI);
+
         uint256 exchangeRate;
-        uint256 volume;
-        (exchangeRate, volume) = marketOracle.getPriceAnd24HourVolume();
+        bool rateValid;
+        (exchangeRate, rateValid) = marketOracle.getData();
+        require(rateValid);
+
         if (exchangeRate > MAX_RATE) {
             exchangeRate = MAX_RATE;
         }
 
-        int256 supplyDelta = computeSupplyDelta(exchangeRate, volume);
+        int256 supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
+
         // Apply the Dampening factor.
         supplyDelta = supplyDelta.div(rebaseLag.toInt256Safe());
 
@@ -98,14 +113,25 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit LogRebase(epoch, exchangeRate, volume, supplyDelta);
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta);
+    }
+
+    /**
+     * @notice Sets the reference to the CPI oracle.
+     * @param cpiOracle_ The address of the cpi oracle contract.
+     */
+    function setCpiOracle(IOracle cpiOracle_)
+        external
+        onlyOwner
+    {
+        cpiOracle = cpiOracle_;
     }
 
     /**
      * @notice Sets the reference to the market oracle.
      * @param marketOracle_ The address of the market oracle contract.
      */
-    function setMarketOracle(IMarketOracle marketOracle_)
+    function setMarketOracle(IOracle marketOracle_)
         external
         onlyOwner
     {
@@ -113,28 +139,16 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice Sets the deviation threshold. If the exchange rate given by the market
-     *         oracle is within this absolute distance from the target, then no supply
-     *         modifications are made. RATE_DECIMALS fixed point number.
-     * @param deviationThreshold_ The new exchange rate threshold.
+     * @notice Sets the deviation threshold fraction. If the exchange rate given by the market
+     *         oracle is within this fractional distance from the targetRate, then no supply
+     *         modifications are made. DECIMALS fixed point number.
+     * @param deviationThreshold_ The new exchange rate threshold fraction.
      */
     function setDeviationThreshold(uint256 deviationThreshold_)
         external
         onlyOwner
     {
         deviationThreshold = deviationThreshold_;
-    }
-
-    /**
-     * @notice Sets the minimum volume. During rebase, the volume must be at least this value before
-     * any supply adjustment is made.
-     * @param minimumVolume_ The new minimum volume, measured in 24hr market Token Volume.
-     */
-    function setMinimumVolume(uint256 minimumVolume_)
-        external
-        onlyOwner
-    {
-        minimumVolume = minimumVolume_;
     }
 
     /**
@@ -177,8 +191,9 @@ contract UFragmentsPolicy is Ownable {
     {
         Ownable.initialize(owner);
 
-        deviationThreshold = (5 * TARGET_RATE) / 100;  // 5% of target
-        minimumVolume = 1;
+        // deviationThreshold = 0.05e18 = 5e16
+        deviationThreshold = 5 * 10 ** (DECIMALS-2);
+
         rebaseLag = 30;
         minRebaseTimeIntervalSec = 1 days;
         lastRebaseTimestampSec = 0;
@@ -188,46 +203,40 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @return Computes the total supply adjustment in response to the exchange rate.
+     * @return Computes the total supply adjustment in response to the exchange rate
+     *         and the targetRate.
      */
-    function computeSupplyDelta(uint256 rate, uint256 volume)
+    function computeSupplyDelta(uint256 rate, uint256 targetRate)
         private
         view
         returns (int256)
     {
-        if (withinDeviationThreshold(rate) || !enoughVolume(volume)) {
+        if (withinDeviationThreshold(rate, targetRate)) {
             return 0;
         }
 
-        // (totalSupply * (rate - target)) / target
-        return uFrags.totalSupply().toInt256Safe().mul(
-            rate.toInt256Safe().sub(TARGET_RATE_SIGNED)
-        ).div(TARGET_RATE_SIGNED);
+        // supplyDelta = totalSupply * (rate - targetRate) / targetRate
+        int256 targetRateSigned = targetRate.toInt256Safe();
+        return uFrags.totalSupply().toInt256Safe()
+            .mul(rate.toInt256Safe().sub(targetRateSigned))
+            .div(targetRateSigned);
     }
 
     /**
      * @param rate The current exchange rate, an 18 decimal fixed point number.
+     * @param targetRate The target exchange rate, an 18 decimal fixed point number.
      * @return If the rate is within the deviation threshold from the target rate, returns true.
      *         Otherwise, returns false.
      */
-    function withinDeviationThreshold(uint256 rate)
+    function withinDeviationThreshold(uint256 rate, uint256 targetRate)
         private
         view
         returns (bool)
     {
-        return (rate >= TARGET_RATE && rate.sub(TARGET_RATE) < deviationThreshold)
-            || (rate < TARGET_RATE && TARGET_RATE.sub(rate) < deviationThreshold);
-    }
+        uint256 absoluteDeviationThreshold = targetRate.mul(deviationThreshold)
+            .div(10 ** DECIMALS);
 
-    /**
-     * @param volume Total trade volume of the last reported 24 hours in Token volume.
-     * return True, if the volume meets requirements for a supply adjustment. False otherwise.
-     */
-    function enoughVolume(uint256 volume)
-        private
-        view
-        returns (bool)
-    {
-        return volume >= minimumVolume;
+        return (rate >= targetRate && rate.sub(targetRate) < absoluteDeviationThreshold)
+            || (rate < targetRate && targetRate.sub(rate) < absoluteDeviationThreshold);
     }
 }
