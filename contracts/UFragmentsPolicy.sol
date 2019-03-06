@@ -71,7 +71,7 @@ contract UFragmentsPolicy is Ownable {
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
 
     // CPI-U value July 10th 1983 100, DECIMALS Fixed point number
-    uint256 private constant BASE_CPI = 100 * 10**(DECIMALS);
+    uint256 private constant BASE_CPI = 100 * (10**DECIMALS);
 
     /**
      * @notice Anyone can call this function to initiate a new rebase operation, provided more than
