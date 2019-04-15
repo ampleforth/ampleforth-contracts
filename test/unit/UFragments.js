@@ -64,7 +64,7 @@ contract('UFragments:Initialization', function (accounts) {
 
   it('should set detailed ERC20 parameters', async function () {
     expect(await uFragments.name.call()).to.eq('UFragments');
-    expect(await uFragments.symbol.call()).to.eq('UFRG');
+    expect(await uFragments.symbol.call()).to.eq('AMPL');
     (await uFragments.decimals.call()).should.be.bignumber.eq(DECIMALS);
   });
 
@@ -73,9 +73,9 @@ contract('UFragments:Initialization', function (accounts) {
     decimals.should.be.bignumber.eq(DECIMALS);
   });
 
-  it('should have UFRG symbol', async function () {
+  it('should have AMPL symbol', async function () {
     const symbol = await uFragments.symbol.call();
-    symbol.should.be.eq('UFRG');
+    symbol.should.be.eq('AMPL');
   });
 });
 
