@@ -40,8 +40,8 @@ async function exec () {
     preRebaseSupply = await uFragments.totalSupply.call();
     await uFragments.rebase(2 * i, 1, {from: deployer});
     postRebaseSupply = await uFragments.totalSupply.call();
-    console.log('Rebased by 1 UFRG');
-    console.log('Total supply is now', postRebaseSupply.toString(), 'UFRG');
+    console.log('Rebased by 1 AMPL');
+    console.log('Total supply is now', postRebaseSupply.toString(), 'AMPL');
 
     console.log('Testing precision of supply');
     expect(postRebaseSupply.minus(preRebaseSupply).toNumber()).to.eq(1);
