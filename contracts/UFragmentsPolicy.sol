@@ -31,8 +31,8 @@ contract UFragmentsPolicy is Ownable {
         uint256 indexed epoch,
         uint256 exchangeRate,
         uint256 cpi,
-        int256 requestedSupplyAdjustment
-        uint256 lastRebaseTimestampSec
+        int256 requestedSupplyAdjustment,
+        uint256 timestampSec
     );
 
     UFragments public uFrags;
