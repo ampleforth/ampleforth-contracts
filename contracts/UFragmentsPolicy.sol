@@ -31,7 +31,8 @@ contract UFragmentsPolicy is Ownable {
         uint256 indexed epoch,
         uint256 exchangeRate,
         uint256 cpi,
-        int256 requestedSupplyAdjustment
+        int256 requestedSupplyAdjustment,
+        uint256 timestampSec
     );
 
     UFragments public uFrags;
@@ -113,7 +114,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta);
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, lastRebaseTimestampSec);
     }
 
     /**
