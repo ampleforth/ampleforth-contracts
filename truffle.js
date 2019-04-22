@@ -6,6 +6,11 @@ module.exports = {
     gethUnitTest: connectionConfig.gethUnitTest,
     testrpcCoverage: connectionConfig.testrpcCoverage
   },
+  compilers: {
+    solc: {
+      version: '0.4.24'
+    }
+  },
   mocha: {
     enableTimeouts: false
   }
