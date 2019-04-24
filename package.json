@@ -31,11 +31,13 @@
     ]
   },
   "dependencies": {
-    "app-root-path": "~2.1.0",
-    "frg-ethereum-runners": "https://github.com/ampleforth/frg-ethereum-runners.git#v1.0.0-alpha",
-    "js-yaml": "^3.13.0",
-    "openzeppelin-eth": "~2.0.2",
-    "truffle": "~4.1.14"
+    "app-root-path": "2.1.0",
+    "bignumber.js": "8.1.1",
+    "frg-ethereum-runners": "https://github.com/ampleforth/frg-ethereum-runners.git#v1.0.0-beta",
+    "js-yaml": "3.13.1",
+    "openzeppelin-eth": "2.0.2",
+    "solc": "0.4.24",
+    "truffle": "5.0.13"
   },
   "devDependencies": {
     "chai": "^4.1.2",
@@ -58,6 +60,6 @@
     "solhint": "^1.1.10",
     "solidity-coverage": "0.5.8",
     "stochasm": "^0.5.0",
-    "zos-lib": "^2.2.2"
+    "zos-lib": "2.2.3"
   }
 }
