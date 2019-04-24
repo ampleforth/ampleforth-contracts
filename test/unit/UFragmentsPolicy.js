@@ -3,7 +3,7 @@ const MockUFragments = artifacts.require('MockUFragments.sol');
 const MockOracle = artifacts.require('MockOracle.sol');
 
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
-const BigNumber = web3.BigNumber;
+const BigNumber = require('bignumber.js');
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);

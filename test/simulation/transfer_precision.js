@@ -21,7 +21,7 @@ const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const Stochasm = require('stochasm');
-const BigNumber = web3.BigNumber;
+const BigNumber = require('bignumber.js');
 
 const endSupply = new BigNumber(2).pow(128).minus(1);
 const uFragmentsGrowth = new Stochasm({ min: -0.5, max: 2.5, seed: 'fragments.org' });
