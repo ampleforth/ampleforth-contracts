@@ -48,10 +48,12 @@ contract UFragmentsPolicy is Ownable {
     // If the current exchange rate is within this fractional distance from the target, no supply
     // update is performed. Fixed point number--same format as the rate.
     // (ie) abs(rate - targetRate) / targetRate < deviationThreshold, then no supply change.
+    // DECIMALS Fixed point number.
     uint256 public deviationThreshold;
 
     // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / rebaseLag
     // Check setRebaseLag comments for more details.
+    // Natural number, no decimal places.
     uint256 public rebaseLag;
 
     // More than this much time must pass between rebase operations.
