@@ -39,7 +39,7 @@ async function setupContracts () {
   mockCpiOracle = await MockOracle.new('CpiOracle');
   uFragmentsPolicy = await UFragmentsPolicy.new();
   await uFragmentsPolicy.sendTransaction({
-    data: encodeCall('initialize', ['address', 'address'], [deployer, mockUFragments.address]),
+    data: encodeCall('initialize', ['address', 'address', 'uint256'], [deployer, mockUFragments.address, BASE_CPI.toString()]),
     from: deployer
   });
   await uFragmentsPolicy.setMarketOracle(mockMarketOracle.address);

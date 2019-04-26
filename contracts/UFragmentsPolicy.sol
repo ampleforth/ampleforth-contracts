@@ -73,15 +73,15 @@ contract UFragmentsPolicy is Ownable {
     // MAX_SUPPLY = MAX_INT256 / MAX_RATE
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
 
-    // CPI-U value July 10th 1983 100, DECIMALS Fixed point number
-    uint256 private constant BASE_CPI = 100 * (10**DECIMALS);
+    // CPI value at the time of launch, DECIMALS Fixed point number
+    uint256 private baseCpi;
 
     /**
      * @notice Anyone can call this function to initiate a new rebase operation, provided more than
      *         the minimum time period has elapsed.
      * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag
      *      Where DeviationFromTargetRate is (MarketOracleRate - targetRate) / targetRate
-     *      and targetRate is CpiOracleRate / BASE_CPI
+     *      and targetRate is CpiOracleRate / baseCpi
      */
     function rebase() external {
         // This comparison also ensures there is no reentrancy.
@@ -94,7 +94,7 @@ contract UFragmentsPolicy is Ownable {
         (cpi, cpiValid) = cpiOracle.getData();
         require(cpiValid);
 
-        uint256 targetRate = cpi.mul(10 ** DECIMALS).div(BASE_CPI);
+        uint256 targetRate = cpi.mul(10 ** DECIMALS).div(baseCpi);
 
         uint256 exchangeRate;
         bool rateValid;
@@ -188,7 +188,7 @@ contract UFragmentsPolicy is Ownable {
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    function initialize(address owner, UFragments uFrags_)
+    function initialize(address owner, UFragments uFrags_, uint256 baseCpi_)
         public
         initializer
     {
@@ -203,6 +203,7 @@ contract UFragmentsPolicy is Ownable {
         epoch = 0;
 
         uFrags = uFrags_;
+        baseCpi = baseCpi_;
     }
 
     /**
