@@ -45,6 +45,9 @@ contract UFragmentsPolicy is Ownable {
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
 
+    // CPI value at the time of launch, DECIMALS Fixed point number
+    uint256 private baseCpi;
+
     // If the current exchange rate is within this fractional distance from the target, no supply
     // update is performed. Fixed point number--same format as the rate.
     // (ie) abs(rate - targetRate) / targetRate < deviationThreshold, then no supply change.
@@ -72,9 +75,6 @@ contract UFragmentsPolicy is Ownable {
     uint256 private constant MAX_RATE = 10**6 * 10**DECIMALS;
     // MAX_SUPPLY = MAX_INT256 / MAX_RATE
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
-
-    // CPI value at the time of launch, DECIMALS Fixed point number
-    uint256 private baseCpi;
 
     /**
      * @notice Anyone can call this function to initiate a new rebase operation, provided more than
