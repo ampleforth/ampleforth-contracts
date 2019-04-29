@@ -44,7 +44,7 @@ contract UFragmentsPolicy is Ownable {
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
 
-    // CPI value at the time of launch, DECIMALS Fixed point number
+    // CPI value at the time of launch, as an 18 decimal fixed point number.
     uint256 private baseCpi;
 
     // If the current exchange rate is within this fractional distance from the target, no supply
