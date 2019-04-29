@@ -37,15 +37,14 @@ contract UFragmentsPolicy is Ownable {
 
     UFragments public uFrags;
 
-    // Cpi oracle provides the current CPI-U, seasonally adjusted data,
-    // as a 18 decimal fixed point number
+    // Provides the current CPI, as an 18 decimal fixed point number.
     IOracle public cpiOracle;
 
-    // Market oracle provides the token/USD exchange rate as a 18 decimal fixed point number
+    // Market oracle provides the token/USD exchange rate as an 18 decimal fixed point number.
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
 
-    // CPI value at the time of launch, DECIMALS Fixed point number
+    // CPI value at the time of launch, as an 18 decimal fixed point number.
     uint256 private baseCpi;
 
     // If the current exchange rate is within this fractional distance from the target, no supply
