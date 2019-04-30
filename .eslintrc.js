@@ -39,7 +39,7 @@ module.exports = {
               "passcode", "geth", "rpc", "rpcmsg","stdev",  "stochasm",
               "whitelist", "uint", "passcodes", "keystore", "hdwallet",
               "formatter", "zos", "stderr", "stdout", "upgradable",
-              "mainnet", "testnets", "npx", "testrpc",
+              "mainnet", "testnets", "npx", "testrpc", "solc",
 
               // shorthand
               "eth", "args", "util", "utils", "msg", "prev", "bal",
@@ -50,7 +50,7 @@ module.exports = {
               // project-specific
               "rebase", "gons", "frg", "rng", "blockchain", "minlot",
               "redemptions", "rebased", "ganache", "ethclient",
-              "bytecode", "Binance", "ethereum", "opcode",
+              "bytecode", "Binance", "ethereum", "opcode", "cpi",
 
               // names
               "nithin",
