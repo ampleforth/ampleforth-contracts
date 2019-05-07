@@ -82,7 +82,10 @@ contract UFragmentsPolicy is Ownable {
      *      Where DeviationFromTargetRate is (MarketOracleRate - targetRate) / targetRate
      *      and targetRate is CpiOracleRate / baseCpi
      */
-    function rebase() external {
+    function rebase()
+        external
+        returns (uint256)
+    {
         // This comparison also ensures there is no reentrancy.
         require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
         lastRebaseTimestampSec = now;
@@ -116,6 +119,7 @@ contract UFragmentsPolicy is Ownable {
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
         emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, lastRebaseTimestampSec);
+        return supplyAfterRebase;
     }
 
     /**

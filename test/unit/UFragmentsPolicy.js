@@ -19,7 +19,7 @@ let deployer, user;
 const MAX_RATE = (new BigNumber('1')).mul(10 ** 6 * 10 ** 18);
 const MAX_SUPPLY = (new BigNumber(2).pow(255).minus(1)).div(MAX_RATE);
 const BASE_CPI = new BigNumber(100e18);
-const INITIAL_CPI = new BigNumber(251.712e18);
+const INITIAL_CPI = new BigNumber(100e18);
 const INITIAL_CPI_25P_MORE = INITIAL_CPI.mul(1.25).dividedToIntegerBy(1);
 const INITIAL_CPI_25P_LESS = INITIAL_CPI.mul(0.77).dividedToIntegerBy(1);
 const INITIAL_RATE = INITIAL_CPI.mul(1e18).dividedToIntegerBy(BASE_CPI);
@@ -276,21 +276,25 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
     it('should return 0', async function () {
       await mockExternalData(INITIAL_RATE.minus(1), INITIAL_CPI, 1000);
+      (await uFragmentsPolicy.rebase.call()).should.be.bignumber.eq(new BigNumber(1000));
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
       await chain.waitForSomeTime(2);
 
       await mockExternalData(INITIAL_RATE.plus(1), INITIAL_CPI, 1000);
+      (await uFragmentsPolicy.rebase.call()).should.be.bignumber.eq(new BigNumber(1000));
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
       await chain.waitForSomeTime(2);
 
       await mockExternalData(INITIAL_RATE_5P_MORE.minus(2), INITIAL_CPI, 1000);
+      (await uFragmentsPolicy.rebase.call()).should.be.bignumber.eq(new BigNumber(1000));
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
       await chain.waitForSomeTime(2);
 
       await mockExternalData(INITIAL_RATE_5P_LESS.plus(2), INITIAL_CPI, 1000);
+      (await uFragmentsPolicy.rebase.call()).should.be.bignumber.eq(new BigNumber(1000));
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
       await chain.waitForSomeTime(1);
@@ -352,10 +356,9 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY);
     });
 
-    it('should fail', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase())
-      ).to.be.true;
+    it('should not grow', async function () {
+      r = await uFragmentsPolicy.rebase();
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
     });
   });
 });
