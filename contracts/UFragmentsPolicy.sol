@@ -84,7 +84,7 @@ contract UFragmentsPolicy is Ownable {
      */
     function rebase()
         external
-        returns (uint256)
+        returns (uint256, uint256, uint256, uint256)
     {
         // This comparison also ensures there is no reentrancy.
         require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
@@ -119,7 +119,7 @@ contract UFragmentsPolicy is Ownable {
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
         emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, lastRebaseTimestampSec);
-        return supplyAfterRebase;
+        return (epoch, exchangeRate, cpi, supplyAfterRebase);
     }
 
     /**

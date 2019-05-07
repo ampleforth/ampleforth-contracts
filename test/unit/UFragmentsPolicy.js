@@ -276,25 +276,26 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
     it('should return 0', async function () {
       await mockExternalData(INITIAL_RATE.minus(1), INITIAL_CPI, 1000);
-      (await uFragmentsPolicy.rebase.call()).should.be.bignumber.eq(new BigNumber(1000));
+      r = (await uFragmentsPolicy.rebase.call());
+      (await uFragmentsPolicy.rebase.call())[3].should.be.bignumber.eq(new BigNumber(1000));
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
       await chain.waitForSomeTime(2);
 
       await mockExternalData(INITIAL_RATE.plus(1), INITIAL_CPI, 1000);
-      (await uFragmentsPolicy.rebase.call()).should.be.bignumber.eq(new BigNumber(1000));
+      (await uFragmentsPolicy.rebase.call())[3].should.be.bignumber.eq(new BigNumber(1000));
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
       await chain.waitForSomeTime(2);
 
       await mockExternalData(INITIAL_RATE_5P_MORE.minus(2), INITIAL_CPI, 1000);
-      (await uFragmentsPolicy.rebase.call()).should.be.bignumber.eq(new BigNumber(1000));
+      (await uFragmentsPolicy.rebase.call())[3].should.be.bignumber.eq(new BigNumber(1000));
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
       await chain.waitForSomeTime(2);
 
       await mockExternalData(INITIAL_RATE_5P_LESS.plus(2), INITIAL_CPI, 1000);
-      (await uFragmentsPolicy.rebase.call()).should.be.bignumber.eq(new BigNumber(1000));
+      (await uFragmentsPolicy.rebase.call())[3].should.be.bignumber.eq(new BigNumber(1000));
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
       await chain.waitForSomeTime(1);
@@ -411,6 +412,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
   describe('positive rate and no change CPI', function () {
+    let result;
     before(async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000);
       await uFragmentsPolicy.setMinRebaseTimeIntervalSec(5); // 5 sec
@@ -419,6 +421,8 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       prevEpoch = await uFragmentsPolicy.epoch.call();
       prevTime = await uFragmentsPolicy.lastRebaseTimestampSec.call();
       await mockExternalData(INITIAL_RATE_60P_MORE, INITIAL_CPI, 1010);
+      result = await uFragmentsPolicy.rebase.call();
+      console.log(result);
       r = await uFragmentsPolicy.rebase();
     });
 
@@ -433,6 +437,11 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     });
 
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
+      console.log(result);
+      result[0].should.be.bignumber.eq(prevEpoch.plus(1));
+      result[1].should.be.bignumber.eq(INITIAL_RATE_60P_MORE);
+      result[2].should.be.bignumber.eq(INITIAL_CPI);
+      result[3].should.be.bignumber.eq(1010 + 20);
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
       expect(log.args.epoch.eq(prevEpoch.plus(1))).to.be.true;
