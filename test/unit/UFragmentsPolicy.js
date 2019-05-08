@@ -352,10 +352,9 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY);
     });
 
-    it('should fail', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase())
-      ).to.be.true;
+    it('should not grow', async function () {
+      r = await uFragmentsPolicy.rebase();
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
     });
   });
 });
