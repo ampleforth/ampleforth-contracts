@@ -166,21 +166,21 @@ contract UFragments is ERC20Detailed, Ownable {
         return _totalSupply;
     }
 
-    function initialize(address owner)
+    function initialize(address owner_)
         public
         initializer
     {
         ERC20Detailed.initialize("UFragments", "AMPL", uint8(DECIMALS));
-        Ownable.initialize(owner);
+        Ownable.initialize(owner_);
 
         rebasePaused = false;
         tokenPaused = false;
 
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
-        _gonBalances[owner] = TOTAL_GONS;
+        _gonBalances[owner_] = TOTAL_GONS;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
 
-        emit Transfer(address(0x0), owner, _totalSupply);
+        emit Transfer(address(0x0), owner_, _totalSupply);
     }
 
     /**
@@ -227,16 +227,16 @@ contract UFragments is ERC20Detailed, Ownable {
 
     /**
      * @dev Function to check the amount of tokens that an owner has allowed to a spender.
-     * @param owner The address which owns the funds.
+     * @param owner_ The address which owns the funds.
      * @param spender The address which will spend the funds.
      * @return The number of tokens still available for the spender.
      */
-    function allowance(address owner, address spender)
+    function allowance(address owner_, address spender)
         public
         view
         returns (uint256)
     {
-        return _allowedFragments[owner][spender];
+        return _allowedFragments[owner_][spender];
     }
 
     /**
