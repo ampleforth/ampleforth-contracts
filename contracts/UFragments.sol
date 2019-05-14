@@ -41,6 +41,7 @@ contract UFragments is ERC20Detailed, Ownable {
     event LogRebase(uint256 indexed epoch, uint256 totalSupply);
     event LogRebasePaused(bool paused);
     event LogTokenPaused(bool paused);
+    event LogMonetaryPolicyUpdated(address monetaryPolicy);
 
     // Used for authentication
     address public monetaryPolicy;
@@ -97,6 +98,7 @@ contract UFragments is ERC20Detailed, Ownable {
         onlyOwner
     {
         monetaryPolicy = monetaryPolicy_;
+        emit LogMonetaryPolicyUpdated(monetaryPolicy_);
     }
 
     /**
