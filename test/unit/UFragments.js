@@ -88,6 +88,14 @@ contract('UFragments:setMonetaryPolicy', function (accounts) {
     await uFragments.setMonetaryPolicy(policy, { from: deployer });
     expect(await uFragments.monetaryPolicy.call()).to.eq(policy);
   });
+
+  it('should emit policy updated event', async function () {
+    const r = await uFragments.setMonetaryPolicy(policy, { from: deployer });
+    const log = r.logs[0];
+    expect(log).to.exist;
+    expect(log.event).to.eq('LogMonetaryPolicyUpdated');
+    expect(log.args.monetaryPolicy).to.eq(policy);
+  });
 });
 
 contract('UFragments:setMonetaryPolicy:accessControl', function (accounts) {
