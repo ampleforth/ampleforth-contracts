@@ -187,11 +187,11 @@ contract UFragmentsPolicy is Ownable {
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    function initialize(address owner, UFragments uFrags_, uint256 baseCpi_)
+    function initialize(address owner_, UFragments uFrags_, uint256 baseCpi_)
         public
         initializer
     {
-        Ownable.initialize(owner);
+        Ownable.initialize(owner_);
 
         // deviationThreshold = 0.05e18 = 5e16
         deviationThreshold = 5 * 10 ** (DECIMALS-2);
