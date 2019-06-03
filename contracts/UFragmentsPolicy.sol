@@ -91,28 +91,29 @@ contract UFragmentsPolicy is Ownable {
         uint256 cpi;
         bool cpiValid;
         (cpi, cpiValid) = cpiOracle.getData();
-        require(cpiValid);
 
         uint256 targetRate = cpi.mul(10 ** DECIMALS).div(baseCpi);
 
         uint256 exchangeRate;
         bool rateValid;
         (exchangeRate, rateValid) = marketOracle.getData();
-        require(rateValid);
 
         if (exchangeRate > MAX_RATE) {
             exchangeRate = MAX_RATE;
         }
 
-        int256 supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
+        int256 supplyDelta = 0;
 
-        // Apply the Dampening factor.
-        supplyDelta = supplyDelta.div(rebaseLag.toInt256Safe());
+        if (cpiValid && rateValid) {
+            supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
 
-        if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
-            supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
+            // Apply the Dampening factor.
+            supplyDelta = supplyDelta.div(rebaseLag.toInt256Safe());
+
+            if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
+                supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
+            }
         }
-
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
         emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, lastRebaseTimestampSec);

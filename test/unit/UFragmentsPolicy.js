@@ -363,20 +363,11 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
   describe('when the market oracle returns invalid data', function () {
-    it('should fail', async function () {
+    it('supply delta should equal zero', async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, false);
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase())
-      ).to.be.true;
-    });
-  });
+      r = await uFragmentsPolicy.rebase();
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
 
-  describe('when the market oracle returns valid data', function () {
-    it('should NOT fail', async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true);
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase())
-      ).to.be.false;
     });
   });
 });
@@ -387,20 +378,11 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
   describe('when the cpi oracle returns invalid data', function () {
     it('should fail', async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true, false);
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase())
-      ).to.be.true;
+      r = await uFragmentsPolicy.rebase();
+      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0)
     });
   });
 
-  describe('when the cpi oracle returns valid data', function () {
-    it('should NOT fail', async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true, true);
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase())
-      ).to.be.false;
-    });
-  });
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
