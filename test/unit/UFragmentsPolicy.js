@@ -31,6 +31,7 @@ const INITIAL_RATE_60P_MORE = INITIAL_RATE.mul(1.6).dividedToIntegerBy(1);
 const INITIAL_RATE_2X = INITIAL_RATE.mul(2);
 
 async function setupContracts () {
+  await chain.waitForSomeTime(86400);
   const accounts = await chain.getUserAccounts();
   deployer = accounts[0];
   user = accounts[1];
@@ -44,6 +45,11 @@ async function setupContracts () {
   });
   await uFragmentsPolicy.setMarketOracle(mockMarketOracle.address);
   await uFragmentsPolicy.setCpiOracle(mockCpiOracle.address);
+}
+
+async function setupContractsWithOpenRebaseWindow () {
+  await setupContracts();
+  await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
 }
 
 async function mockExternalData (rate, cpi, uFragSupply, rateValidity = true, cpiValidity = true) {
@@ -79,6 +85,12 @@ contract('UFragmentsPolicy:initialize', async function (accounts) {
     });
     it('epoch', async function () {
       (await uFragmentsPolicy.epoch.call()).should.be.bignumber.eq(0);
+    });
+    it('rebaseWindowOffsetSec', async function () {
+      (await uFragmentsPolicy.rebaseWindowOffsetSec.call()).should.be.bignumber.eq(72000);
+    });
+    it('rebaseWindowLengthSec', async function () {
+      (await uFragmentsPolicy.rebaseWindowLengthSec.call()).should.be.bignumber.eq(900);
     });
     it('should set owner', async function () {
       expect(await uFragmentsPolicy.owner.call()).to.eq(deployer);
@@ -209,52 +221,60 @@ contract('UFragments:setRebaseLag:accessControl', function (accounts) {
   });
 });
 
-contract('UFragmentsPolicy:setMinRebaseTimeIntervalSec', async function (accounts) {
-  let prevInterval;
+contract('UFragmentsPolicy:setRebaseTimingParameters', async function (accounts) {
   before('setup UFragmentsPolicy contract', async function () {
     await setupContracts();
-    prevInterval = await uFragmentsPolicy.minRebaseTimeIntervalSec.call();
   });
 
-  describe('when interval = 0', function () {
+  describe('when interval=0', function () {
     it('should fail', async function () {
       expect(
-        await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(0))
+        await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(0, 0, 0))
       ).to.be.true;
     });
   });
 
-  describe('when interval > 0', function () {
-    it('should setMinRebaseTimeIntervalSec', async function () {
-      const interval = prevInterval.plus(1);
-      await uFragmentsPolicy.setMinRebaseTimeIntervalSec(interval);
-      (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(interval);
+  describe('when offset > interval', function () {
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(300, 3600, 300))
+      ).to.be.true;
+    });
+  });
+
+  describe('when params are valid', function () {
+    it('should setRebaseTimingParameters', async function () {
+      await uFragmentsPolicy.setRebaseTimingParameters(600, 60, 300);
+      (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(600);
+      (await uFragmentsPolicy.rebaseWindowOffsetSec.call()).should.be.bignumber.eq(60);
+      (await uFragmentsPolicy.rebaseWindowLengthSec.call()).should.be.bignumber.eq(300);
     });
   });
 });
 
-contract('UFragments:setMinRebaseTimeIntervalSec:accessControl', function (accounts) {
+contract('UFragments:setRebaseTimingParameters:accessControl', function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
   it('should be callable by owner', async function () {
     expect(
-      await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(1, { from: deployer }))
+      await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(600, 60, 300, { from: deployer }))
     ).to.be.false;
   });
 
   it('should NOT be callable by non-owner', async function () {
     expect(
-      await chain.isEthException(uFragmentsPolicy.setMinRebaseTimeIntervalSec(1, { from: user }))
+      await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(600, 60, 300, { from: user }))
     ).to.be.true;
   });
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when minRebaseTimeIntervalSec has NOT passed since the previous rebase', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1010);
+      await chain.waitForSomeTime(60);
       await uFragmentsPolicy.rebase();
     });
 
@@ -267,58 +287,56 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when rate is within deviationThreshold', function () {
     before(async function () {
-      await uFragmentsPolicy.setMinRebaseTimeIntervalSec(1);
+      await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
     });
 
     it('should return 0', async function () {
       await mockExternalData(INITIAL_RATE.minus(1), INITIAL_CPI, 1000);
+      await chain.waitForSomeTime(60);
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-      await chain.waitForSomeTime(2);
+      await chain.waitForSomeTime(60);
 
       await mockExternalData(INITIAL_RATE.plus(1), INITIAL_CPI, 1000);
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-      await chain.waitForSomeTime(2);
+      await chain.waitForSomeTime(60);
 
       await mockExternalData(INITIAL_RATE_5P_MORE.minus(2), INITIAL_CPI, 1000);
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-      await chain.waitForSomeTime(2);
+      await chain.waitForSomeTime(60);
 
       await mockExternalData(INITIAL_RATE_5P_LESS.plus(2), INITIAL_CPI, 1000);
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-      await chain.waitForSomeTime(1);
+      await chain.waitForSomeTime(60);
     });
   });
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when rate is more than MAX_RATE', function () {
-    before(async function () {
-      await uFragmentsPolicy.setMinRebaseTimeIntervalSec(1);
-    });
-
     it('should return same supply delta as delta for MAX_RATE', async function () {
       // Any exchangeRate >= (MAX_RATE=100x) would result in the same supply increase
       await mockExternalData(MAX_RATE, INITIAL_CPI, 1000);
+      await chain.waitForSomeTime(60);
       r = await uFragmentsPolicy.rebase();
       const supplyChange = r.logs[0].args.requestedSupplyAdjustment;
 
-      await chain.waitForSomeTime(2); // 2 sec
+      await chain.waitForSomeTime(60);
 
       await mockExternalData(MAX_RATE.add(1e17), INITIAL_CPI, 1000);
       r = await uFragmentsPolicy.rebase();
       r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
 
-      await chain.waitForSomeTime(2); // 2 sec
+      await chain.waitForSomeTime(60);
 
       await mockExternalData(MAX_RATE.mul(2), INITIAL_CPI, 1000);
       r = await uFragmentsPolicy.rebase();
@@ -328,11 +346,12 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when uFragments grows beyond MAX_SUPPLY', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY.minus(1));
+      await chain.waitForSomeTime(60);
     });
 
     it('should apply SupplyAdjustment {MAX_SUPPLY - totalSupply}', async function () {
@@ -345,11 +364,12 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when uFragments supply equals MAX_SUPPLY and rebase attempts to grow', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY);
+      await chain.waitForSomeTime(60);
     });
 
     it('should not grow', async function () {
@@ -360,11 +380,12 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when the market oracle returns invalid data', function () {
     it('should fail', async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, false);
+      await chain.waitForSomeTime(60);
       expect(
         await chain.isEthException(uFragmentsPolicy.rebase())
       ).to.be.true;
@@ -374,6 +395,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
   describe('when the market oracle returns valid data', function () {
     it('should NOT fail', async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true);
+      await chain.waitForSomeTime(60);
       expect(
         await chain.isEthException(uFragmentsPolicy.rebase())
       ).to.be.false;
@@ -382,11 +404,12 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when the cpi oracle returns invalid data', function () {
     it('should fail', async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true, false);
+      await chain.waitForSomeTime(60);
       expect(
         await chain.isEthException(uFragmentsPolicy.rebase())
       ).to.be.true;
@@ -396,6 +419,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
   describe('when the cpi oracle returns valid data', function () {
     it('should NOT fail', async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true, true);
+      await chain.waitForSomeTime(60);
       expect(
         await chain.isEthException(uFragmentsPolicy.rebase())
       ).to.be.false;
@@ -404,14 +428,15 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('positive rate and no change CPI', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000);
-      await uFragmentsPolicy.setMinRebaseTimeIntervalSec(5); // 5 sec
+      await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
+      await chain.waitForSomeTime(60);
       await uFragmentsPolicy.rebase();
-      await chain.waitForSomeTime(6); // 6 sec
+      await chain.waitForSomeTime(72);
       prevEpoch = await uFragmentsPolicy.epoch.call();
       prevTime = await uFragmentsPolicy.lastRebaseTimestampSec.call();
       await mockExternalData(INITIAL_RATE_60P_MORE, INITIAL_CPI, 1010);
@@ -425,7 +450,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
     it('should update lastRebaseTimestamp', async function () {
       const time = await uFragmentsPolicy.lastRebaseTimestampSec.call();
-      expect(time.minus(prevTime).gte(5)).to.be.true;
+      expect(time.minus(prevTime).eq(60)).to.be.true;
     });
 
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
@@ -467,11 +492,12 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('negative rate', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE_30P_LESS, INITIAL_CPI, 1000);
+      await chain.waitForSomeTime(60);
       r = await uFragmentsPolicy.rebase();
     });
 
@@ -484,11 +510,12 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when cpi increases', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE, INITIAL_CPI_25P_MORE, 1000);
+      await chain.waitForSomeTime(60);
       await uFragmentsPolicy.setDeviationThreshold(0);
       r = await uFragmentsPolicy.rebase();
     });
@@ -502,11 +529,12 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('when cpi decreases', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE, INITIAL_CPI_25P_LESS, 1000);
+      await chain.waitForSomeTime(60);
       await uFragmentsPolicy.setDeviationThreshold(0);
       r = await uFragmentsPolicy.rebase();
     });
@@ -520,12 +548,13 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
 
   describe('rate=TARGET_RATE', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
       await uFragmentsPolicy.setDeviationThreshold(0);
+      await chain.waitForSomeTime(60);
       r = await uFragmentsPolicy.rebase();
     });
 
@@ -533,6 +562,69 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
       log.args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
+    });
+  });
+});
+
+contract('UFragmentsPolicy:Rebase', async function (accounts) {
+  let rbTime, rbWindow, minRebaseTimeIntervalSec, now, prevRebaseTime, nextRebaseTime,
+    timeToWait;
+
+  beforeEach('setup UFragmentsPolicy contract', async function () {
+    await setupContracts();
+    rbTime = await uFragmentsPolicy.rebaseWindowOffsetSec.call();
+    rbWindow = await uFragmentsPolicy.rebaseWindowLengthSec.call();
+    minRebaseTimeIntervalSec = await uFragmentsPolicy.minRebaseTimeIntervalSec.call();
+    now = new BigNumber(await chain.currentTime());
+    prevRebaseTime = now.minus(now.mod(minRebaseTimeIntervalSec)).plus(rbTime);
+    nextRebaseTime = prevRebaseTime.plus(minRebaseTimeIntervalSec);
+  });
+
+  describe('when its 5s after the rebase window closes', function () {
+    it('should fail', async function () {
+      timeToWait = nextRebaseTime.minus(now).plus(rbWindow).plus(5);
+      await chain.waitForSomeTime(timeToWait.toNumber());
+      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
+      expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.false;
+      expect(
+        await chain.isEthException(uFragmentsPolicy.rebase())
+      ).to.be.true;
+    });
+  });
+
+  describe('when its 5s before the rebase window opens', function () {
+    it('should fail', async function () {
+      timeToWait = nextRebaseTime.minus(now).minus(5);
+      await chain.waitForSomeTime(timeToWait.toNumber());
+      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
+      expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.false;
+      expect(
+        await chain.isEthException(uFragmentsPolicy.rebase())
+      ).to.be.true;
+    });
+  });
+
+  describe('when its 5s after the rebase window opens', function () {
+    it('should NOT fail', async function () {
+      timeToWait = nextRebaseTime.minus(now).plus(5);
+      await chain.waitForSomeTime(timeToWait.toNumber());
+      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
+      expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.true;
+      expect(
+        await chain.isEthException(uFragmentsPolicy.rebase())
+      ).to.be.false;
+    });
+  });
+
+  describe('when its 5s before the rebase window closes', function () {
+    it('should NOT fail', async function () {
+      timeToWait = nextRebaseTime.minus(now).plus(rbWindow).minus(5);
+      await chain.waitForSomeTime(timeToWait.toNumber());
+      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
+      expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.true;
+      expect(
+        await chain.isEthException(uFragmentsPolicy.rebase())
+      ).to.be.false;
     });
   });
 });
