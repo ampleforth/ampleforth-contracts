@@ -200,6 +200,7 @@ contract UFragmentsPolicy is Ownable {
         external
         onlyOwner
     {
+        require(minRebaseTimeIntervalSec_ > 0);
         require(rebaseWindowOffsetSec_ < minRebaseTimeIntervalSec_);
 
         minRebaseTimeIntervalSec = minRebaseTimeIntervalSec_;

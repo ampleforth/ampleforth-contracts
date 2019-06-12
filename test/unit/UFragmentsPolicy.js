@@ -226,8 +226,16 @@ contract('UFragmentsPolicy:setRebaseTimingParameters', async function (accounts)
     await setupContracts();
   });
 
+  describe('when interval=0', function () {
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(0, 0, 0))
+      ).to.be.true;
+    });
+  });
+
   describe('when offset > interval', function () {
-    it('should setRebaseTimingParameters', async function () {
+    it('should fail', async function () {
       expect(
         await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(300, 3600, 300))
       ).to.be.true;
