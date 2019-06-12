@@ -58,22 +58,21 @@ contract UFragmentsPolicy is Ownable {
     // Natural number, no decimal places.
     uint256 public rebaseLag;
 
-    // More than this much time must pass between rebase operations.
+    // At least this much time must pass between rebase operations.
     uint256 public minRebaseTimeIntervalSec;
 
     // Block timestamp of last rebase operation
     uint256 public lastRebaseTimestampSec;
 
-    // The number of rebase cycles since inception
-    uint256 public epoch;
-
-    // The beginning of rebase time window within minRebaseTimeIntervalSec cyclic period.
-    // If minRebaseTimeIntervalSec = 24 hours, it's time of the day from midnight in seconds,
-    // at which rebase window begins.
+    // The rebase window begins this many seconds into the minRebaseTimeInterval period.
+    // For example if minRebaseTimeInterval is 24hrs, it represents the time of day in seconds.
     uint256 public rebaseWindowOffsetSec;
 
-    // The size of the time window starting at rebaseTime, within which rebase can be invoked.
+    // The length of the time window where a rebase operation is allowed to execute, in seconds.
     uint256 public rebaseWindowLengthSec;
+
+    // The number of rebase cycles since inception
+    uint256 public epoch;
 
     uint256 private constant DECIMALS = 18;
 
@@ -183,23 +182,24 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice Sets the hyper-parameters which control the timing and frequency of
+     * @notice Sets the parameters which control the timing and frequency of
      *         rebase operations.
      *         a) the minimum time period that must elapse between rebase cycles.
      *         b) the rebase window offset parameter.
      *         c) the rebase window length parameter.
-     * @param minRebaseTimeIntervalSec_ More than this much time must pass between rebase
-     *        rebase operations, in seconds.
-     * @param rebaseWindowOffsetSec_ The number of seconds from midnight when
-     *        the rebase window begins.
-     * @param rebaseWindowLengthSec_ The size of the rebase window in seconds.
+     * @param minRebaseTimeIntervalSec_ At least this much time must pass between rebase
+     *        operations, in seconds.
+     * @param rebaseWindowOffsetSec_ The number of seconds from the beginning of
+              the rebase interval, where the rebase window begins.
+     * @param rebaseWindowLengthSec_ The length of the rebase window in seconds.
      */
-    function setRebaseTimingParameters(uint256 minRebaseTimeIntervalSec_,
-        uint256 rebaseWindowOffsetSec_, uint256 rebaseWindowLengthSec_)
+    function setRebaseTimingParameters(
+        uint256 minRebaseTimeIntervalSec_,
+        uint256 rebaseWindowOffsetSec_,
+        uint256 rebaseWindowLengthSec_)
         external
         onlyOwner
     {
-        require(minRebaseTimeIntervalSec_ > 0);
         require(rebaseWindowOffsetSec_ < minRebaseTimeIntervalSec_);
 
         minRebaseTimeIntervalSec = minRebaseTimeIntervalSec_;
@@ -223,14 +223,13 @@ contract UFragmentsPolicy is Ownable {
 
         rebaseLag = 30;
         minRebaseTimeIntervalSec = 1 days;
+        rebaseWindowOffsetSec = 72000;  // 8PM UTC
+        rebaseWindowLengthSec = 15 minutes;
         lastRebaseTimestampSec = 0;
         epoch = 0;
 
         uFrags = uFrags_;
         baseCpi = baseCpi_;
-
-        rebaseWindowOffsetSec = 72000;  // 8PM UTC
-        rebaseWindowLengthSec = 15 minutes;
     }
 
     /**
