@@ -58,7 +58,7 @@ contract UFragmentsPolicy is Ownable {
     // Natural number, no decimal places.
     uint256 public rebaseLag;
 
-    // At least this much time must pass between rebase operations.
+    // More than this much time must pass between rebase operations.
     uint256 public minRebaseTimeIntervalSec;
 
     // Block timestamp of last rebase operation
@@ -187,7 +187,7 @@ contract UFragmentsPolicy is Ownable {
      *         a) the minimum time period that must elapse between rebase cycles.
      *         b) the rebase window offset parameter.
      *         c) the rebase window length parameter.
-     * @param minRebaseTimeIntervalSec_ At least this much time must pass between rebase
+     * @param minRebaseTimeIntervalSec_ More than this much time must pass between rebase
      *        operations, in seconds.
      * @param rebaseWindowOffsetSec_ The number of seconds from the beginning of
               the rebase interval, where the rebase window begins.

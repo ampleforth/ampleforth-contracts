@@ -49,7 +49,7 @@ async function setupContracts () {
 
 async function setupContractsWithOpenRebaseWindow () {
   await setupContracts();
-  await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 59);
+  await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
 }
 
 async function mockExternalData (rate, cpi, uFragSupply, rateValidity = true, cpiValidity = true) {
@@ -283,7 +283,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
   describe('when rate is within deviationThreshold', function () {
     before(async function () {
-      await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 59);
+      await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
     });
 
     it('should return 0', async function () {
@@ -425,7 +425,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
   describe('positive rate and no change CPI', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000);
-      await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 59);
+      await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
       await chain.waitForSomeTime(60);
       await uFragmentsPolicy.rebase();
       await chain.waitForSomeTime(72);
