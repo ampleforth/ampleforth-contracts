@@ -67,6 +67,14 @@ contract UFragmentsPolicy is Ownable {
     // The number of rebase cycles since inception
     uint256 public epoch;
 
+    // The beginning of rebase time window within minRebaseTimeIntervalSec cyclic period.
+    // If minRebaseTimeIntervalSec = 24 hours, it's time of the day from midnight in seconds,
+    // at which rebase window begins.
+    uint256 public rebaseWindowOffsetSec;
+
+    // The size of the time window starting at rebaseTime, within which rebase can be invoked.
+    uint256 public rebaseWindowLengthSec;
+
     uint256 private constant DECIMALS = 18;
 
     // Due to the expression in computeSupplyDelta(), MAX_RATE * MAX_SUPPLY must fit into an int256.
@@ -83,9 +91,14 @@ contract UFragmentsPolicy is Ownable {
      *      and targetRate is CpiOracleRate / baseCpi
      */
     function rebase() external {
+        require(inRebaseWindow());
+
         // This comparison also ensures there is no reentrancy.
         require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
-        lastRebaseTimestampSec = now;
+
+        // Snap the rebase time to the start of this window.
+        lastRebaseTimestampSec = now.sub(now.mod(minRebaseTimeIntervalSec));
+
         epoch = epoch.add(1);
 
         uint256 cpi;
@@ -154,19 +167,6 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice Sets the minimum time period that must elapse between rebase cycles.
-     * @param minRebaseTimeIntervalSec_ More than this much time must pass between rebase
-     *        operations, in seconds.
-     */
-    function setMinRebaseTimeIntervalSec(uint256 minRebaseTimeIntervalSec_)
-        external
-        onlyOwner
-    {
-        require(minRebaseTimeIntervalSec_ > 0);
-        minRebaseTimeIntervalSec = minRebaseTimeIntervalSec_;
-    }
-
-    /**
      * @notice Sets the rebase lag parameter.
                It is used to dampen the applied supply adjustment by 1 / rebaseLag
                If the rebase lag R, equals 1, the smallest value for R, then the full supply
@@ -180,6 +180,31 @@ contract UFragmentsPolicy is Ownable {
     {
         require(rebaseLag_ > 0);
         rebaseLag = rebaseLag_;
+    }
+
+    /**
+     * @notice Sets the hyper-parameters which control the timing and frequency of
+     *         rebase operations.
+     *         a) the minimum time period that must elapse between rebase cycles.
+     *         b) the rebase window offset parameter.
+     *         c) the rebase window length parameter.
+     * @param minRebaseTimeIntervalSec_ More than this much time must pass between rebase
+     *        rebase operations, in seconds.
+     * @param rebaseWindowOffsetSec_ The number of seconds from midnight when
+     *        the rebase window begins.
+     * @param rebaseWindowLengthSec_ The size of the rebase window in seconds.
+     */
+    function setRebaseTimingParameters(uint256 minRebaseTimeIntervalSec_,
+        uint256 rebaseWindowOffsetSec_, uint256 rebaseWindowLengthSec_)
+        external
+        onlyOwner
+    {
+        require(minRebaseTimeIntervalSec_ > 0);
+        require(rebaseWindowOffsetSec_ < minRebaseTimeIntervalSec_);
+
+        minRebaseTimeIntervalSec = minRebaseTimeIntervalSec_;
+        rebaseWindowOffsetSec = rebaseWindowOffsetSec_;
+        rebaseWindowLengthSec = rebaseWindowLengthSec_;
     }
 
     /**
@@ -203,6 +228,20 @@ contract UFragmentsPolicy is Ownable {
 
         uFrags = uFrags_;
         baseCpi = baseCpi_;
+
+        rebaseWindowOffsetSec = 72000;  // 8PM UTC
+        rebaseWindowLengthSec = 15 minutes;
+    }
+
+    /**
+     * @return If the latest block timestamp is within the rebase time window it, returns true.
+     *         Otherwise, returns false.
+     */
+    function inRebaseWindow() public view returns (bool) {
+        return (
+            now.mod(minRebaseTimeIntervalSec) >= rebaseWindowOffsetSec &&
+            now.mod(minRebaseTimeIntervalSec) < (rebaseWindowOffsetSec.add(rebaseWindowLengthSec))
+        );
     }
 
     /**
