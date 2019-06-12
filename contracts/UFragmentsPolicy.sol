@@ -96,7 +96,8 @@ contract UFragmentsPolicy is Ownable {
         require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
 
         // Snap the rebase time to the start of this window.
-        lastRebaseTimestampSec = now.sub(now.mod(minRebaseTimeIntervalSec));
+        lastRebaseTimestampSec = now.sub(
+            now.mod(minRebaseTimeIntervalSec)).add(rebaseWindowOffsetSec);
 
         epoch = epoch.add(1);
 

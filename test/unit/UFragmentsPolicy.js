@@ -567,22 +567,23 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 });
 
 contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  let rbTime, rbWindow, minRebaseTimeIntervalSec, now, prevRebaseTime, nextRebaseTime,
-    timeToWait;
+  let rbTime, rbWindow, minRebaseTimeIntervalSec, now, prevRebaseTime, nextRebaseWindowOpenTime,
+    timeToWait, lastRebaseTimestamp;
 
   beforeEach('setup UFragmentsPolicy contract', async function () {
     await setupContracts();
+    await uFragmentsPolicy.setRebaseTimingParameters(86400, 72000, 900);
     rbTime = await uFragmentsPolicy.rebaseWindowOffsetSec.call();
     rbWindow = await uFragmentsPolicy.rebaseWindowLengthSec.call();
     minRebaseTimeIntervalSec = await uFragmentsPolicy.minRebaseTimeIntervalSec.call();
     now = new BigNumber(await chain.currentTime());
     prevRebaseTime = now.minus(now.mod(minRebaseTimeIntervalSec)).plus(rbTime);
-    nextRebaseTime = prevRebaseTime.plus(minRebaseTimeIntervalSec);
+    nextRebaseWindowOpenTime = prevRebaseTime.plus(minRebaseTimeIntervalSec);
   });
 
   describe('when its 5s after the rebase window closes', function () {
     it('should fail', async function () {
-      timeToWait = nextRebaseTime.minus(now).plus(rbWindow).plus(5);
+      timeToWait = nextRebaseWindowOpenTime.minus(now).plus(rbWindow).plus(5);
       await chain.waitForSomeTime(timeToWait.toNumber());
       await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
       expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.false;
@@ -594,7 +595,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
   describe('when its 5s before the rebase window opens', function () {
     it('should fail', async function () {
-      timeToWait = nextRebaseTime.minus(now).minus(5);
+      timeToWait = nextRebaseWindowOpenTime.minus(now).minus(5);
       await chain.waitForSomeTime(timeToWait.toNumber());
       await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
       expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.false;
@@ -606,25 +607,29 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
 
   describe('when its 5s after the rebase window opens', function () {
     it('should NOT fail', async function () {
-      timeToWait = nextRebaseTime.minus(now).plus(5);
+      timeToWait = nextRebaseWindowOpenTime.minus(now).plus(5);
       await chain.waitForSomeTime(timeToWait.toNumber());
       await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
       expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.true;
       expect(
         await chain.isEthException(uFragmentsPolicy.rebase())
       ).to.be.false;
+      lastRebaseTimestamp = await uFragmentsPolicy.lastRebaseTimestampSec.call();
+      expect(lastRebaseTimestamp.eq(nextRebaseWindowOpenTime)).to.be.true;
     });
   });
 
   describe('when its 5s before the rebase window closes', function () {
     it('should NOT fail', async function () {
-      timeToWait = nextRebaseTime.minus(now).plus(rbWindow).minus(5);
+      timeToWait = nextRebaseWindowOpenTime.minus(now).plus(rbWindow).minus(5);
       await chain.waitForSomeTime(timeToWait.toNumber());
       await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
       expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.true;
       expect(
         await chain.isEthException(uFragmentsPolicy.rebase())
       ).to.be.false;
+      lastRebaseTimestamp = await uFragmentsPolicy.lastRebaseTimestampSec.call();
+      expect(lastRebaseTimestamp.eq(nextRebaseWindowOpenTime)).to.be.true;
     });
   });
 });
