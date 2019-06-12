@@ -436,7 +436,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
       await chain.waitForSomeTime(60);
       await uFragmentsPolicy.rebase();
-      await chain.waitForSomeTime(72);
+      await chain.waitForSomeTime(59);
       prevEpoch = await uFragmentsPolicy.epoch.call();
       prevTime = await uFragmentsPolicy.lastRebaseTimestampSec.call();
       await mockExternalData(INITIAL_RATE_60P_MORE, INITIAL_CPI, 1010);
