@@ -172,7 +172,7 @@ contract UFragments is ERC20Detailed, Ownable {
         public
         initializer
     {
-        ERC20Detailed.initialize("UFragments", "AMPL", uint8(DECIMALS));
+        ERC20Detailed.initialize("Ampleforth", "AMPL", uint8(DECIMALS));
         Ownable.initialize(owner_);
 
         rebasePaused = false;
