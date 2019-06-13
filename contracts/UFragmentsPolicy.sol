@@ -128,7 +128,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, lastRebaseTimestampSec);
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
     }
 
     /**
