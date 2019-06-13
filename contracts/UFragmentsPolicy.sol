@@ -96,7 +96,8 @@ contract UFragmentsPolicy is Ownable {
         require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
 
         // Snap the rebase time to the start of this window.
-        lastRebaseTimestampSec = now.sub(now.mod(minRebaseTimeIntervalSec));
+        lastRebaseTimestampSec = now.sub(
+            now.mod(minRebaseTimeIntervalSec)).add(rebaseWindowOffsetSec);
 
         epoch = epoch.add(1);
 
@@ -127,7 +128,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, lastRebaseTimestampSec);
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
     }
 
     /**
