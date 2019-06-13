@@ -63,7 +63,7 @@ contract('UFragments:Initialization', function (accounts) {
   });
 
   it('should set detailed ERC20 parameters', async function () {
-    expect(await uFragments.name.call()).to.eq('UFragments');
+    expect(await uFragments.name.call()).to.eq('Ampleforth');
     expect(await uFragments.symbol.call()).to.eq('AMPL');
     (await uFragments.decimals.call()).should.be.bignumber.eq(DECIMALS);
   });
