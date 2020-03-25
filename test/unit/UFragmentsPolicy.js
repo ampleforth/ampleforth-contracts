@@ -1,6 +1,7 @@
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
 const MockUFragments = artifacts.require('MockUFragments.sol');
 const MockOracle = artifacts.require('MockOracle.sol');
+const RebaseCallerContract = artifacts.require('RebaseCallerContract.sol');
 
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const BigNumber = web3.BigNumber;
@@ -12,7 +13,7 @@ require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should();
 
-let uFragmentsPolicy, mockUFragments, mockMarketOracle, mockCpiOracle;
+let uFragmentsPolicy, mockUFragments, mockMarketOracle, mockCpiOracle, rebaseCallerContract;
 let r, prevEpoch, prevTime;
 let deployer, user;
 
@@ -45,6 +46,7 @@ async function setupContracts () {
   });
   await uFragmentsPolicy.setMarketOracle(mockMarketOracle.address);
   await uFragmentsPolicy.setCpiOracle(mockCpiOracle.address);
+  rebaseCallerContract = await RebaseCallerContract.new(uFragmentsPolicy.address);
 }
 
 async function setupContractsWithOpenRebaseWindow () {
@@ -265,6 +267,30 @@ contract('UFragments:setRebaseTimingParameters:accessControl', function (account
     expect(
       await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(600, 60, 300, { from: user }))
     ).to.be.true;
+  });
+});
+
+contract('UFragmentsPolicy:Rebase:accessControl', async function (accounts) {
+  before('setup UFragmentsPolicy contract', async function () {
+    await setupContractsWithOpenRebaseWindow();
+    await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true);
+    await chain.waitForSomeTime(60);
+  });
+
+  describe('when rebase called by an EOA', function () {
+    it('should succeed', async function () {
+      expect(
+        await chain.isEthException(uFragmentsPolicy.rebase())
+      ).to.be.false;
+    });
+  });
+
+  describe('when rebase called by a contract', function () {
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(rebaseCallerContract.callRebase())
+      ).to.be.true;
+    });
   });
 });
 
