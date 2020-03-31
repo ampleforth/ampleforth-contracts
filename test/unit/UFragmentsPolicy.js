@@ -14,7 +14,7 @@ require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should();
 
-let uFragmentsPolicy, mockUFragments, mockMarketOracle, mockCpiOracle, rebaseCallerContract;
+let uFragmentsPolicy, mockUFragments, mockMarketOracle, mockCpiOracle;
 let r, prevEpoch, prevTime;
 let deployer, user;
 
@@ -47,7 +47,6 @@ async function setupContracts () {
   });
   await uFragmentsPolicy.setMarketOracle(mockMarketOracle.address);
   await uFragmentsPolicy.setCpiOracle(mockCpiOracle.address);
-  rebaseCallerContract = await RebaseCallerContract.new(uFragmentsPolicy.address);
 }
 
 async function setupContractsWithOpenRebaseWindow () {
@@ -288,8 +287,9 @@ contract('UFragmentsPolicy:Rebase:accessControl', async function (accounts) {
 
   describe('when rebase called by a contract', function () {
     it('should fail', async function () {
+      const rebaseCallerContract = await RebaseCallerContract.new();
       expect(
-        await chain.isEthException(rebaseCallerContract.callRebase())
+        await chain.isEthException(rebaseCallerContract.callRebase(uFragmentsPolicy.address))
       ).to.be.true;
     });
   });

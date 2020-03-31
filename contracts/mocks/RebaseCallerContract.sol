@@ -4,18 +4,11 @@ import "../UFragmentsPolicy.sol";
 
 
 contract RebaseCallerContract {
-    UFragmentsPolicy private _policy;
-
-    constructor(address policy) public {
-        _policy = UFragmentsPolicy(policy);
-    }
-
-    function callRebase() public returns (bool) {
+    function callRebase(address policy) public returns (bool) {
         // Take out a flash loan.
         // Do something funky...
-        _policy.rebase();  // should fail
+        UFragmentsPolicy(policy).rebase();  // should fail
         // pay back flash loan.
-
         return true;
     }
 }
