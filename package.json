@@ -33,7 +33,7 @@
   "dependencies": {
     "app-root-path": "2.1.0",
     "frg-ethereum-runners": "https://github.com/ampleforth/frg-ethereum-runners.git#v1.0.0-alpha",
-    "js-yaml": "^3.13.0",
+    "js-yaml": "^3.13.1",
     "openzeppelin-eth": "2.0.2",
     "truffle": "4.1.14"
   },
