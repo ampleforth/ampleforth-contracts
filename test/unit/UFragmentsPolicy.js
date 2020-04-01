@@ -2,6 +2,7 @@ const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
 const MockUFragments = artifacts.require('MockUFragments.sol');
 const MockOracle = artifacts.require('MockOracle.sol');
 const RebaseCallerContract = artifacts.require('RebaseCallerContract.sol');
+const ConstructorRebaseCallerContract = artifacts.require('ConstructorRebaseCallerContract.sol');
 
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const BigNumber = web3.BigNumber;
@@ -13,7 +14,7 @@ require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should();
 
-let uFragmentsPolicy, mockUFragments, mockMarketOracle, mockCpiOracle, rebaseCallerContract;
+let uFragmentsPolicy, mockUFragments, mockMarketOracle, mockCpiOracle;
 let r, prevEpoch, prevTime;
 let deployer, user;
 
@@ -46,7 +47,6 @@ async function setupContracts () {
   });
   await uFragmentsPolicy.setMarketOracle(mockMarketOracle.address);
   await uFragmentsPolicy.setCpiOracle(mockCpiOracle.address);
-  rebaseCallerContract = await RebaseCallerContract.new(uFragmentsPolicy.address);
 }
 
 async function setupContractsWithOpenRebaseWindow () {
@@ -271,7 +271,7 @@ contract('UFragments:setRebaseTimingParameters:accessControl', function (account
 });
 
 contract('UFragmentsPolicy:Rebase:accessControl', async function (accounts) {
-  before('setup UFragmentsPolicy contract', async function () {
+  beforeEach('setup UFragmentsPolicy contract', async function () {
     await setupContractsWithOpenRebaseWindow();
     await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true);
     await chain.waitForSomeTime(60);
@@ -287,8 +287,17 @@ contract('UFragmentsPolicy:Rebase:accessControl', async function (accounts) {
 
   describe('when rebase called by a contract', function () {
     it('should fail', async function () {
+      const rebaseCallerContract = await RebaseCallerContract.new();
       expect(
-        await chain.isEthException(rebaseCallerContract.callRebase())
+        await chain.isEthException(rebaseCallerContract.callRebase(uFragmentsPolicy.address))
+      ).to.be.true;
+    });
+  });
+
+  describe('when rebase called by a contract which is being constructed', function () {
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(ConstructorRebaseCallerContract.new(uFragmentsPolicy.address))
       ).to.be.true;
     });
   });
