@@ -6,6 +6,7 @@ import "openzeppelin-eth/contracts/ownership/Ownable.sol";
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
 import "./UFragments.sol";
+import "./RebaseNotifier.sol";
 
 
 interface IOracle {
@@ -43,6 +44,8 @@ contract UFragmentsPolicy is Ownable {
     // Market oracle provides the token/USD exchange rate as an 18 decimal fixed point number.
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
+
+    RebaseNotifier public notifier = RebaseNotifier(address(0x0));
 
     // CPI value at the time of launch, as an 18 decimal fixed point number.
     uint256 private baseCpi;
@@ -131,6 +134,11 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
+
+        if (notifier != address(0)) {
+            notifier.notify();
+        }
+
         emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
     }
 
@@ -154,6 +162,13 @@ contract UFragmentsPolicy is Ownable {
         onlyOwner
     {
         marketOracle = marketOracle_;
+    }
+
+    function setNotifier(RebaseNotifier notifier_)
+        external
+        onlyOwner
+    {
+        notifier = notifier_;
     }
 
     /**
