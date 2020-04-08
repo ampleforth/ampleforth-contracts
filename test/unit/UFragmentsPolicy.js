@@ -47,6 +47,7 @@ async function setupContracts () {
   });
   await uFragmentsPolicy.setMarketOracle(mockMarketOracle.address);
   await uFragmentsPolicy.setCpiOracle(mockCpiOracle.address);
+  await uFragmentsPolicy.setOrchestrator(deployer);
 }
 
 async function setupContractsWithOpenRebaseWindow () {

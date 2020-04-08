@@ -2,8 +2,10 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-eth/contracts/ownership/Ownable.sol";
 
+import "./UFragmentsPolicy.sol";
 
-contract RebaseNotifier is Ownable {
+
+contract Orchestrator is Ownable {
 
     struct Transaction {
         address destination;
@@ -15,18 +17,15 @@ contract RebaseNotifier is Ownable {
     // No ordering of execution is guaranteed
     Transaction[] public transactions;
 
-    address public policy;
-
-    modifier onlyPolicy() {
-        require(msg.sender == policy, "Only policy may call this function.");
-        _;
-    }
+    UFragmentsPolicy public policy;
 
     constructor(address policy_) public {
-        policy = policy_;
+        policy = UFragmentsPolicy(policy_);
     }
 
-    function notify() external onlyPolicy {
+    function rebase() external {
+        policy.rebase();
+
         for (uint i = 0; i < transactions.length; i++) {
             Transaction storage t = transactions[i];
             if (t.enabled) {

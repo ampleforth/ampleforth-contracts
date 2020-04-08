@@ -6,7 +6,6 @@ import "openzeppelin-eth/contracts/ownership/Ownable.sol";
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
 import "./UFragments.sol";
-import "./RebaseNotifier.sol";
 
 
 interface IOracle {
@@ -45,7 +44,7 @@ contract UFragmentsPolicy is Ownable {
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
 
-    RebaseNotifier public notifier = RebaseNotifier(address(0x0));
+    address public orchestrator = address(0x0);
 
     // CPI value at the time of launch, as an 18 decimal fixed point number.
     uint256 private baseCpi;
@@ -79,6 +78,11 @@ contract UFragmentsPolicy is Ownable {
 
     uint256 private constant DECIMALS = 18;
 
+    modifier onlyOrchestrator() {
+        require(msg.sender == orchestrator);
+        _;
+    }
+
     // Due to the expression in computeSupplyDelta(), MAX_RATE * MAX_SUPPLY must fit into an int256.
     // Both are 18 decimals fixed point numbers.
     uint256 private constant MAX_RATE = 10**6 * 10**DECIMALS;
@@ -94,7 +98,7 @@ contract UFragmentsPolicy is Ownable {
      *      Where DeviationFromTargetRate is (MarketOracleRate - targetRate) / targetRate
      *      and targetRate is CpiOracleRate / baseCpi
      */
-    function rebase() external {
+    function rebase() external onlyOrchestrator {
         require(msg.sender == tx.origin);  // solhint-disable-line avoid-tx-origin
         require(inRebaseWindow());
 
@@ -134,11 +138,6 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-
-        if (notifier != address(0)) {
-            notifier.notify();
-        }
-
         emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
     }
 
@@ -164,11 +163,11 @@ contract UFragmentsPolicy is Ownable {
         marketOracle = marketOracle_;
     }
 
-    function setNotifier(RebaseNotifier notifier_)
+    function setOrchestrator(address orchestrator_)
         external
         onlyOwner
     {
-        notifier = notifier_;
+        orchestrator = orchestrator_;
     }
 
     /**
