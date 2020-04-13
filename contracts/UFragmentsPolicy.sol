@@ -44,8 +44,6 @@ contract UFragmentsPolicy is Ownable {
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
 
-    address public orchestrator = address(0x0);
-
     // CPI value at the time of launch, as an 18 decimal fixed point number.
     uint256 private baseCpi;
 
@@ -78,16 +76,19 @@ contract UFragmentsPolicy is Ownable {
 
     uint256 private constant DECIMALS = 18;
 
-    modifier onlyOrchestrator() {
-        require(msg.sender == orchestrator);
-        _;
-    }
-
     // Due to the expression in computeSupplyDelta(), MAX_RATE * MAX_SUPPLY must fit into an int256.
     // Both are 18 decimals fixed point numbers.
     uint256 private constant MAX_RATE = 10**6 * 10**DECIMALS;
     // MAX_SUPPLY = MAX_INT256 / MAX_RATE
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
+
+    // This module orchestrates the rebase execution and downstream notification.
+    address public orchestrator = address(0x0);
+
+    modifier onlyOrchestrator() {
+        require(msg.sender == orchestrator);
+        _;
+    }
 
     /**
      * @notice Any EOA address can call this function to initiate a new rebase operation, provided
