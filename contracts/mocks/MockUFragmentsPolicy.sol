@@ -4,8 +4,7 @@ import "./Mock.sol";
 
 
 contract MockUFragmentsPolicy is Mock {
-
-    // Mock methods
+    
     function rebase() external {
         emit FunctionCalled("UFragmentsPolicy", "rebase", msg.sender);
     }

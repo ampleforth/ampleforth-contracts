@@ -5,6 +5,11 @@ import "openzeppelin-eth/contracts/ownership/Ownable.sol";
 import "./UFragmentsPolicy.sol";
 
 
+/**
+ * @title Orchestrator
+ * @notice The orchestrator is the main entry point for rebase operations. It coordinates the policy
+ * actions with external consumers.
+ */
 contract Orchestrator is Ownable {
 
     struct Transaction {
@@ -14,20 +19,30 @@ contract Orchestrator is Ownable {
         bool enabled;
     }
 
-    // No ordering of execution is guaranteed
+    // Stable ordering is not guaranteed.
     Transaction[] public transactions;
 
     UFragmentsPolicy public policy;
 
+    /**
+     * @param policy_ Address of the UFragments policy.
+     */
     constructor(address policy_) public {
         Ownable.initialize(msg.sender);
         policy = UFragmentsPolicy(policy_);
     }
 
+    /**
+     * @notice Main entry point to initiate a rebase operation.
+     *         The Orchestrator calls rebase on the policy and notifies downstream applications.
+     *         Contracts are guarded from calling, to avoid flash loan attacks on liquidity
+     *         providers.
+     */
     function rebase()
         external
     {
-        // TODO: add tx.origin stuff here
+        require(msg.sender == tx.origin);  // solhint-disable-line avoid-tx-origin
+
         policy.rebase();
 
         for (uint i = 0; i < transactions.length; i++) {
@@ -57,6 +72,10 @@ contract Orchestrator is Ownable {
         }));
     }
 
+    /**
+     * @param index Index of transaction to remove.
+     *              Transaction ordering may have changed since adding.
+     */
     function removeTransaction(uint index)
         external
         onlyOwner
@@ -71,6 +90,10 @@ contract Orchestrator is Ownable {
         transactions.length--;
     }
 
+    /**
+     * @param index Index of transaction. Transaction ordering may have changed since adding.
+     * @param enabled True for enabled, false for disabled.
+     */
     function setTransactionEnabled(uint index, bool enabled)
         external
         onlyOwner
@@ -79,6 +102,9 @@ contract Orchestrator is Ownable {
         transactions[index].enabled = enabled;
     }
 
+    /**
+     * @return Number of transactions, both enabled and disabled, in transactions list.
+     */
     function transactionsLength()
         external
         view
@@ -87,6 +113,14 @@ contract Orchestrator is Ownable {
         return transactions.length;
     }
 
+    /**
+     * @dev wrapper to call the encoded transactions on downstream consumers.
+     * @param destination Address of destination contract.
+     * @param value ETH value
+     * @param dataLength Size of data param.
+     * @param data The encoded data payload.
+     * @return True on success
+     */
     function externalCall(address destination, uint value, uint dataLength, bytes data)
         internal
         returns (bool)

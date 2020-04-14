@@ -91,16 +91,13 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @notice Any EOA address can call this function to initiate a new rebase operation, provided
-     *         more than the minimum time period has elapsed.
-     *         Contracts are guarded from calling, to avoid flash loan attacks on liquidity
-     *         providers.
+     * @notice Initiates a new rebase operation, provided the minimum time period has elapsed.
+     *
      * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag
      *      Where DeviationFromTargetRate is (MarketOracleRate - targetRate) / targetRate
      *      and targetRate is CpiOracleRate / baseCpi
      */
     function rebase() external onlyOrchestrator {
-        require(msg.sender == tx.origin);  // solhint-disable-line avoid-tx-origin
         require(inRebaseWindow());
 
         // This comparison also ensures there is no reentrancy.
@@ -164,6 +161,10 @@ contract UFragmentsPolicy is Ownable {
         marketOracle = marketOracle_;
     }
 
+    /**
+     * @notice Sets the reference to the orchestrator.
+     * @param orchestrator_ The address of the orchestrator contract.
+     */
     function setOrchestrator(address orchestrator_)
         external
         onlyOwner

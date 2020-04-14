@@ -1,8 +1,6 @@
 const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
 const MockUFragments = artifacts.require('MockUFragments.sol');
 const MockOracle = artifacts.require('MockOracle.sol');
-const RebaseCallerContract = artifacts.require('RebaseCallerContract.sol');
-const ConstructorRebaseCallerContract = artifacts.require('ConstructorRebaseCallerContract.sol');
 
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 const BigNumber = web3.BigNumber;
@@ -154,6 +152,31 @@ contract('UFragments:setCpiOracle:accessControl', function (accounts) {
   });
 });
 
+contract('UFragmentsPolicy:setOrchestrator', async function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should set orchestrator', async function () {
+    await uFragmentsPolicy.setOrchestrator(user, {from: deployer});
+    expect(await uFragmentsPolicy.orchestrator.call()).to.eq(user);
+  });
+});
+
+contract('UFragments:setOrchestrator:accessControl', function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setOrchestrator(deployer, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setOrchestrator(deployer, { from: user }))
+    ).to.be.true;
+  });
+});
+
 contract('UFragmentsPolicy:setDeviationThreshold', async function (accounts) {
   let prevThreshold, threshold;
   before('setup UFragmentsPolicy contract', async function () {
@@ -278,27 +301,18 @@ contract('UFragmentsPolicy:Rebase:accessControl', async function (accounts) {
     await chain.waitForSomeTime(60);
   });
 
-  describe('when rebase called by an EOA', function () {
+  describe('when rebase called by orchestrator', function () {
     it('should succeed', async function () {
       expect(
-        await chain.isEthException(uFragmentsPolicy.rebase())
+        await chain.isEthException(uFragmentsPolicy.rebase({from: deployer}))
       ).to.be.false;
     });
   });
 
-  describe('when rebase called by a contract', function () {
-    it('should fail', async function () {
-      const rebaseCallerContract = await RebaseCallerContract.new();
-      expect(
-        await chain.isEthException(rebaseCallerContract.callRebase(uFragmentsPolicy.address))
-      ).to.be.true;
-    });
-  });
-
-  describe('when rebase called by a contract which is being constructed', function () {
+  describe('when rebase called by non-orchestrator', function () {
     it('should fail', async function () {
       expect(
-        await chain.isEthException(ConstructorRebaseCallerContract.new(uFragmentsPolicy.address))
+        await chain.isEthException(uFragmentsPolicy.rebase({from: user}))
       ).to.be.true;
     });
   });

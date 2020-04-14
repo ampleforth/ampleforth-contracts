@@ -1,6 +1,8 @@
 const MockDownstream = artifacts.require('MockDownstream.sol');
 const MockUFragmentsPolicy = artifacts.require('MockUFragmentsPolicy.sol');
 const Orchestrator = artifacts.require('Orchestrator.sol');
+const RebaseCallerContract = artifacts.require('RebaseCallerContract.sol');
+const ConstructorRebaseCallerContract = artifacts.require('ConstructorRebaseCallerContract.sol');
 
 const BigNumber = web3.BigNumber;
 const _require = require('app-root-path').require;
@@ -32,6 +34,23 @@ contract('Orchestrator', function (accounts) {
     it('should reject', async function () {
       expect(
         await chain.isEthException(orchestrator.sendTransaction({ from: user, value: 1 }))
+      ).to.be.true;
+    });
+  });
+
+  describe('when rebase called by a contract', function () {
+    it('should fail', async function () {
+      const rebaseCallerContract = await RebaseCallerContract.new();
+      expect(
+        await chain.isEthException(rebaseCallerContract.callRebase(orchestrator.address))
+      ).to.be.true;
+    });
+  });
+
+  describe('when rebase called by a contract which is being constructed', function () {
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(ConstructorRebaseCallerContract.new(orchestrator.address))
       ).to.be.true;
     });
   });
@@ -207,6 +226,76 @@ contract('Orchestrator', function (accounts) {
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
+    });
+  });
+
+  describe('Access Control', function () {
+    describe('addTransaction', async function () {
+      it('should be callable by owner', async function () {
+        const updateNoArgEncoded = mockDownstream.contract.updateNoArg.getData();
+        expect(
+          await chain.isEthException(
+            orchestrator.addTransaction(mockDownstream.address, 0, updateNoArgEncoded, {from: deployer})
+          )
+        ).to.be.false;
+      });
+
+      it('should be not be callable by others', async function () {
+        const updateNoArgEncoded = mockDownstream.contract.updateNoArg.getData();
+        expect(
+          await chain.isEthException(
+            orchestrator.addTransaction(mockDownstream.address, 0, updateNoArgEncoded, {from: user})
+          )
+        ).to.be.true;
+      });
+    });
+
+    describe('setTransactionEnabled', async function () {
+      it('should be callable by owner', async function () {
+        (await orchestrator.transactionsLength.call()).should.be.bignumber.gt(0);
+        expect(
+          await chain.isEthException(
+            orchestrator.setTransactionEnabled(0, true, {from: deployer})
+          )
+        ).to.be.false;
+      });
+
+      it('should be not be callable by others', async function () {
+        (await orchestrator.transactionsLength.call()).should.be.bignumber.gt(0);
+        expect(
+          await chain.isEthException(
+            orchestrator.setTransactionEnabled(0, true, {from: user})
+          )
+        ).to.be.true;
+      });
+    });
+
+    describe('removeTransaction', async function () {
+      it('should be not be callable by others', async function () {
+        (await orchestrator.transactionsLength.call()).should.be.bignumber.gt(0);
+        expect(
+          await chain.isEthException(
+            orchestrator.removeTransaction(0, {from: user})
+          )
+        ).to.be.true;
+      });
+
+      it('should be callable by owner', async function () {
+        (await orchestrator.transactionsLength.call()).should.be.bignumber.gt(0);
+        expect(
+          await chain.isEthException(
+            orchestrator.removeTransaction(0, {from: deployer})
+          )
+        ).to.be.false;
+      });
+    });
+
+    describe('transferOwnership', async function () {
+      it('should transfer ownership', async function () {
+        (await orchestrator.owner.call()).should.eq(deployer);
+        await orchestrator.transferOwnership(user);
+        (await orchestrator.owner.call()).should.eq(user);
+      });
     });
   });
 });
