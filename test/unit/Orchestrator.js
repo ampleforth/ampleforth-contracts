@@ -111,7 +111,7 @@ contract('Orchestrator', function (accounts) {
       r = await orchestrator.rebase();
     });
 
-    it('should have 2 transaction', async function () {
+    it('should have 2 transactions', async function () {
       (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(2);
     });
 
@@ -155,7 +155,7 @@ contract('Orchestrator', function (accounts) {
       r = await orchestrator.rebase();
     });
 
-    it('should have 2 transaction', async function () {
+    it('should have 2 transactions', async function () {
       (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(2);
     });
 
@@ -217,7 +217,7 @@ contract('Orchestrator', function (accounts) {
       r = await orchestrator.rebase();
     });
 
-    it('should have 0 transaction', async function () {
+    it('should have 0 transactions', async function () {
       (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(0);
     });
 
@@ -226,6 +226,63 @@ contract('Orchestrator', function (accounts) {
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
+    });
+  });
+
+  describe('when a transaction reverts', async function () {
+    before('adding 3 transactions', async function () {
+      const updateOneArgEncoded = mockDownstream.contract.updateOneArg.getData(123);
+      orchestrator.addTransaction(mockDownstream.address, 0, updateOneArgEncoded, {from: deployer});
+
+      const revertsEncoded = mockDownstream.contract.reverts.getData();
+      orchestrator.addTransaction(mockDownstream.address, 0, revertsEncoded, {from: deployer});
+
+      const updateTwoArgsEncoded = mockDownstream.contract.updateTwoArgs.getData(12345, 23456);
+      orchestrator.addTransaction(mockDownstream.address, 0, updateTwoArgsEncoded, {from: deployer});
+      r = await orchestrator.rebase();
+    });
+
+    it('should have 3 transactions', async function () {
+      (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(3);
+    });
+
+    it('should call rebase on policy', async function () {
+      const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
+      expect(fnCalled.args.functionName).to.eq('rebase');
+      expect(fnCalled.args.caller).to.eq(orchestrator.address);
+    });
+
+    it('should call first transaction', async function () {
+      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      expect(fnCalled.args.instanceName).to.eq('MockDownstream');
+      expect(fnCalled.args.functionName).to.eq('updateOneArg');
+      expect(fnCalled.args.caller).to.eq(orchestrator.address);
+
+      const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[2]);
+      const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
+        return fnArgs.args[k].map(d => d.toNumber()).concat(m);
+      }, [ ]);
+      expect(parsedFnArgs).to.eql([123]);
+    });
+
+    it('should emit TransactionReverted event', async function () {
+      const emitted = orchestrator.TransactionFailed().formatter(r.receipt.logs[3]);
+      expect(emitted.args.destination).to.eq(mockDownstream.address);
+      emitted.args.index.should.be.bignumber.eq(1);
+    });
+
+    it('should call last transaction after reverted one', async function () {
+      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[4]);
+      expect(fnCalled.args.instanceName).to.eq('MockDownstream');
+      expect(fnCalled.args.functionName).to.eq('updateTwoArgs');
+      expect(fnCalled.args.caller).to.eq(orchestrator.address);
+
+      const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[5]);
+      const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
+        return fnArgs.args[k].map(d => d.toNumber()).concat(m);
+      }, [ ]);
+      expect(parsedFnArgs).to.eql([23456, 12345]);
     });
   });
 

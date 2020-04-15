@@ -19,6 +19,8 @@ contract Orchestrator is Ownable {
         bool enabled;
     }
 
+    event TransactionFailed(address indexed destination, uint index);
+
     // Stable ordering is not guaranteed.
     Transaction[] public transactions;
 
@@ -37,6 +39,8 @@ contract Orchestrator is Ownable {
      *         The Orchestrator calls rebase on the policy and notifies downstream applications.
      *         Contracts are guarded from calling, to avoid flash loan attacks on liquidity
      *         providers.
+     *         If a transaction in the transaction list reverts, it is swallowed and the remaining
+     *         transactions are executed.
      */
     function rebase()
         external
@@ -48,8 +52,10 @@ contract Orchestrator is Ownable {
         for (uint i = 0; i < transactions.length; i++) {
             Transaction storage t = transactions[i];
             if (t.enabled) {
-                // Does not revert when false is returned.
-                require(externalCall(t.destination, t.value, t.data.length, t.data), "call failed");
+                bool result = externalCall(t.destination, t.value, t.data.length, t.data);
+                if (!result) {
+                    emit TransactionFailed(t.destination, i);
+                }
             }
         }
     }

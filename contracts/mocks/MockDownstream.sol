@@ -31,4 +31,14 @@ contract MockDownstream is Mock {
         intVals[0] = i;
         emit FunctionArguments(uintVals, intVals);
     }
+
+    function reverts() external {
+        emit FunctionCalled("MockDownstream", "reverts", msg.sender);
+
+        uint256[] memory uintVals = new uint256[](0);
+        int256[] memory intVals = new int256[](0);
+        emit FunctionArguments(uintVals, intVals);
+
+        require(false, "reverted");
+    }
 }
