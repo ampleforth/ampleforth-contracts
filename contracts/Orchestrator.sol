@@ -14,12 +14,12 @@ contract Orchestrator is Ownable {
 
     struct Transaction {
         address destination;
-        uint value;
+        uint transferValueWei;
         bytes data;
         bool enabled;
     }
 
-    event TransactionFailed(address indexed destination, uint index);
+    event TransactionFailed(address indexed destination, uint index, bytes data);
 
     // Stable ordering is not guaranteed.
     Transaction[] public transactions;
@@ -52,9 +52,10 @@ contract Orchestrator is Ownable {
         for (uint i = 0; i < transactions.length; i++) {
             Transaction storage t = transactions[i];
             if (t.enabled) {
-                bool result = externalCall(t.destination, t.value, t.data.length, t.data);
+                bool result =
+                    externalCall(t.destination, t.transferValueWei, t.data.length, t.data);
                 if (!result) {
-                    emit TransactionFailed(t.destination, i);
+                    emit TransactionFailed(t.destination, i, t.data);
                 }
             }
         }
@@ -63,16 +64,16 @@ contract Orchestrator is Ownable {
     /**
      * @notice Adds a transaction that gets called for a downstream receiver of rebases
      * @param destination Address of contract destination
-     * @param value Transaction Ether value
+     * @param transferValueWei ETH value to send, in wei.
      * @param data Transaction data payload
      */
-    function addTransaction(address destination, uint value, bytes data)
+    function addTransaction(address destination, uint transferValueWei, bytes data)
         external
         onlyOwner
     {
         transactions.push(Transaction({
             destination: destination,
-            value: value,
+            transferValueWei: transferValueWei,
             data: data,
             enabled: true
         }));
@@ -122,12 +123,12 @@ contract Orchestrator is Ownable {
     /**
      * @dev wrapper to call the encoded transactions on downstream consumers.
      * @param destination Address of destination contract.
-     * @param value ETH value
+     * @param transferValueWei ETH value to send, in wei.
      * @param dataLength Size of data param.
      * @param data The encoded data payload.
      * @return True on success
      */
-    function externalCall(address destination, uint value, uint dataLength, bytes data)
+    function externalCall(address destination, uint transferValueWei, uint dataLength, bytes data)
         internal
         returns (bool)
     {
@@ -135,16 +136,12 @@ contract Orchestrator is Ownable {
         assembly {  // solhint-disable-line no-inline-assembly
             // "Allocate" memory for output
             // (0x40 is where "free memory" pointer is stored by convention)
-            let x := mload(0x40)
+            let outputAddress := mload(0x40)
 
             // First 32 bytes are the padded length of data, so exclude that
-            let d := add(data, 32)
+            let dataAddress := add(data, 32)
 
             result := call(
-                // TODO(iles): Update these gas numbers.
-
-
-
                 // 34710 is the value that solidity is currently emitting
                 // It includes callGas (700) + callVeryLow (3, to pay for SUB)
                 // + callValueTransferGas (9000) + callNewAccountGas
@@ -153,10 +150,10 @@ contract Orchestrator is Ownable {
 
 
                 destination,
-                value,
-                d,
+                transferValueWei,
+                dataAddress,
                 dataLength,  // Size of the input (in bytes). This is what fixes the padding problem
-                x,
+                outputAddress,
                 0  // Output is ignored, therefore the output size is zero
             )
         }
