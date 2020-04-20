@@ -70,6 +70,10 @@ contract('Orchestrator', function (accounts) {
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
     });
+
+    it('should not have any subsequent logs', async function () {
+      expect(r.receipt.logs.length).to.eq(1);
+    });
   });
 
   describe('when there is a single transaction', async function () {
@@ -101,6 +105,10 @@ contract('Orchestrator', function (accounts) {
         return fnArgs.args[k].map(d => d.toNumber()).concat(m);
       }, [ ]);
       expect(parsedFnArgs).to.eql([12345]);
+    });
+
+    it('should not have any subsequent logs', async function () {
+      expect(r.receipt.logs.length).to.eq(3);
     });
   });
 
@@ -147,6 +155,10 @@ contract('Orchestrator', function (accounts) {
       }, [ ]);
       expect(parsedFnArgs).to.eql([23456, 12345]);
     });
+
+    it('should not have any subsequent logs', async function () {
+      expect(r.receipt.logs.length).to.eq(5);
+    });
   });
 
   describe('when 1st transaction is disabled', async function () {
@@ -177,6 +189,10 @@ contract('Orchestrator', function (accounts) {
         return fnArgs.args[k].map(d => d.toNumber()).concat(m);
       }, [ ]);
       expect(parsedFnArgs).to.eql([23456, 12345]);
+    });
+
+    it('should not have any subsequent logs', async function () {
+      expect(r.receipt.logs.length).to.eq(3);
     });
   });
 
@@ -209,6 +225,10 @@ contract('Orchestrator', function (accounts) {
       }, [ ]);
       expect(parsedFnArgs).to.eql([23456, 12345]);
     });
+
+    it('should not have any subsequent logs', async function () {
+      expect(r.receipt.logs.length).to.eq(3);
+    });
   });
 
   describe('when all transactions are removed', async function () {
@@ -226,6 +246,10 @@ contract('Orchestrator', function (accounts) {
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
+    });
+
+    it('should not have any subsequent logs', async function () {
+      expect(r.receipt.logs.length).to.eq(1);
     });
   });
 
@@ -283,6 +307,10 @@ contract('Orchestrator', function (accounts) {
         return fnArgs.args[k].map(d => d.toNumber()).concat(m);
       }, [ ]);
       expect(parsedFnArgs).to.eql([23456, 12345]);
+    });
+
+    it('should not have any subsequent logs', async function () {
+      expect(r.receipt.logs.length).to.eq(6);
     });
   });
 
