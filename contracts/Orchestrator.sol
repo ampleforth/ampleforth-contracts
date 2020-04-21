@@ -14,7 +14,6 @@ contract Orchestrator is Ownable {
 
     struct Transaction {
         address destination;
-        uint transferValueWei;
         bytes data;
         bool enabled;
     }
@@ -53,7 +52,7 @@ contract Orchestrator is Ownable {
             Transaction storage t = transactions[i];
             if (t.enabled) {
                 bool result =
-                    externalCall(t.destination, t.transferValueWei, t.data.length, t.data);
+                    externalCall(t.destination, 0, t.data.length, t.data);
                 if (!result) {
                     emit TransactionFailed(t.destination, i, t.data);
                 }
@@ -64,16 +63,14 @@ contract Orchestrator is Ownable {
     /**
      * @notice Adds a transaction that gets called for a downstream receiver of rebases
      * @param destination Address of contract destination
-     * @param transferValueWei ETH value to send, in wei.
      * @param data Transaction data payload
      */
-    function addTransaction(address destination, uint transferValueWei, bytes data)
+    function addTransaction(address destination, bytes data)
         external
         onlyOwner
     {
         transactions.push(Transaction({
             destination: destination,
-            transferValueWei: transferValueWei,
             data: data,
             enabled: true
         }));

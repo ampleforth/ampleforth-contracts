@@ -79,7 +79,7 @@ contract('Orchestrator', function (accounts) {
   describe('when there is a single transaction', async function () {
     before('adding a transaction', async function () {
       const updateOneArgEncoded = mockDownstream.contract.updateOneArg.getData(12345);
-      orchestrator.addTransaction(mockDownstream.address, 0, updateOneArgEncoded, {from: deployer});
+      orchestrator.addTransaction(mockDownstream.address, updateOneArgEncoded, {from: deployer});
       r = await orchestrator.rebase();
     });
 
@@ -115,7 +115,7 @@ contract('Orchestrator', function (accounts) {
   describe('when there are two transactions', async function () {
     before('adding a transaction', async function () {
       const updateTwoArgsEncoded = mockDownstream.contract.updateTwoArgs.getData(12345, 23456);
-      orchestrator.addTransaction(mockDownstream.address, 0, updateTwoArgsEncoded, {from: deployer});
+      orchestrator.addTransaction(mockDownstream.address, updateTwoArgsEncoded, {from: deployer});
       r = await orchestrator.rebase();
     });
 
@@ -256,13 +256,13 @@ contract('Orchestrator', function (accounts) {
   describe('when a transaction reverts', async function () {
     before('adding 3 transactions', async function () {
       const updateOneArgEncoded = mockDownstream.contract.updateOneArg.getData(123);
-      orchestrator.addTransaction(mockDownstream.address, 0, updateOneArgEncoded, {from: deployer});
+      orchestrator.addTransaction(mockDownstream.address, updateOneArgEncoded, {from: deployer});
 
       const revertsEncoded = mockDownstream.contract.reverts.getData();
-      orchestrator.addTransaction(mockDownstream.address, 0, revertsEncoded, {from: deployer});
+      orchestrator.addTransaction(mockDownstream.address, revertsEncoded, {from: deployer});
 
       const updateTwoArgsEncoded = mockDownstream.contract.updateTwoArgs.getData(12345, 23456);
-      orchestrator.addTransaction(mockDownstream.address, 0, updateTwoArgsEncoded, {from: deployer});
+      orchestrator.addTransaction(mockDownstream.address, updateTwoArgsEncoded, {from: deployer});
       r = await orchestrator.rebase();
     });
 
@@ -320,7 +320,7 @@ contract('Orchestrator', function (accounts) {
         const updateNoArgEncoded = mockDownstream.contract.updateNoArg.getData();
         expect(
           await chain.isEthException(
-            orchestrator.addTransaction(mockDownstream.address, 0, updateNoArgEncoded, {from: deployer})
+            orchestrator.addTransaction(mockDownstream.address, updateNoArgEncoded, {from: deployer})
           )
         ).to.be.false;
       });
@@ -329,7 +329,7 @@ contract('Orchestrator', function (accounts) {
         const updateNoArgEncoded = mockDownstream.contract.updateNoArg.getData();
         expect(
           await chain.isEthException(
-            orchestrator.addTransaction(mockDownstream.address, 0, updateNoArgEncoded, {from: user})
+            orchestrator.addTransaction(mockDownstream.address, updateNoArgEncoded, {from: user})
           )
         ).to.be.true;
       });
