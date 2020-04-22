@@ -82,17 +82,22 @@ contract UFragmentsPolicy is Ownable {
     // MAX_SUPPLY = MAX_INT256 / MAX_RATE
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
 
+    // This module orchestrates the rebase execution and downstream notification.
+    address public orchestrator = address(0x0);
+
+    modifier onlyOrchestrator() {
+        require(msg.sender == orchestrator);
+        _;
+    }
+
     /**
-     * @notice Any EOA address can call this function to initiate a new rebase operation, provided
-     *         more than the minimum time period has elapsed.
-     *         Contracts are guarded from calling, to avoid flash loan attacks on liquidity
-     *         providers.
+     * @notice Initiates a new rebase operation, provided the minimum time period has elapsed.
+     *
      * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag
      *      Where DeviationFromTargetRate is (MarketOracleRate - targetRate) / targetRate
      *      and targetRate is CpiOracleRate / baseCpi
      */
-    function rebase() external {
-        require(msg.sender == tx.origin);  // solhint-disable-line avoid-tx-origin
+    function rebase() external onlyOrchestrator {
         require(inRebaseWindow());
 
         // This comparison also ensures there is no reentrancy.
@@ -154,6 +159,17 @@ contract UFragmentsPolicy is Ownable {
         onlyOwner
     {
         marketOracle = marketOracle_;
+    }
+
+    /**
+     * @notice Sets the reference to the orchestrator.
+     * @param orchestrator_ The address of the orchestrator contract.
+     */
+    function setOrchestrator(address orchestrator_)
+        external
+        onlyOwner
+    {
+        orchestrator = orchestrator_;
     }
 
     /**

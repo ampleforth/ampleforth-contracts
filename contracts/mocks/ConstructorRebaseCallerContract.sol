@@ -1,13 +1,13 @@
 pragma solidity 0.4.24;
 
-import "../UFragmentsPolicy.sol";
+import "../Orchestrator.sol";
 
 
 contract ConstructorRebaseCallerContract {
-    constructor(address policy) public {
+    constructor(address orchestrator) public {
         // Take out a flash loan.
         // Do something funky...
-        UFragmentsPolicy(policy).rebase();  // should fail
+        Orchestrator(orchestrator).rebase();  // should fail
         // pay back flash loan.
     }
 }
