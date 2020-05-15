@@ -13,9 +13,9 @@ import "./UFragmentsPolicy.sol";
 contract Orchestrator is Ownable {
 
     struct Transaction {
+        bool enabled;
         address destination;
         bytes data;
-        bool enabled;
     }
 
     event TransactionFailed(address indexed destination, uint index, bytes data);
