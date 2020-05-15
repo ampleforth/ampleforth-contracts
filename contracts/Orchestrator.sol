@@ -108,7 +108,7 @@ contract Orchestrator is Ownable {
     /**
      * @return Number of transactions, both enabled and disabled, in transactions list.
      */
-    function transactionsLength()
+    function transactionsSize()
         external
         view
         returns (uint256)
