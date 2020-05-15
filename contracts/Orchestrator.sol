@@ -52,7 +52,7 @@ contract Orchestrator is Ownable {
             Transaction storage t = transactions[i];
             if (t.enabled) {
                 bool result =
-                    externalCall(t.destination, 0, t.data.length, t.data);
+                    externalCall(t.destination, t.data.length, t.data);
                 if (!result) {
                     emit TransactionFailed(t.destination, i, t.data);
                 }
@@ -119,12 +119,11 @@ contract Orchestrator is Ownable {
     /**
      * @dev wrapper to call the encoded transactions on downstream consumers.
      * @param destination Address of destination contract.
-     * @param transferValueWei ETH value to send, in wei.
      * @param dataLength Size of data param.
      * @param data The encoded data payload.
      * @return True on success
      */
-    function externalCall(address destination, uint transferValueWei, uint dataLength, bytes data)
+    function externalCall(address destination, uint dataLength, bytes data)
         internal
         returns (bool)
     {
@@ -146,7 +145,7 @@ contract Orchestrator is Ownable {
 
 
                 destination,
-                transferValueWei,
+                0, // transfer value in wei
                 dataAddress,
                 dataLength,  // Size of the input (in bytes). This is what fixes the padding problem
                 outputAddress,
