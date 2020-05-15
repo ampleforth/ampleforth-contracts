@@ -83,7 +83,7 @@ contract UFragmentsPolicy is Ownable {
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
 
     // This module orchestrates the rebase execution and downstream notification.
-    address public orchestrator = address(0x0);
+    address public orchestrator;
 
     modifier onlyOrchestrator() {
         require(msg.sender == orchestrator);
