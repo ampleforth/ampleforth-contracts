@@ -70,9 +70,9 @@ contract Orchestrator is Ownable {
         onlyOwner
     {
         transactions.push(Transaction({
+            enabled: true,
             destination: destination,
-            data: data,
-            enabled: true
+            data: data
         }));
     }
 
@@ -90,7 +90,6 @@ contract Orchestrator is Ownable {
             transactions[index] = transactions[transactions.length - 1];
         }
 
-        delete transactions[transactions.length - 1];
         transactions.length--;
     }
 
