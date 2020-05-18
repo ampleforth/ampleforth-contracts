@@ -13,9 +13,9 @@ import "./UFragmentsPolicy.sol";
 contract Orchestrator is Ownable {
 
     struct Transaction {
+        bool enabled;
         address destination;
         bytes data;
-        bool enabled;
     }
 
     event TransactionFailed(address indexed destination, uint index, bytes data);
@@ -52,7 +52,7 @@ contract Orchestrator is Ownable {
             Transaction storage t = transactions[i];
             if (t.enabled) {
                 bool result =
-                    externalCall(t.destination, 0, t.data.length, t.data);
+                    externalCall(t.destination, t.data);
                 if (!result) {
                     emit TransactionFailed(t.destination, i, t.data);
                 }
@@ -70,9 +70,9 @@ contract Orchestrator is Ownable {
         onlyOwner
     {
         transactions.push(Transaction({
+            enabled: true,
             destination: destination,
-            data: data,
-            enabled: true
+            data: data
         }));
     }
 
@@ -90,7 +90,6 @@ contract Orchestrator is Ownable {
             transactions[index] = transactions[transactions.length - 1];
         }
 
-        delete transactions[transactions.length - 1];
         transactions.length--;
     }
 
@@ -109,7 +108,7 @@ contract Orchestrator is Ownable {
     /**
      * @return Number of transactions, both enabled and disabled, in transactions list.
      */
-    function transactionsLength()
+    function transactionsSize()
         external
         view
         returns (uint256)
@@ -120,12 +119,10 @@ contract Orchestrator is Ownable {
     /**
      * @dev wrapper to call the encoded transactions on downstream consumers.
      * @param destination Address of destination contract.
-     * @param transferValueWei ETH value to send, in wei.
-     * @param dataLength Size of data param.
      * @param data The encoded data payload.
      * @return True on success
      */
-    function externalCall(address destination, uint transferValueWei, uint dataLength, bytes data)
+    function externalCall(address destination, bytes data)
         internal
         returns (bool)
     {
@@ -147,9 +144,9 @@ contract Orchestrator is Ownable {
 
 
                 destination,
-                transferValueWei,
+                0, // transfer value in wei
                 dataAddress,
-                dataLength,  // Size of the input (in bytes). This is what fixes the padding problem
+                mload(data),  // Size of the input, in bytes. Stored in position 0 of the array.
                 outputAddress,
                 0  // Output is ignored, therefore the output size is zero
             )

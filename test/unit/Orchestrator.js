@@ -61,7 +61,7 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have no transactions', async function () {
-      (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(0);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(0);
     });
 
     it('should call rebase on policy', async function () {
@@ -84,7 +84,7 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 1 transaction', async function () {
-      (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(1);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(1);
     });
 
     it('should call rebase on policy', async function () {
@@ -120,7 +120,7 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 2 transactions', async function () {
-      (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(2);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(2);
     });
 
     it('should call rebase on policy', async function () {
@@ -168,7 +168,7 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 2 transactions', async function () {
-      (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(2);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(2);
     });
 
     it('should call rebase on policy', async function () {
@@ -203,7 +203,7 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 1 transaction', async function () {
-      (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(1);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(1);
     });
 
     it('should call rebase on policy', async function () {
@@ -238,7 +238,7 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 0 transactions', async function () {
-      (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(0);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(0);
     });
 
     it('should call rebase on policy', async function () {
@@ -267,7 +267,7 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 3 transactions', async function () {
-      (await orchestrator.transactionsLength.call()).should.be.bignumber.eq(3);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(3);
     });
 
     it('should call rebase on policy', async function () {
@@ -337,7 +337,7 @@ contract('Orchestrator', function (accounts) {
 
     describe('setTransactionEnabled', async function () {
       it('should be callable by owner', async function () {
-        (await orchestrator.transactionsLength.call()).should.be.bignumber.gt(0);
+        (await orchestrator.transactionsSize.call()).should.be.bignumber.gt(0);
         expect(
           await chain.isEthException(
             orchestrator.setTransactionEnabled(0, true, {from: deployer})
@@ -346,7 +346,7 @@ contract('Orchestrator', function (accounts) {
       });
 
       it('should be not be callable by others', async function () {
-        (await orchestrator.transactionsLength.call()).should.be.bignumber.gt(0);
+        (await orchestrator.transactionsSize.call()).should.be.bignumber.gt(0);
         expect(
           await chain.isEthException(
             orchestrator.setTransactionEnabled(0, true, {from: user})
@@ -357,7 +357,7 @@ contract('Orchestrator', function (accounts) {
 
     describe('removeTransaction', async function () {
       it('should be not be callable by others', async function () {
-        (await orchestrator.transactionsLength.call()).should.be.bignumber.gt(0);
+        (await orchestrator.transactionsSize.call()).should.be.bignumber.gt(0);
         expect(
           await chain.isEthException(
             orchestrator.removeTransaction(0, {from: user})
@@ -366,7 +366,7 @@ contract('Orchestrator', function (accounts) {
       });
 
       it('should be callable by owner', async function () {
-        (await orchestrator.transactionsLength.call()).should.be.bignumber.gt(0);
+        (await orchestrator.transactionsSize.call()).should.be.bignumber.gt(0);
         expect(
           await chain.isEthException(
             orchestrator.removeTransaction(0, {from: deployer})
