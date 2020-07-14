@@ -38,6 +38,8 @@
     "truffle": "4.1.14"
   },
   "devDependencies": {
+    "@openzeppelin/test-environment": "^0.1.2",
+    "@openzeppelin/test-helpers": "^0.5.4",
     "chai": "^4.1.2",
     "chai-bignumber": "^2.0.2",
     "coveralls": "^3.0.2",
