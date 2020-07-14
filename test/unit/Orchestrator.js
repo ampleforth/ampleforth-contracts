@@ -8,6 +8,7 @@ const BigNumber = web3.BigNumber;
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
+const {expectRevert} = require('@openzeppelin/test-helpers');
 
 require('chai')
   .use(require('chai-bignumber')(BigNumber))
@@ -263,54 +264,11 @@ contract('Orchestrator', function (accounts) {
 
       const updateTwoArgsEncoded = mockDownstream.contract.updateTwoArgs.getData(12345, 23456);
       orchestrator.addTransaction(mockDownstream.address, updateTwoArgsEncoded, {from: deployer});
-      r = await orchestrator.rebase();
+      await expectRevert.unspecified(orchestrator.rebase());
     });
 
     it('should have 3 transactions', async function () {
       (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(3);
-    });
-
-    it('should call rebase on policy', async function () {
-      const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
-      expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
-      expect(fnCalled.args.functionName).to.eq('rebase');
-      expect(fnCalled.args.caller).to.eq(orchestrator.address);
-    });
-
-    it('should call first transaction', async function () {
-      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
-      expect(fnCalled.args.instanceName).to.eq('MockDownstream');
-      expect(fnCalled.args.functionName).to.eq('updateOneArg');
-      expect(fnCalled.args.caller).to.eq(orchestrator.address);
-
-      const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[2]);
-      const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
-        return fnArgs.args[k].map(d => d.toNumber()).concat(m);
-      }, [ ]);
-      expect(parsedFnArgs).to.eql([123]);
-    });
-
-    it('should emit TransactionReverted event', async function () {
-      const emitted = orchestrator.TransactionFailed().formatter(r.receipt.logs[3]);
-      expect(emitted.args.destination).to.eq(mockDownstream.address);
-      emitted.args.index.should.be.bignumber.eq(1);
-    });
-
-    it('should call last transaction after reverted one', async function () {
-      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[4]);
-      expect(fnCalled.args.instanceName).to.eq('MockDownstream');
-      expect(fnCalled.args.functionName).to.eq('updateTwoArgs');
-      expect(fnCalled.args.caller).to.eq(orchestrator.address);
-
-      const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[5]);
-      const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
-        return fnArgs.args[k].map(d => d.toNumber()).concat(m);
-      }, [ ]);
-      expect(parsedFnArgs).to.eql([23456, 12345]);
-    });
-
-    it('should not have any subsequent logs', async function () {
-      expect(r.receipt.logs.length).to.eq(6);
     });
   });
 
