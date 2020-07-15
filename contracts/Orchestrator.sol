@@ -55,6 +55,7 @@ contract Orchestrator is Ownable {
                     externalCall(t.destination, t.data);
                 if (!result) {
                     emit TransactionFailed(t.destination, i, t.data);
+                    revert("Transaction Failed");
                 }
             }
         }
