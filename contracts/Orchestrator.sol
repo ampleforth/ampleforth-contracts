@@ -67,16 +67,16 @@ contract Orchestrator is Ownable {
      */
     function _executePeripheralTransaction(uint256 index) internal returns (bool success, bytes memory returnData) {
         // declare storage reference
-        Transaction storage transaction = transactions[index];
+        Transaction memory transaction = transactions[index];
 
-        // perform low level external call
+        // perform low level external call and forward all remaining gas
         (success, returnData) = address(transaction.destination).call(transaction.data);
 
         // Check if any of the atomic transactions failed, if not, decode return data
         if (!success) {
-            // If there is no prefix to the revert reason, we assume it was an OOG error and revert the batch
             if (returnData.length == 0) {
-                revert("Transaction out of gas");
+                // If revert reason is empty, it is either OOG error or silent revert so we revert the batch
+                revert("Transaction reverted silently");
             } else {
                 // parse revert message
                 (string memory revertMessage) = _getRevertMsg(returnData);
