@@ -1,7 +1,7 @@
-pragma solidity 0.4.24;
+pragma solidity 0.5.12;
 
-import "openzeppelin-eth/contracts/math/SafeMath.sol";
-import "openzeppelin-eth/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
 
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";

@@ -1,8 +1,8 @@
-pragma solidity 0.4.24;
+pragma solidity 0.5.12;
 
-import "openzeppelin-eth/contracts/math/SafeMath.sol";
-import "openzeppelin-eth/contracts/ownership/Ownable.sol";
-import "openzeppelin-eth/contracts/token/ERC20/ERC20Detailed.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol";
 
 import "./lib/SafeMathInt.sol";
 

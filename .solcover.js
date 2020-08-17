@@ -11,5 +11,5 @@ module.exports = {
     testCommand: 'npx truffle test ./test/unit/*.js',
     compileCommand: 'npx truffle compile',
     skipFiles: ['mocks'],
-    copyPackages: ['openzeppelin-eth'],
+    copyPackages: ['@openzeppelin/contracts-ethereum-package'],
 };

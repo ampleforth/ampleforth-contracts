@@ -1,6 +1,6 @@
-pragma solidity 0.4.24;
+pragma solidity 0.5.12;
 
-import "openzeppelin-eth/contracts/ownership/Ownable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
 
 import "./UFragmentsPolicy.sol";
 
@@ -66,7 +66,7 @@ contract Orchestrator is Ownable {
      * @param destination Address of contract destination
      * @param data Transaction data payload
      */
-    function addTransaction(address destination, bytes data)
+    function addTransaction(address destination, bytes calldata data)
         external
         onlyOwner
     {
