@@ -2,6 +2,7 @@ pragma solidity 0.5.12;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
 
+import "./lib/BytesLib.sol";
 import "./UFragmentsPolicy.sol";
 
 
@@ -12,13 +13,15 @@ import "./UFragmentsPolicy.sol";
  */
 contract Orchestrator is Ownable {
 
+    using BytesLib for bytes;
+
     struct Transaction {
         bool enabled;
         address destination;
         bytes data;
     }
 
-    event TransactionFailed(address indexed destination, uint index, bytes data);
+    event TransactionFailed(address indexed destination, uint index, bytes data, string reason);
 
     // Stable ordering is not guaranteed.
     Transaction[] public transactions;
@@ -44,22 +47,63 @@ contract Orchestrator is Ownable {
     function rebase()
         external
     {
+        // only callable by EOA to prevent flashloan attacks
         require(msg.sender == tx.origin);  // solhint-disable-line avoid-tx-origin
 
+        // call monetary policy rebase, always revert on failure
         policy.rebase();
 
-        for (uint i = 0; i < transactions.length; i++) {
-            Transaction storage t = transactions[i];
-            if (t.enabled) {
-                bool result =
-                    externalCall(t.destination, t.data);
-                if (!result) {
-                    emit TransactionFailed(t.destination, i, t.data);
-                    revert("Transaction Failed");
-                }
-            }
+        // call peripheral contracts, handle reverts based on policy
+        for (uint index = 0; index < transactions.length; index++) {
+            _executePeripheralTransaction(index);
         }
     }
+
+    /**
+     * @notice Get the revert message and code from a call.
+     * @param index uint256 Index of the transaction.
+     * @return success bool True if peripheral transaction was successful.
+     * @return returnData bytes Return data.
+     */
+    function _executePeripheralTransaction(uint256 index) internal returns (bool success, bytes memory returnData) {
+        // declare storage reference
+        Transaction storage transaction = transactions[index];
+
+        // perform low level external call
+        (success, returnData) = address(transaction.destination).call(transaction.data);
+
+        // Check if any of the atomic transactions failed, if not, decode return data
+        if (!success) {
+            // If there is no prefix to the revert reason, we assume it was an OOG error and revert the batch
+            if (returnData.length == 0) {
+                revert("Transaction out of gas");
+            } else {
+                // parse revert message
+                (string memory revertMessage) = _getRevertMsg(returnData);
+                // Log any other revert and continue rebase execution
+                emit TransactionFailed(transaction.destination, index, transaction.data, revertMessage);
+            }
+        }
+
+        // explicit return
+        return (success, returnData);
+	}
+
+    /**
+     * @notice Get the revert message from a call.
+     * @param res bytes Response of the call.
+     * @return revertMessage string Revert message.
+     */
+	function _getRevertMsg(bytes memory res) internal pure returns (string memory revertMessage) {
+		// If the revert reason length is less than 68, then the transaction failed silently (without a revert message)
+		if (res.length < 68) {
+            return "Transaction reverted silently";
+        } else {
+            // Else extract revert message
+	        bytes memory revertData = res.slice(4, res.length - 4); // Remove the selector which is the first 4 bytes
+		    return abi.decode(revertData, (string)); // All that remains is the revert string
+        }
+	}
 
     /**
      * @notice Adds a transaction that gets called for a downstream receiver of rebases
@@ -115,43 +159,5 @@ contract Orchestrator is Ownable {
         returns (uint256)
     {
         return transactions.length;
-    }
-
-    /**
-     * @dev wrapper to call the encoded transactions on downstream consumers.
-     * @param destination Address of destination contract.
-     * @param data The encoded data payload.
-     * @return True on success
-     */
-    function externalCall(address destination, bytes data)
-        internal
-        returns (bool)
-    {
-        bool result;
-        assembly {  // solhint-disable-line no-inline-assembly
-            // "Allocate" memory for output
-            // (0x40 is where "free memory" pointer is stored by convention)
-            let outputAddress := mload(0x40)
-
-            // First 32 bytes are the padded length of data, so exclude that
-            let dataAddress := add(data, 32)
-
-            result := call(
-                // 34710 is the value that solidity is currently emitting
-                // It includes callGas (700) + callVeryLow (3, to pay for SUB)
-                // + callValueTransferGas (9000) + callNewAccountGas
-                // (25000, in case the destination address does not exist and needs creating)
-                sub(gas, 34710),
-
-
-                destination,
-                0, // transfer value in wei
-                dataAddress,
-                mload(data),  // Size of the input, in bytes. Stored in position 0 of the array.
-                outputAddress,
-                0  // Output is ignored, therefore the output size is zero
-            )
-        }
-        return result;
     }
 }
