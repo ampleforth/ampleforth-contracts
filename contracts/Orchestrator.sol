@@ -44,21 +44,59 @@ contract Orchestrator is Ownable {
     function rebase()
         external
     {
+        // only callable by EOA to prevent flashloan attacks
         require(msg.sender == tx.origin);  // solhint-disable-line avoid-tx-origin
 
+        // call monetary policy rebase, always revert on failure
         policy.rebase();
 
-        for (uint i = 0; i < transactions.length; i++) {
-            Transaction storage t = transactions[i];
-            if (t.enabled) {
-                bool result =
-                    externalCall(t.destination, t.data);
-                if (!result) {
-                    emit TransactionFailed(t.destination, i, t.data);
-                    revert("Transaction Failed");
-                }
+        // call peripheral contracts, revert batch if out-of-gas or silent revert
+        for (uint256 index = 0; index < transactions.length; index++) {
+            _executePeripheralTransaction(index);
+        }
+    }
+
+    /**
+     * @notice Get the revert message and code from a call.
+     * @param index uint256 Index of the transaction.
+     * @return success bool True if peripheral transaction was successful.
+     * @return returnData bytes Return data.
+     */
+    function _executePeripheralTransaction(uint256 index)
+        internal
+        returns (bool success, bytes memory returnData)
+    {
+        // declare storage reference
+        Transaction memory transaction = transactions[index];
+
+        // return early if disabled
+        if (!transaction.enabled) {
+            return (success, returnData);
+        }
+
+        // perform low level external call and forward 63/64 remaining gas
+        (success) = address(transaction.destination).call(transaction.data);
+
+        // Check if any of the atomic transactions failed, if not, decode return data
+        if (!success) {
+            assembly {
+                returndatacopy(returnData, 0, returndatasize)
+            }
+            if (returnData.length == 0) {
+                // If revert reason is empty, it is either OOG error or silent revert so we revert the batch
+                revert("Transaction reverted silently");
+            } else {
+                // Log any other revert and continue rebase execution
+                emit TransactionFailed(
+                    transaction.destination,
+                    index,
+                    transaction.data
+                );
             }
         }
+
+        // explicit return
+        return (success, returnData);
     }
 
     /**
@@ -116,42 +154,3 @@ contract Orchestrator is Ownable {
     {
         return transactions.length;
     }
-
-    /**
-     * @dev wrapper to call the encoded transactions on downstream consumers.
-     * @param destination Address of destination contract.
-     * @param data The encoded data payload.
-     * @return True on success
-     */
-    function externalCall(address destination, bytes data)
-        internal
-        returns (bool)
-    {
-        bool result;
-        assembly {  // solhint-disable-line no-inline-assembly
-            // "Allocate" memory for output
-            // (0x40 is where "free memory" pointer is stored by convention)
-            let outputAddress := mload(0x40)
-
-            // First 32 bytes are the padded length of data, so exclude that
-            let dataAddress := add(data, 32)
-
-            result := call(
-                // 34710 is the value that solidity is currently emitting
-                // It includes callGas (700) + callVeryLow (3, to pay for SUB)
-                // + callValueTransferGas (9000) + callNewAccountGas
-                // (25000, in case the destination address does not exist and needs creating)
-                sub(gas, 34710),
-
-
-                destination,
-                0, // transfer value in wei
-                dataAddress,
-                mload(data),  // Size of the input, in bytes. Stored in position 0 of the array.
-                outputAddress,
-                0  // Output is ignored, therefore the output size is zero
-            )
-        }
-        return result;
-    }
-}
