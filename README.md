@@ -47,11 +47,11 @@ npx truffle --network ganacheUnitTest test test/unit/uFragments.js
 
 ## Testnets
 There is a testnet deployment on Rinkeby. It rebases hourly using real market data.
-- ERC-20 Token: [0x027dbcA046ca156De9622cD1e2D907d375e53aa7](https://kovan.etherscan.io/token/0x027dbcA046ca156De9622cD1e2D907d375e53aa7)
-- Supply Policy: [0x1D2771AFC894107c4edc072e3bd15Cb7F1BCC007](https://kovan.etherscan.io/address/0x1D2771AFC894107c4edc072e3bd15Cb7F1BCC007)
-- Orchestrator: [0xF473604Be74A69a6bB4ebED33A91a291f6C5b5DE](https://kovan.etherscan.io/address/0xF473604Be74A69a6bB4ebED33A91a291f6C5b5DE)
-- Market Oracle: [0x47fB203e1d75FB2c518Cd56f3a8094D22A46aF83](https://kovan.etherscan.io/address/0x47fB203e1d75FB2c518Cd56f3a8094D22A46aF83)
-- CPI Oracle: [0xDB021b1B247fe2F1fa57e0A87C748Cc1E321F07F](https://kovan.etherscan.io/address/0xDB021b1B247fe2F1fa57e0A87C748Cc1E321F07F)
+- ERC-20 Token: [0x027dbcA046ca156De9622cD1e2D907d375e53aa7](https://rinkeby.etherscan.io/token/0x027dbcA046ca156De9622cD1e2D907d375e53aa7)
+- Supply Policy: [0x1D2771AFC894107c4edc072e3bd15Cb7F1BCC007](https://rinkeby.etherscan.io/address/0x1D2771AFC894107c4edc072e3bd15Cb7F1BCC007)
+- Orchestrator: [0xF473604Be74A69a6bB4ebED33A91a291f6C5b5DE](https://rinkeby.etherscan.io/address/0xF473604Be74A69a6bB4ebED33A91a291f6C5b5DE)
+- Market Oracle: [0x47fB203e1d75FB2c518Cd56f3a8094D22A46aF83](https://rinkeby.etherscan.io/address/0x47fB203e1d75FB2c518Cd56f3a8094D22A46aF83)
+- CPI Oracle: [0xDB021b1B247fe2F1fa57e0A87C748Cc1E321F07F](https://rinkeby.etherscan.io/address/0xDB021b1B247fe2F1fa57e0A87C748Cc1E321F07F)
 
 ## Contribute
 
@@ -66,6 +66,7 @@ npm run lint
 # View code coverage
 npm run coverage
 ```
+
 
 ## License
 
