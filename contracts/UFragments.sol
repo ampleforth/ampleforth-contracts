@@ -181,6 +181,9 @@ contract UFragments is ERC20Detailed, Ownable {
         validRecipient(to)
         returns (bool)
     {
+        require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
+        require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
+
         uint256 gonValue = value.mul(_gonsPerFragment);
         _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
@@ -213,6 +216,10 @@ contract UFragments is ERC20Detailed, Ownable {
         validRecipient(to)
         returns (bool)
     {
+        require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
+        require(from != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
+        require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
+
         _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value);
 
         uint256 gonValue = value.mul(_gonsPerFragment);
