@@ -72,3 +72,10 @@ scDebugLog
 coverage.json
 coverage/
 coverageEnv/
+
+node_modules
+
+#Buidler files
+cache
+artifacts
+.openzeppelin
