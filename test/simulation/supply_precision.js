@@ -1,60 +1,51 @@
 /*
-  In this truffle script,
+  In this script,
   During every iteration:
   * We double the total fragments supply.
   * We test the following guarantee:
       - the difference in totalSupply() before and after the rebase(+1) should be exactly 1.
-
-  USAGE:
-  npx truffle --network ganacheUnitTest exec ./test/simulation/supply_precision.js
 */
 
-const expect = require('chai').expect;
-const UFragments = artifacts.require('UFragments.sol');
-const _require = require('app-root-path').require;
-const BlockchainCaller = _require('/util/blockchain_caller');
-const chain = new BlockchainCaller(web3);
-const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
-const BigNumber = web3.BigNumber;
+import { ethers, upgrades } from '@nomiclabs/buidler'
+import { expect } from 'chai'
 
-const endSupply = new BigNumber(2).pow(128).minus(1);
+async function exec() {
+  const [deployer] = await ethers.getSigners()
+  const factory = await ethers.getContractFactory('UFragments')
+  const uFragments = await upgrades.deployProxy(
+    factory.connect(deployer),
+    [await deployer.getAddress()],
+    {
+      initializer: 'initialize(address)',
+    },
+  )
+  await uFragments.connect(deployer).setMonetaryPolicy(deployer.getAddress())
 
-let uFragments, preRebaseSupply, postRebaseSupply;
-preRebaseSupply = new BigNumber(0);
-postRebaseSupply = new BigNumber(0);
+  const endSupply = ethers.BigNumber.from(2).pow(128).sub(1)
+  let preRebaseSupply = ethers.BigNumber.from(0),
+    postRebaseSupply = ethers.BigNumber.from(0)
 
-async function exec () {
-  const accounts = await chain.getUserAccounts();
-  const deployer = accounts[0];
-  uFragments = await UFragments.new();
-  await uFragments.sendTransaction({
-    data: encodeCall('initialize', ['address'], [deployer]),
-    from: deployer
-  });
-  await uFragments.setMonetaryPolicy(deployer, {from: deployer});
-
-  let i = 0;
+  let i = 0
   do {
-    console.log('Iteration', i + 1);
+    console.log('Iteration', i + 1)
 
-    preRebaseSupply = await uFragments.totalSupply.call();
-    await uFragments.rebase(2 * i, 1, {from: deployer});
-    postRebaseSupply = await uFragments.totalSupply.call();
-    console.log('Rebased by 1 AMPL');
-    console.log('Total supply is now', postRebaseSupply.toString(), 'AMPL');
+    preRebaseSupply = await uFragments.totalSupply()
+    await uFragments.connect(deployer).rebase(2 * i, 1)
+    postRebaseSupply = await uFragments.totalSupply()
+    console.log('Rebased by 1 AMPL')
+    console.log('Total supply is now', postRebaseSupply.toString(), 'AMPL')
 
-    console.log('Testing precision of supply');
-    expect(postRebaseSupply.minus(preRebaseSupply).toNumber()).to.eq(1);
+    console.log('Testing precision of supply')
+    expect(postRebaseSupply.sub(preRebaseSupply).toNumber()).to.eq(1)
 
-    console.log('Doubling supply');
-    await uFragments.rebase(2 * i + 1, postRebaseSupply, {from: deployer});
-    i++;
-  } while ((await uFragments.totalSupply.call()).lt(endSupply));
+    console.log('Doubling supply')
+    await uFragments.connect(deployer).rebase(2 * i + 1, postRebaseSupply)
+    i++
+  } while ((await uFragments.totalSupply()).lt(endSupply))
 }
 
-module.exports = function (done) {
-  exec().then(done).catch(e => {
-    console.error(e);
-    process.exit(1);
-  });
-};
+describe('Supply Precision', function () {
+  it('should successfully run simulation', async function () {
+    await exec()
+  })
+})

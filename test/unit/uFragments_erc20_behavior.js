@@ -1,19 +1,15 @@
 /*
   MIT License
-
   Copyright (c) 2016 Smart Contract Solutions, Inc.
   Copyright (c) 2018 Fragments, Inc.
-
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
   in the Software without restriction, including without limitation the rights
   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   copies of the Software, and to permit persons to whom the Software is
   furnished to do so, subject to the following conditions:
-
   The above copyright notice and this permission notice shall be included in all
   copies or substantial portions of the Software.
-
   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,438 +17,682 @@
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
-
   This file tests if the UFragments contract confirms to the ERC20 specification.
   These test cases are inspired from OpenZepplin's ERC20 unit test.
   https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/test/token/ERC20/ERC20.test.js
 */
-const UFragments = artifacts.require('UFragments.sol');
-const _require = require('app-root-path').require;
-const BlockchainCaller = _require('/util/blockchain_caller');
-const chain = new BlockchainCaller(web3);
-const BigNumber = web3.BigNumber;
-const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
 
-require('chai')
-  .use(require('chai-bignumber')(BigNumber))
-  .should();
+import { ethers, upgrades, waffle } from '@nomiclabs/buidler'
+import { Contract, Signer, BigNumber } from 'ethers'
+import { TransactionResponse } from '@ethersproject/providers'
+import { expect } from 'chai'
+import { AnySrvRecord } from 'dns'
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-function toTokenDenomination (x) {
-  return new BigNumber(x).mul(10 ** DECIMALS);
-}
-const DECIMALS = 9;
-const INITIAL_SUPPLY = toTokenDenomination(50 * 10 ** 6);
-const transferAmount = toTokenDenomination(10);
-const unitTokenAmount = toTokenDenomination(1);
-const overdraftAmount = INITIAL_SUPPLY.plus(unitTokenAmount);
-const overdraftAmountPlusOne = overdraftAmount.plus(unitTokenAmount);
-const overdraftAmountMinusOne = overdraftAmount.minus(unitTokenAmount);
-const transferAmountPlusOne = transferAmount.plus(unitTokenAmount);
-const transferAmountMinusOne = transferAmount.minus(unitTokenAmount);
+const toUFrgDenomination = (ample: string): BigNumber =>
+  ethers.utils.parseUnits(ample, DECIMALS)
 
-let token, owner, anotherAccount, recipient, r;
-async function setupContractAndAccounts (accounts) {
-  owner = accounts[0];
-  anotherAccount = accounts[8];
-  recipient = accounts[9];
-  token = await UFragments.new();
-  await token.sendTransaction({
-    data: encodeCall('initialize', ['address'], [owner]),
-    from: owner
-  });
+const DECIMALS = 9
+const INITIAL_SUPPLY = ethers.utils.parseUnits('50', 6 + DECIMALS)
+const transferAmount = toUFrgDenomination('10')
+const unitTokenAmount = toUFrgDenomination('1')
+const overdraftAmount = INITIAL_SUPPLY.add(unitTokenAmount)
+const overdraftAmountPlusOne = overdraftAmount.add(unitTokenAmount)
+const overdraftAmountMinusOne = overdraftAmount.sub(unitTokenAmount)
+const transferAmountPlusOne = transferAmount.add(unitTokenAmount)
+const transferAmountMinusOne = transferAmount.sub(unitTokenAmount)
+
+let token: Contract, owner: Signer, anotherAccount: Signer, recipient: Signer
+
+async function upgradeableToken() {
+  const [owner, recipient, anotherAccount] = await ethers.getSigners()
+  const factory = await ethers.getContractFactory('UFragments')
+  const token = await upgrades.deployProxy(
+    factory.connect(owner),
+    [await owner.getAddress()],
+    {
+      initializer: 'initialize(address)',
+    },
+  )
+  return { token, owner, recipient, anotherAccount }
 }
 
-contract('UFragments:ERC20', function (accounts) {
+describe('UFragments:ERC20', () => {
   before('setup UFragments contract', async function () {
-    await setupContractAndAccounts(accounts);
-  });
+    ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
+      upgradeableToken,
+    ))
+  })
 
   describe('totalSupply', function () {
     it('returns the total amount of tokens', async function () {
-      (await token.totalSupply.call()).should.be.bignumber.eq(INITIAL_SUPPLY);
-    });
-  });
+      expect(await token.totalSupply()).to.eq(INITIAL_SUPPLY)
+    })
+  })
 
   describe('balanceOf', function () {
     describe('when the requested account has no tokens', function () {
       it('returns zero', async function () {
-        (await token.balanceOf.call(anotherAccount)).should.be.bignumber.eq(0);
-      });
-    });
+        expect(await token.balanceOf(await anotherAccount.getAddress())).to.eq(
+          0,
+        )
+      })
+    })
 
     describe('when the requested account has some tokens', function () {
       it('returns the total amount of tokens', async function () {
-        (await token.balanceOf.call(owner)).should.be.bignumber.eq(INITIAL_SUPPLY);
-      });
-    });
-  });
-});
+        expect(await token.balanceOf(await owner.getAddress())).to.eq(
+          INITIAL_SUPPLY,
+        )
+      })
+    })
+  })
+})
 
-contract('UFragments:ERC20:transfer', function (accounts) {
+describe('UFragments:ERC20:transfer', () => {
   before('setup UFragments contract', async function () {
-    await setupContractAndAccounts(accounts);
-  });
+    ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
+      upgradeableToken,
+    ))
+  })
 
   describe('when the sender does NOT have enough balance', function () {
     it('reverts', async function () {
-      expect(
-        await chain.isEthException(token.transfer(recipient, overdraftAmount, { from: owner }))
-      ).to.be.true;
-    });
-  });
+      await expect(
+        token
+          .connect(owner)
+          .transfer(await recipient.getAddress(), overdraftAmount),
+      ).to.be.reverted
+    })
+  })
 
   describe('when the sender has enough balance', function () {
-    before(async function () {
-      r = await token.transfer(recipient, transferAmount, { from: owner });
-    });
+    it('should emit a transfer event', async function () {
+      await expect(
+        token
+          .connect(owner)
+          .transfer(await recipient.getAddress(), transferAmount),
+      )
+        .to.emit(token, 'Transfer')
+        .withArgs(
+          await owner.getAddress(),
+          await recipient.getAddress(),
+          transferAmount,
+        )
+    })
 
     it('should transfer the requested amount', async function () {
-      const senderBalance = await token.balanceOf.call(owner);
-      const recipientBalance = await token.balanceOf.call(recipient);
-      const supply = await token.totalSupply.call();
-      supply.minus(transferAmount).should.be.bignumber.eq(senderBalance);
-      recipientBalance.should.be.bignumber.eq(transferAmount);
-    });
-    it('should emit a transfer event', async function () {
-      expect(r.logs.length).to.eq(1);
-      expect(r.logs[0].event).to.eq('Transfer');
-      expect(r.logs[0].args.from).to.eq(owner);
-      expect(r.logs[0].args.to).to.eq(recipient);
-      r.logs[0].args.value.should.be.bignumber.eq(transferAmount);
-    });
-  });
+      const senderBalance = await token.balanceOf(await owner.getAddress())
+      const recipientBalance = await token.balanceOf(
+        await recipient.getAddress(),
+      )
+      const supply = await token.totalSupply()
+      expect(supply.sub(transferAmount)).to.eq(senderBalance)
+      expect(recipientBalance).to.eq(transferAmount)
+    })
+  })
 
   describe('when the recipient is the zero address', function () {
     it('should fail', async function () {
-      expect(
-        await chain.isEthException(token.transfer(ZERO_ADDRESS, transferAmount, { from: owner }))
-      ).to.be.true;
-    });
-  });
-});
+      await expect(
+        token
+          .connect(owner)
+          .transfer(ethers.constants.AddressZero, transferAmount),
+      ).to.be.reverted
+    })
+  })
+})
 
-contract('UFragments:ERC20:transferFrom', function (accounts) {
+describe('UFragments:ERC20:transferFrom', () => {
   before('setup UFragments contract', async function () {
-    await setupContractAndAccounts(accounts);
-  });
+    ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
+      upgradeableToken,
+    ))
+  })
 
   describe('when the spender does NOT have enough approved balance', function () {
     describe('when the owner does NOT have enough balance', function () {
       it('reverts', async function () {
-        await token.approve(anotherAccount, overdraftAmountMinusOne, { from: owner });
-        expect(
-          await chain.isEthException(token.transferFrom(owner, recipient, overdraftAmount, { from: anotherAccount }))
-        ).to.be.true;
-      });
-    });
+        await token
+          .connect(owner)
+          .approve(await anotherAccount.getAddress(), overdraftAmountMinusOne)
+        await expect(
+          token
+            .connect(anotherAccount)
+            .transferFrom(
+              await owner.getAddress(),
+              await recipient.getAddress(),
+              overdraftAmount,
+            ),
+        ).to.be.reverted
+      })
+    })
 
     describe('when the owner has enough balance', function () {
       it('reverts', async function () {
-        await token.approve(anotherAccount, transferAmountMinusOne, { from: owner });
-        expect(
-          await chain.isEthException(token.transferFrom(owner, recipient, transferAmount, { from: anotherAccount }))
-        ).to.be.true;
-      });
-    });
-  });
+        await token
+          .connect(owner)
+          .approve(await anotherAccount.getAddress(), transferAmountMinusOne)
+        await expect(
+          token
+            .connect(anotherAccount)
+            .transferFrom(
+              await owner.getAddress(),
+              await recipient.getAddress(),
+              transferAmount,
+            ),
+        ).to.be.reverted
+      })
+    })
+  })
 
   describe('when the spender has enough approved balance', function () {
     describe('when the owner does NOT have enough balance', function () {
       it('should fail', async function () {
-        await token.approve(anotherAccount, overdraftAmount, { from: owner });
-        expect(
-          await chain.isEthException(token.transferFrom(owner, recipient, overdraftAmount, { from: anotherAccount }))
-        ).to.be.true;
-      });
-    });
+        await token
+          .connect(owner)
+          .approve(await anotherAccount.getAddress(), overdraftAmount)
+        await expect(
+          token
+            .connect(anotherAccount)
+            .transferFrom(
+              await owner.getAddress(),
+              await recipient.getAddress(),
+              overdraftAmount,
+            ),
+        ).to.be.reverted
+      })
+    })
 
     describe('when the owner has enough balance', function () {
-      let prevSenderBalance, r;
+      let prevSenderBalance: BigNumber
       before(async function () {
-        prevSenderBalance = await token.balanceOf.call(owner);
-        await token.approve(anotherAccount, transferAmount, { from: owner });
-        r = await token.transferFrom(owner, recipient, transferAmount, { from: anotherAccount });
-      });
+        prevSenderBalance = await token.balanceOf(await owner.getAddress())
+        await token
+          .connect(owner)
+          .approve(await anotherAccount.getAddress(), transferAmount)
+      })
+
+      it('emits a transfer event', async function () {
+        await expect(
+          token
+            .connect(anotherAccount)
+            .transferFrom(
+              await owner.getAddress(),
+              await recipient.getAddress(),
+              transferAmount,
+            ),
+        )
+          .to.emit(token, 'Transfer')
+          .withArgs(
+            await owner.getAddress(),
+            await recipient.getAddress(),
+            transferAmount,
+          )
+      })
 
       it('transfers the requested amount', async function () {
-        const senderBalance = await token.balanceOf.call(owner);
-        const recipientBalance = await token.balanceOf.call(recipient);
-        prevSenderBalance.minus(transferAmount).should.be.bignumber.eq(senderBalance);
-        recipientBalance.should.be.bignumber.eq(transferAmount);
-      });
-      it('decreases the spender allowance', async function () {
-        expect((await token.allowance(owner, anotherAccount)).eq(0)).to.be.true;
-      });
-      it('emits a transfer event', async function () {
-        expect(r.logs.length).to.eq(1);
-        expect(r.logs[0].event).to.eq('Transfer');
-        expect(r.logs[0].args.from).to.eq(owner);
-        expect(r.logs[0].args.to).to.eq(recipient);
-        r.logs[0].args.value.should.be.bignumber.eq(transferAmount);
-      });
-    });
-  });
-});
+        const senderBalance = await token.balanceOf(await owner.getAddress())
+        const recipientBalance = await token.balanceOf(
+          await recipient.getAddress(),
+        )
+        expect(prevSenderBalance.sub(transferAmount)).to.eq(senderBalance)
+        expect(recipientBalance).to.eq(transferAmount)
+      })
 
-contract('UFragments:ERC20:approve', function (accounts) {
+      it('decreases the spender allowance', async function () {
+        expect(
+          await token.allowance(
+            await owner.getAddress(),
+            await anotherAccount.getAddress(),
+          ),
+        ).to.eq(0)
+      })
+    })
+  })
+})
+
+describe('UFragments:ERC20:approve', () => {
   before('setup UFragments contract', async function () {
-    await setupContractAndAccounts(accounts);
-  });
+    ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
+      upgradeableToken,
+    ))
+  })
 
   describe('when the spender is NOT the zero address', function () {
     describe('when the sender has enough balance', function () {
       describe('when there was no approved amount before', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, 0, { from: owner });
-          r = await token.approve(anotherAccount, transferAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), 0)
+          r = token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), transferAmount)
+        })
 
         it('approves the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(transferAmount);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(transferAmount)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(transferAmount);
-        });
-      });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              transferAmount,
+            )
+        })
+      })
 
       describe('when the spender had an approved amount', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, toTokenDenomination(1), { from: owner });
-          r = await token.approve(anotherAccount, transferAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), toUFrgDenomination('1'))
+          r = token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), transferAmount)
+        })
 
         it('approves the requested amount and replaces the previous one', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(transferAmount);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(transferAmount)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(transferAmount);
-        });
-      });
-    });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              transferAmount,
+            )
+        })
+      })
+    })
 
     describe('when the sender does not have enough balance', function () {
       describe('when there was no approved amount before', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, 0, { from: owner });
-          r = await token.approve(anotherAccount, overdraftAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), 0)
+          r = token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), overdraftAmount)
+        })
 
         it('approves the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(overdraftAmount);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(overdraftAmount)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(overdraftAmount);
-        });
-      });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              overdraftAmount,
+            )
+        })
+      })
 
       describe('when the spender had an approved amount', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, toTokenDenomination(1), { from: owner });
-          r = await token.approve(anotherAccount, overdraftAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), toUFrgDenomination('1'))
+          r = token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), overdraftAmount)
+        })
 
         it('approves the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(overdraftAmount);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(overdraftAmount)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(overdraftAmount);
-        });
-      });
-    });
-  });
-});
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              overdraftAmount,
+            )
+        })
+      })
+    })
+  })
+})
 
-contract('UFragments:ERC20:increaseAllowance', function (accounts) {
+describe('UFragments:ERC20:increaseAllowance', () => {
   before('setup UFragments contract', async function () {
-    await setupContractAndAccounts(accounts);
-  });
+    ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
+      upgradeableToken,
+    ))
+  })
 
   describe('when the spender is NOT the zero address', function () {
     describe('when the sender has enough balance', function () {
       describe('when there was no approved amount before', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, 0, { from: owner });
-          r = await token.increaseAllowance(anotherAccount, transferAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), 0)
+          r = token
+            .connect(owner)
+            .increaseAllowance(
+              await anotherAccount.getAddress(),
+              transferAmount,
+            )
+        })
         it('approves the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(transferAmount);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(transferAmount)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(transferAmount);
-        });
-      });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              transferAmount,
+            )
+        })
+      })
 
       describe('when the spender had an approved amount', function () {
+        let r: any
         beforeEach(async function () {
-          await token.approve(anotherAccount, unitTokenAmount, { from: owner });
-          r = await token.increaseAllowance(anotherAccount, transferAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), unitTokenAmount)
+          r = token
+            .connect(owner)
+            .increaseAllowance(
+              await anotherAccount.getAddress(),
+              transferAmount,
+            )
+        })
 
         it('increases the spender allowance adding the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(transferAmountPlusOne);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(transferAmountPlusOne)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(transferAmountPlusOne);
-        });
-      });
-    });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              transferAmountPlusOne,
+            )
+        })
+      })
+    })
 
     describe('when the sender does not have enough balance', function () {
       describe('when there was no approved amount before', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, 0, { from: owner });
-          r = await token.increaseAllowance(anotherAccount, overdraftAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), 0)
+          r = token
+            .connect(owner)
+            .increaseAllowance(
+              await anotherAccount.getAddress(),
+              overdraftAmount,
+            )
+        })
 
         it('approves the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(overdraftAmount);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(overdraftAmount)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(overdraftAmount);
-        });
-      });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              overdraftAmount,
+            )
+        })
+      })
 
       describe('when the spender had an approved amount', function () {
+        let r: any
         beforeEach(async function () {
-          await token.approve(anotherAccount, unitTokenAmount, { from: owner });
-          r = await token.increaseAllowance(anotherAccount, overdraftAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), unitTokenAmount)
+          r = token
+            .connect(owner)
+            .increaseAllowance(
+              await anotherAccount.getAddress(),
+              overdraftAmount,
+            )
+        })
 
         it('increases the spender allowance adding the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(overdraftAmountPlusOne);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(overdraftAmountPlusOne)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(overdraftAmountPlusOne);
-        });
-      });
-    });
-  });
-});
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              overdraftAmountPlusOne,
+            )
+        })
+      })
+    })
+  })
+})
 
-contract('UFragments:ERC20:decreaseAllowance', function (accounts) {
+describe('UFragments:ERC20:decreaseAllowance', () => {
   before('setup UFragments contract', async function () {
-    await setupContractAndAccounts(accounts);
-  });
+    ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
+      upgradeableToken,
+    ))
+  })
 
   describe('when the spender is NOT the zero address', function () {
     describe('when the sender does NOT have enough balance', function () {
       describe('when there was no approved amount before', function () {
+        let r: any
         before(async function () {
-          r = await token.decreaseAllowance(anotherAccount, overdraftAmount, { from: owner });
-        });
+          r = token
+            .connect(owner)
+            .decreaseAllowance(
+              await anotherAccount.getAddress(),
+              overdraftAmount,
+            )
+        })
 
         it('keeps the allowance to zero', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(0);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(0)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(0);
-        });
-      });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              0,
+            )
+        })
+      })
 
       describe('when the spender had an approved amount', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, overdraftAmountPlusOne, { from: owner });
-          r = await token.decreaseAllowance(anotherAccount, overdraftAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), overdraftAmountPlusOne)
+          r = token
+            .connect(owner)
+            .decreaseAllowance(
+              await anotherAccount.getAddress(),
+              overdraftAmount,
+            )
+        })
 
         it('decreases the spender allowance subtracting the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(unitTokenAmount);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(unitTokenAmount)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(unitTokenAmount);
-        });
-      });
-    });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              unitTokenAmount,
+            )
+        })
+      })
+    })
 
     describe('when the sender has enough balance', function () {
       describe('when there was no approved amount before', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, 0, { from: owner });
-          r = await token.decreaseAllowance(anotherAccount, transferAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), 0)
+          r = token
+            .connect(owner)
+            .decreaseAllowance(
+              await anotherAccount.getAddress(),
+              transferAmount,
+            )
+        })
 
         it('keeps the allowance to zero', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(0);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(0)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(0);
-        });
-      });
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              0,
+            )
+        })
+      })
 
       describe('when the spender had an approved amount', function () {
+        let r: any
         before(async function () {
-          await token.approve(anotherAccount, transferAmountPlusOne, { from: owner });
-          r = await token.decreaseAllowance(anotherAccount, transferAmount, { from: owner });
-        });
+          await token
+            .connect(owner)
+            .approve(await anotherAccount.getAddress(), transferAmountPlusOne)
+          r = token
+            .connect(owner)
+            .decreaseAllowance(
+              await anotherAccount.getAddress(),
+              transferAmount,
+            )
+        })
 
         it('decreases the spender allowance subtracting the requested amount', async function () {
-          (await token.allowance(owner, anotherAccount)).should.be.bignumber.eq(unitTokenAmount);
-        });
+          await r
+          expect(
+            await token.allowance(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+            ),
+          ).to.eq(unitTokenAmount)
+        })
 
         it('emits an approval event', async function () {
-          expect(r.logs.length).to.eq(1);
-          expect(r.logs[0].event).to.eq('Approval');
-          expect(r.logs[0].args.owner).to.eq(owner);
-          expect(r.logs[0].args.spender).to.eq(anotherAccount);
-          r.logs[0].args.value.should.be.bignumber.eq(unitTokenAmount);
-        });
-      });
-    });
-  });
-});
+          await expect(r)
+            .to.emit(token, 'Approval')
+            .withArgs(
+              await owner.getAddress(),
+              await anotherAccount.getAddress(),
+              unitTokenAmount,
+            )
+        })
+      })
+    })
+  })
+})

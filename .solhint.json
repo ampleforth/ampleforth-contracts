@@ -1,9 +1,9 @@
 {
-    "extends": "default",
-    "rules": {
-        "not-rely-on-time": [false],
-        "no-simple-event-func-name": [false],
-        "indent": ["warn", 4],
-        "max-line-length": ["error", 100]
-    }
+  "extends": "solhint:default",
+  "plugins": ["prettier"],
+  "rules": {
+    "prettier/prettier": "error",
+    "not-rely-on-time": "off",
+    "max-line-length": ["error", 100]
+  }
 }

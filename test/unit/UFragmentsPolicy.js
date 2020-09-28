@@ -1,686 +1,1067 @@
-const UFragmentsPolicy = artifacts.require('UFragmentsPolicy.sol');
-const MockUFragments = artifacts.require('MockUFragments.sol');
-const MockOracle = artifacts.require('MockOracle.sol');
+import { ethers, upgrades, waffle } from '@nomiclabs/buidler'
+import { Contract, Signer, BigNumber, BigNumberish, Event } from 'ethers'
+import { TransactionResponse } from '@ethersproject/providers'
+import { expect } from 'chai'
+import { Result } from 'ethers/lib/utils'
+import { imul, increaseTime } from '../utils/utils'
 
-const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
-const BigNumber = web3.BigNumber;
-const _require = require('app-root-path').require;
-const BlockchainCaller = _require('/util/blockchain_caller');
-const chain = new BlockchainCaller(web3);
+let uFragmentsPolicy: Contract,
+  mockUFragments: Contract,
+  mockMarketOracle: Contract,
+  mockCpiOracle: Contract
+let prevEpoch: BigNumber, prevTime: BigNumber
+let deployer: Signer, user: Signer, orchestrator: Signer
 
-require('chai')
-  .use(require('chai-bignumber')(BigNumber))
-  .should();
+const MAX_RATE = ethers.utils.parseUnits('1', 24)
+const MAX_SUPPLY = ethers.BigNumber.from(2).pow(255).sub(1).div(MAX_RATE)
+const BASE_CPI = ethers.utils.parseUnits('1', 20)
+const INITIAL_CPI = ethers.utils.parseUnits('251.712', 18)
 
-let uFragmentsPolicy, mockUFragments, mockMarketOracle, mockCpiOracle;
-let r, prevEpoch, prevTime;
-let deployer, user, orchestrator;
+const INITIAL_CPI_25P_MORE = imul(INITIAL_CPI, '1.25', 1)
+const INITIAL_CPI_25P_LESS = imul(INITIAL_CPI, '0.77', 1)
+const INITIAL_RATE = imul(INITIAL_CPI, 1e18, BASE_CPI)
+const INITIAL_RATE_30P_MORE = imul(INITIAL_RATE, '1.3', 1)
+const INITIAL_RATE_30P_LESS = imul(INITIAL_RATE, '0.7', 1)
+const INITIAL_RATE_5P_MORE = imul(INITIAL_RATE, '1.05', 1)
+const INITIAL_RATE_5P_LESS = imul(INITIAL_RATE, '0.95', 1)
+const INITIAL_RATE_60P_MORE = imul(INITIAL_RATE, '1.6', 1)
+const INITIAL_RATE_2X = INITIAL_RATE.mul(2)
 
-const MAX_RATE = (new BigNumber('1')).mul(10 ** 6 * 10 ** 18);
-const MAX_SUPPLY = (new BigNumber(2).pow(255).minus(1)).div(MAX_RATE);
-const BASE_CPI = new BigNumber(100e18);
-const INITIAL_CPI = new BigNumber(251.712e18);
-const INITIAL_CPI_25P_MORE = INITIAL_CPI.mul(1.25).dividedToIntegerBy(1);
-const INITIAL_CPI_25P_LESS = INITIAL_CPI.mul(0.77).dividedToIntegerBy(1);
-const INITIAL_RATE = INITIAL_CPI.mul(1e18).dividedToIntegerBy(BASE_CPI);
-const INITIAL_RATE_30P_MORE = INITIAL_RATE.mul(1.3).dividedToIntegerBy(1);
-const INITIAL_RATE_30P_LESS = INITIAL_RATE.mul(0.7).dividedToIntegerBy(1);
-const INITIAL_RATE_5P_MORE = INITIAL_RATE.mul(1.05).dividedToIntegerBy(1);
-const INITIAL_RATE_5P_LESS = INITIAL_RATE.mul(0.95).dividedToIntegerBy(1);
-const INITIAL_RATE_60P_MORE = INITIAL_RATE.mul(1.6).dividedToIntegerBy(1);
-const INITIAL_RATE_2X = INITIAL_RATE.mul(2);
-
-async function setupContracts () {
-  await chain.waitForSomeTime(86400);
-  const accounts = await chain.getUserAccounts();
-  deployer = accounts[0];
-  user = accounts[1];
-  orchestrator = accounts[2];
-  mockUFragments = await MockUFragments.new();
-  mockMarketOracle = await MockOracle.new('MarketOracle');
-  mockCpiOracle = await MockOracle.new('CpiOracle');
-  uFragmentsPolicy = await UFragmentsPolicy.new();
-  await uFragmentsPolicy.sendTransaction({
-    data: encodeCall('initialize', ['address', 'address', 'uint256'], [deployer, mockUFragments.address, BASE_CPI.toString()]),
-    from: deployer
-  });
-  await uFragmentsPolicy.setMarketOracle(mockMarketOracle.address);
-  await uFragmentsPolicy.setCpiOracle(mockCpiOracle.address);
-  await uFragmentsPolicy.setOrchestrator(orchestrator);
+async function mockedUpgradablePolicy() {
+  // get signers
+  const [deployer, user, orchestrator] = await ethers.getSigners()
+  // deploy mocks
+  const mockUFragments = await (
+    await ethers.getContractFactory('MockUFragments')
+  )
+    .connect(deployer)
+    .deploy()
+  const mockMarketOracle = await (await ethers.getContractFactory('MockOracle'))
+    .connect(deployer)
+    .deploy('MarketOracle')
+  const mockCpiOracle = await (await ethers.getContractFactory('MockOracle'))
+    .connect(deployer)
+    .deploy('CpiOracle')
+  // deploy upgradable contract
+  const uFragmentsPolicy = await upgrades.deployProxy(
+    (await ethers.getContractFactory('UFragmentsPolicy')).connect(deployer),
+    [await deployer.getAddress(), mockUFragments.address, BASE_CPI.toString()],
+    {
+      initializer: 'initialize(address,address,uint256)',
+    },
+  )
+  // setup oracles
+  await uFragmentsPolicy
+    .connect(deployer)
+    .setMarketOracle(mockMarketOracle.address)
+  await uFragmentsPolicy.connect(deployer).setCpiOracle(mockCpiOracle.address)
+  await uFragmentsPolicy
+    .connect(deployer)
+    .setOrchestrator(await orchestrator.getAddress())
+  // return entities
+  return {
+    deployer,
+    user,
+    orchestrator,
+    mockUFragments,
+    mockMarketOracle,
+    mockCpiOracle,
+    uFragmentsPolicy,
+  }
 }
 
-async function setupContractsWithOpenRebaseWindow () {
-  await setupContracts();
-  await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
+async function mockedUpgradablePolicyWithOpenRebaseWindow() {
+  const {
+    deployer,
+    user,
+    orchestrator,
+    mockUFragments,
+    mockMarketOracle,
+    mockCpiOracle,
+    uFragmentsPolicy,
+  } = await mockedUpgradablePolicy()
+  await uFragmentsPolicy.connect(deployer).setRebaseTimingParameters(60, 0, 60)
+  return {
+    deployer,
+    user,
+    orchestrator,
+    mockUFragments,
+    mockMarketOracle,
+    mockCpiOracle,
+    uFragmentsPolicy,
+  }
 }
 
-async function mockExternalData (rate, cpi, uFragSupply, rateValidity = true, cpiValidity = true) {
-  await mockMarketOracle.storeData(rate);
-  await mockMarketOracle.storeValidity(rateValidity);
-  await mockCpiOracle.storeData(cpi);
-  await mockCpiOracle.storeValidity(cpiValidity);
-  await mockUFragments.storeSupply(uFragSupply);
+async function mockExternalData(
+  rate: BigNumberish,
+  cpi: BigNumberish,
+  uFragSupply: BigNumberish,
+  rateValidity = true,
+  cpiValidity = true,
+) {
+  await mockMarketOracle.connect(deployer).storeData(rate)
+  await mockMarketOracle.connect(deployer).storeValidity(rateValidity)
+  await mockCpiOracle.connect(deployer).storeData(cpi)
+  await mockCpiOracle.connect(deployer).storeValidity(cpiValidity)
+  await mockUFragments.connect(deployer).storeSupply(uFragSupply)
 }
 
-contract('UFragmentsPolicy', function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+async function parseRebaseLog(response: Promise<TransactionResponse>) {
+  const receipt = (await (await response).wait()) as any
+  const logs = receipt.events.filter(
+    (event: Event) => event.event === 'LogRebase',
+  )
+  return logs[0].args
+}
+
+describe('UFragmentsPolicy', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should reject any ether sent to it', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.sendTransaction({ from: user, value: 1 }))
-    ).to.be.true;
-  });
-});
+    await expect(
+      user.sendTransaction({ to: uFragmentsPolicy.address, value: 1 }),
+    ).to.be.reverted
+  })
+})
 
-contract('UFragmentsPolicy:initialize', async function (accounts) {
+describe('UFragmentsPolicy:initialize', async function () {
   describe('initial values set correctly', function () {
-    before('setup UFragmentsPolicy contract', setupContracts);
+    before('setup UFragmentsPolicy contract', async () => {
+      ;({
+        deployer,
+        user,
+        orchestrator,
+        mockUFragments,
+        mockMarketOracle,
+        mockCpiOracle,
+        uFragmentsPolicy,
+      } = await waffle.loadFixture(mockedUpgradablePolicy))
+    })
 
     it('deviationThreshold', async function () {
-      (await uFragmentsPolicy.deviationThreshold.call()).should.be.bignumber.eq(0.05e18);
-    });
+      expect(await uFragmentsPolicy.deviationThreshold()).to.eq(
+        ethers.utils.parseUnits('5', 16),
+      )
+    })
     it('rebaseLag', async function () {
-      (await uFragmentsPolicy.rebaseLag.call()).should.be.bignumber.eq(30);
-    });
+      expect(await uFragmentsPolicy.rebaseLag()).to.eq(30)
+    })
     it('minRebaseTimeIntervalSec', async function () {
-      (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(24 * 60 * 60);
-    });
+      expect(await uFragmentsPolicy.minRebaseTimeIntervalSec()).to.eq(
+        24 * 60 * 60,
+      )
+    })
     it('epoch', async function () {
-      (await uFragmentsPolicy.epoch.call()).should.be.bignumber.eq(0);
-    });
+      expect(await uFragmentsPolicy.epoch()).to.eq(0)
+    })
     it('rebaseWindowOffsetSec', async function () {
-      (await uFragmentsPolicy.rebaseWindowOffsetSec.call()).should.be.bignumber.eq(72000);
-    });
+      expect(await uFragmentsPolicy.rebaseWindowOffsetSec()).to.eq(72000)
+    })
     it('rebaseWindowLengthSec', async function () {
-      (await uFragmentsPolicy.rebaseWindowLengthSec.call()).should.be.bignumber.eq(900);
-    });
+      expect(await uFragmentsPolicy.rebaseWindowLengthSec()).to.eq(900)
+    })
     it('should set owner', async function () {
-      expect(await uFragmentsPolicy.owner.call()).to.eq(deployer);
-    });
+      expect(await uFragmentsPolicy.owner()).to.eq(await deployer.getAddress())
+    })
     it('should set reference to uFragments', async function () {
-      expect(await uFragmentsPolicy.uFrags.call()).to.eq(mockUFragments.address);
-    });
-  });
-});
+      expect(await uFragmentsPolicy.uFrags()).to.eq(mockUFragments.address)
+    })
+  })
+})
 
-contract('UFragmentsPolicy:setMarketOracle', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragmentsPolicy:setMarketOracle', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should set marketOracle', async function () {
-    await uFragmentsPolicy.setMarketOracle(deployer);
-    expect(await uFragmentsPolicy.marketOracle.call()).to.eq(deployer);
-  });
-});
+    await uFragmentsPolicy
+      .connect(deployer)
+      .setMarketOracle(await deployer.getAddress())
+    expect(await uFragmentsPolicy.marketOracle()).to.eq(
+      await deployer.getAddress(),
+    )
+  })
+})
 
-contract('UFragments:setMarketOracle:accessControl', function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragments:setMarketOracle:accessControl', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should be callable by owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setMarketOracle(deployer, { from: deployer }))
-    ).to.be.false;
-  });
+    await expect(
+      uFragmentsPolicy
+        .connect(deployer)
+        .setMarketOracle(await deployer.getAddress()),
+    ).to.not.be.reverted
+  })
 
   it('should NOT be callable by non-owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setMarketOracle(deployer, { from: user }))
-    ).to.be.true;
-  });
-});
+    await expect(
+      uFragmentsPolicy
+        .connect(user)
+        .setMarketOracle(await deployer.getAddress()),
+    ).to.be.reverted
+  })
+})
 
-contract('UFragmentsPolicy:setCpiOracle', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragmentsPolicy:setCpiOracle', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should set cpiOracle', async function () {
-    await uFragmentsPolicy.setCpiOracle(deployer);
-    expect(await uFragmentsPolicy.cpiOracle.call()).to.eq(deployer);
-  });
-});
+    await uFragmentsPolicy
+      .connect(deployer)
+      .setCpiOracle(await deployer.getAddress())
+    expect(await uFragmentsPolicy.cpiOracle()).to.eq(
+      await deployer.getAddress(),
+    )
+  })
+})
 
-contract('UFragments:setCpiOracle:accessControl', function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragments:setCpiOracle:accessControl', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should be callable by owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setCpiOracle(deployer, { from: deployer }))
-    ).to.be.false;
-  });
+    await expect(
+      uFragmentsPolicy
+        .connect(deployer)
+        .setCpiOracle(await deployer.getAddress()),
+    ).to.not.be.reverted
+  })
 
   it('should NOT be callable by non-owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setCpiOracle(deployer, { from: user }))
-    ).to.be.true;
-  });
-});
+    await expect(
+      uFragmentsPolicy.connect(user).setCpiOracle(await deployer.getAddress()),
+    ).to.be.reverted
+  })
+})
 
-contract('UFragmentsPolicy:setOrchestrator', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragmentsPolicy:setOrchestrator', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should set orchestrator', async function () {
-    await uFragmentsPolicy.setOrchestrator(user, {from: deployer});
-    expect(await uFragmentsPolicy.orchestrator.call()).to.eq(user);
-  });
-});
+    await uFragmentsPolicy
+      .connect(deployer)
+      .setOrchestrator(await user.getAddress())
+    expect(await uFragmentsPolicy.orchestrator()).to.eq(await user.getAddress())
+  })
+})
 
-contract('UFragments:setOrchestrator:accessControl', function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragments:setOrchestrator:accessControl', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should be callable by owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setOrchestrator(deployer, { from: deployer }))
-    ).to.be.false;
-  });
+    await expect(
+      uFragmentsPolicy
+        .connect(deployer)
+        .setOrchestrator(await deployer.getAddress()),
+    ).to.not.be.reverted
+  })
 
   it('should NOT be callable by non-owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setOrchestrator(deployer, { from: user }))
-    ).to.be.true;
-  });
-});
+    await expect(
+      uFragmentsPolicy
+        .connect(user)
+        .setOrchestrator(await deployer.getAddress()),
+    ).to.be.reverted
+  })
+})
 
-contract('UFragmentsPolicy:setDeviationThreshold', async function (accounts) {
-  let prevThreshold, threshold;
+describe('UFragmentsPolicy:setDeviationThreshold', async function () {
+  let prevThreshold: BigNumber, threshold: BigNumber
   before('setup UFragmentsPolicy contract', async function () {
-    await setupContracts();
-    prevThreshold = await uFragmentsPolicy.deviationThreshold.call();
-    threshold = prevThreshold.plus(0.01e18);
-    await uFragmentsPolicy.setDeviationThreshold(threshold);
-  });
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+    prevThreshold = await uFragmentsPolicy.deviationThreshold()
+    threshold = prevThreshold.add(ethers.utils.parseUnits('1', 16))
+    await uFragmentsPolicy.connect(deployer).setDeviationThreshold(threshold)
+  })
 
   it('should set deviationThreshold', async function () {
-    (await uFragmentsPolicy.deviationThreshold.call()).should.be.bignumber.eq(threshold);
-  });
-});
+    expect(await uFragmentsPolicy.deviationThreshold()).to.eq(threshold)
+  })
+})
 
-contract('UFragments:setDeviationThreshold:accessControl', function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragments:setDeviationThreshold:accessControl', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should be callable by owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setDeviationThreshold(0, { from: deployer }))
-    ).to.be.false;
-  });
+    await expect(uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)).to
+      .not.be.reverted
+  })
 
   it('should NOT be callable by non-owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setDeviationThreshold(0, { from: user }))
-    ).to.be.true;
-  });
-});
+    await expect(uFragmentsPolicy.connect(user).setDeviationThreshold(0)).to.be
+      .reverted
+  })
+})
 
-contract('UFragmentsPolicy:setRebaseLag', async function (accounts) {
-  let prevLag;
+describe('UFragmentsPolicy:setRebaseLag', async function () {
+  let prevLag: BigNumber
   before('setup UFragmentsPolicy contract', async function () {
-    await setupContracts();
-    prevLag = await uFragmentsPolicy.rebaseLag.call();
-  });
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+    prevLag = await uFragmentsPolicy.rebaseLag()
+  })
 
   describe('when rebaseLag is more than 0', async function () {
     it('should setRebaseLag', async function () {
-      const lag = prevLag.plus(1);
-      await uFragmentsPolicy.setRebaseLag(lag);
-      (await uFragmentsPolicy.rebaseLag.call()).should.be.bignumber.eq(lag);
-    });
-  });
+      const lag = prevLag.add(1)
+      await uFragmentsPolicy.connect(deployer).setRebaseLag(lag)
+      expect(await uFragmentsPolicy.rebaseLag()).to.eq(lag)
+    })
+  })
 
   describe('when rebaseLag is 0', async function () {
     it('should fail', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.setRebaseLag(0))
-      ).to.be.true;
-    });
-  });
-});
+      await expect(uFragmentsPolicy.connect(deployer).setRebaseLag(0)).to.be
+        .reverted
+    })
+  })
+})
 
-contract('UFragments:setRebaseLag:accessControl', function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragments:setRebaseLag:accessControl', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should be callable by owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setRebaseLag(1, { from: deployer }))
-    ).to.be.false;
-  });
+    await expect(uFragmentsPolicy.connect(deployer).setRebaseLag(1)).to.not.be
+      .reverted
+  })
 
   it('should NOT be callable by non-owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setRebaseLag(1, { from: user }))
-    ).to.be.true;
-  });
-});
+    await expect(uFragmentsPolicy.connect(user).setRebaseLag(1)).to.be.reverted
+  })
+})
 
-contract('UFragmentsPolicy:setRebaseTimingParameters', async function (accounts) {
+describe('UFragmentsPolicy:setRebaseTimingParameters', async function () {
   before('setup UFragmentsPolicy contract', async function () {
-    await setupContracts();
-  });
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   describe('when interval=0', function () {
     it('should fail', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(0, 0, 0))
-      ).to.be.true;
-    });
-  });
+      await expect(
+        uFragmentsPolicy.connect(deployer).setRebaseTimingParameters(0, 0, 0),
+      ).to.be.reverted
+    })
+  })
 
   describe('when offset > interval', function () {
     it('should fail', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(300, 3600, 300))
-      ).to.be.true;
-    });
-  });
+      await expect(
+        uFragmentsPolicy
+          .connect(deployer)
+          .setRebaseTimingParameters(300, 3600, 300),
+      ).to.be.reverted
+    })
+  })
 
   describe('when params are valid', function () {
     it('should setRebaseTimingParameters', async function () {
-      await uFragmentsPolicy.setRebaseTimingParameters(600, 60, 300);
-      (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(600);
-      (await uFragmentsPolicy.rebaseWindowOffsetSec.call()).should.be.bignumber.eq(60);
-      (await uFragmentsPolicy.rebaseWindowLengthSec.call()).should.be.bignumber.eq(300);
-    });
-  });
-});
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseTimingParameters(600, 60, 300)
+      expect(await uFragmentsPolicy.minRebaseTimeIntervalSec()).to.eq(600)
+      expect(await uFragmentsPolicy.rebaseWindowOffsetSec()).to.eq(60)
+      expect(await uFragmentsPolicy.rebaseWindowLengthSec()).to.eq(300)
+    })
+  })
+})
 
-contract('UFragments:setRebaseTimingParameters:accessControl', function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContracts);
+describe('UFragments:setRebaseTimingParameters:accessControl', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
 
   it('should be callable by owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(600, 60, 300, { from: deployer }))
-    ).to.be.false;
-  });
+    await expect(
+      uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseTimingParameters(600, 60, 300),
+    ).to.not.be.reverted
+  })
 
   it('should NOT be callable by non-owner', async function () {
-    expect(
-      await chain.isEthException(uFragmentsPolicy.setRebaseTimingParameters(600, 60, 300, { from: user }))
-    ).to.be.true;
-  });
-});
+    await expect(
+      uFragmentsPolicy.connect(user).setRebaseTimingParameters(600, 60, 300),
+    ).to.be.reverted
+  })
+})
 
-contract('UFragmentsPolicy:Rebase:accessControl', async function (accounts) {
+describe('UFragmentsPolicy:Rebase:accessControl', async function () {
   beforeEach('setup UFragmentsPolicy contract', async function () {
-    await setupContractsWithOpenRebaseWindow();
-    await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true);
-    await chain.waitForSomeTime(60);
-  });
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+    // await setupContractsWithOpenRebaseWindow()
+    await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true)
+    await increaseTime(60)
+  })
 
   describe('when rebase called by orchestrator', function () {
     it('should succeed', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.false;
-    });
-  });
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.not.be
+        .reverted
+    })
+  })
 
   describe('when rebase called by non-orchestrator', function () {
     it('should fail', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: user}))
-      ).to.be.true;
-    });
-  });
-});
+      await expect(uFragmentsPolicy.connect(user).rebase()).to.be.reverted
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when minRebaseTimeIntervalSec has NOT passed since the previous rebase', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1010);
-      await chain.waitForSomeTime(60);
-      await uFragmentsPolicy.rebase({from: orchestrator});
-    });
+      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1010)
+      await increaseTime(60)
+      await uFragmentsPolicy.connect(orchestrator).rebase()
+    })
 
     it('should fail', async function () {
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.true;
-    });
-  });
-});
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.be
+        .reverted
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when rate is within deviationThreshold', function () {
     before(async function () {
-      await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
-    });
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseTimingParameters(60, 0, 60)
+    })
 
     it('should return 0', async function () {
-      await mockExternalData(INITIAL_RATE.minus(1), INITIAL_CPI, 1000);
-      await chain.waitForSomeTime(60);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-      await chain.waitForSomeTime(60);
+      await mockExternalData(INITIAL_RATE.sub(1), INITIAL_CPI, 1000)
+      await increaseTime(60)
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(0)
+      await increaseTime(60)
 
-      await mockExternalData(INITIAL_RATE.plus(1), INITIAL_CPI, 1000);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-      await chain.waitForSomeTime(60);
+      await mockExternalData(INITIAL_RATE.add(1), INITIAL_CPI, 1000)
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(0)
+      await increaseTime(60)
 
-      await mockExternalData(INITIAL_RATE_5P_MORE.minus(2), INITIAL_CPI, 1000);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-      await chain.waitForSomeTime(60);
+      await mockExternalData(INITIAL_RATE_5P_MORE.sub(2), INITIAL_CPI, 1000)
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(0)
+      await increaseTime(60)
 
-      await mockExternalData(INITIAL_RATE_5P_LESS.plus(2), INITIAL_CPI, 1000);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-      await chain.waitForSomeTime(60);
-    });
-  });
-});
+      await mockExternalData(INITIAL_RATE_5P_LESS.add(2), INITIAL_CPI, 1000)
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(0)
+      await increaseTime(60)
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when rate is more than MAX_RATE', function () {
     it('should return same supply delta as delta for MAX_RATE', async function () {
       // Any exchangeRate >= (MAX_RATE=100x) would result in the same supply increase
-      await mockExternalData(MAX_RATE, INITIAL_CPI, 1000);
-      await chain.waitForSomeTime(60);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      const supplyChange = r.logs[0].args.requestedSupplyAdjustment;
+      await mockExternalData(MAX_RATE, INITIAL_CPI, 1000)
+      await increaseTime(60)
 
-      await chain.waitForSomeTime(60);
+      const supplyChange = (
+        await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase())
+      ).requestedSupplyAdjustment
 
-      await mockExternalData(MAX_RATE.add(1e17), INITIAL_CPI, 1000);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
+      await increaseTime(60)
 
-      await chain.waitForSomeTime(60);
+      await mockExternalData(
+        MAX_RATE.add(ethers.utils.parseUnits('1', 17)),
+        INITIAL_CPI,
+        1000,
+      )
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(supplyChange)
 
-      await mockExternalData(MAX_RATE.mul(2), INITIAL_CPI, 1000);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(supplyChange);
-    });
-  });
-});
+      await increaseTime(60)
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+      await mockExternalData(MAX_RATE.mul(2), INITIAL_CPI, 1000)
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(supplyChange)
+    })
+  })
+})
+
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when uFragments grows beyond MAX_SUPPLY', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY.minus(1));
-      await chain.waitForSomeTime(60);
-    });
+      await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY.sub(1))
+      await increaseTime(60)
+    })
 
     it('should apply SupplyAdjustment {MAX_SUPPLY - totalSupply}', async function () {
       // Supply is MAX_SUPPLY-1, exchangeRate is 2x; resulting in a new supply more than MAX_SUPPLY
       // However, supply is ONLY increased by 1 to MAX_SUPPLY
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(1);
-    });
-  });
-});
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(1)
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when uFragments supply equals MAX_SUPPLY and rebase attempts to grow', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY);
-      await chain.waitForSomeTime(60);
-    });
+      await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY)
+      await increaseTime(60)
+    })
 
     it('should not grow', async function () {
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-      r.logs[0].args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-    });
-  });
-});
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(0)
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when the market oracle returns invalid data', function () {
     it('should fail', async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, false);
-      await chain.waitForSomeTime(60);
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.true;
-    });
-  });
+      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, false)
+      await increaseTime(60)
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.be
+        .reverted
+    })
+  })
 
   describe('when the market oracle returns valid data', function () {
     it('should NOT fail', async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true);
-      await chain.waitForSomeTime(60);
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.false;
-    });
-  });
-});
+      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true)
+      await increaseTime(60)
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.not.be
+        .reverted
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when the cpi oracle returns invalid data', function () {
     it('should fail', async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true, false);
-      await chain.waitForSomeTime(60);
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.true;
-    });
-  });
+      await mockExternalData(
+        INITIAL_RATE_30P_MORE,
+        INITIAL_CPI,
+        1000,
+        true,
+        false,
+      )
+      await increaseTime(60)
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.be
+        .reverted
+    })
+  })
 
   describe('when the cpi oracle returns valid data', function () {
     it('should NOT fail', async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true, true);
-      await chain.waitForSomeTime(60);
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.false;
-    });
-  });
-});
+      await mockExternalData(
+        INITIAL_RATE_30P_MORE,
+        INITIAL_CPI,
+        1000,
+        true,
+        true,
+      )
+      await increaseTime(60)
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.not.be
+        .reverted
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('positive rate and no change CPI', function () {
-    before(async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000);
-      await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
-      await chain.waitForSomeTime(60);
-      await uFragmentsPolicy.rebase({from: orchestrator});
-      await chain.waitForSomeTime(59);
-      prevEpoch = await uFragmentsPolicy.epoch.call();
-      prevTime = await uFragmentsPolicy.lastRebaseTimestampSec.call();
-      await mockExternalData(INITIAL_RATE_60P_MORE, INITIAL_CPI, 1010);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-    });
+    beforeEach(async function () {
+      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000)
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseTimingParameters(60, 0, 60)
+      await increaseTime(60)
+      await uFragmentsPolicy.connect(orchestrator).rebase()
+      await increaseTime(59)
+      prevEpoch = await uFragmentsPolicy.epoch()
+      prevTime = await uFragmentsPolicy.lastRebaseTimestampSec()
+      await mockExternalData(INITIAL_RATE_60P_MORE, INITIAL_CPI, 1010)
+    })
 
     it('should increment epoch', async function () {
-      const epoch = await uFragmentsPolicy.epoch.call();
-      expect(prevEpoch.plus(1).eq(epoch));
-    });
+      await uFragmentsPolicy.connect(orchestrator).rebase()
+      expect(await uFragmentsPolicy.epoch()).to.eq(prevEpoch.add(1))
+    })
 
     it('should update lastRebaseTimestamp', async function () {
-      const time = await uFragmentsPolicy.lastRebaseTimestampSec.call();
-      expect(time.minus(prevTime).eq(60)).to.be.true;
-    });
+      await uFragmentsPolicy.connect(orchestrator).rebase()
+      const time = await uFragmentsPolicy.lastRebaseTimestampSec()
+      expect(time.sub(prevTime)).to.eq(60)
+    })
 
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
-      const log = r.logs[0];
-      expect(log.event).to.eq('LogRebase');
-      expect(log.args.epoch.eq(prevEpoch.plus(1))).to.be.true;
-      log.args.exchangeRate.should.be.bignumber.eq(INITIAL_RATE_60P_MORE);
-      log.args.cpi.should.be.bignumber.eq(INITIAL_CPI);
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(20);
-    });
+      const r = uFragmentsPolicy.connect(orchestrator).rebase()
+      await expect(r)
+        .to.emit(uFragmentsPolicy, 'LogRebase')
+        .withArgs(
+          prevEpoch.add(1),
+          INITIAL_RATE_60P_MORE,
+          INITIAL_CPI,
+          20,
+          (await parseRebaseLog(r)).timestampSec,
+        )
+    })
 
     it('should call getData from the market oracle', async function () {
-      const fnCalled = mockMarketOracle.FunctionCalled().formatter(r.receipt.logs[2]);
-      expect(fnCalled.args.instanceName).to.eq('MarketOracle');
-      expect(fnCalled.args.functionName).to.eq('getData');
-      expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
-    });
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase())
+        .to.emit(mockMarketOracle, 'FunctionCalled')
+        .withArgs('MarketOracle', 'getData', uFragmentsPolicy.address)
+    })
 
     it('should call getData from the cpi oracle', async function () {
-      const fnCalled = mockCpiOracle.FunctionCalled().formatter(r.receipt.logs[0]);
-      expect(fnCalled.args.instanceName).to.eq('CpiOracle');
-      expect(fnCalled.args.functionName).to.eq('getData');
-      expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
-    });
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase())
+        .to.emit(mockCpiOracle, 'FunctionCalled')
+        .withArgs('CpiOracle', 'getData', uFragmentsPolicy.address)
+    })
 
     it('should call uFrag Rebase', async function () {
-      prevEpoch = await uFragmentsPolicy.epoch.call();
-      const fnCalled = mockUFragments.FunctionCalled().formatter(r.receipt.logs[4]);
-      expect(fnCalled.args.instanceName).to.eq('UFragments');
-      expect(fnCalled.args.functionName).to.eq('rebase');
-      expect(fnCalled.args.caller).to.eq(uFragmentsPolicy.address);
-      const fnArgs = mockUFragments.FunctionArguments().formatter(r.receipt.logs[5]);
-      const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
-        return fnArgs.args[k].map(d => d.toNumber()).concat(m);
-      }, [ ]);
-      expect(parsedFnArgs).to.include.members([prevEpoch.toNumber(), 20]);
-    });
-  });
-});
+      const r = uFragmentsPolicy.connect(orchestrator).rebase()
+      await expect(r)
+        .to.emit(mockUFragments, 'FunctionCalled')
+        .withArgs('UFragments', 'rebase', uFragmentsPolicy.address)
+      await expect(r)
+        .to.emit(mockUFragments, 'FunctionArguments')
+        .withArgs([prevEpoch.add(1)], [20])
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('negative rate', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_30P_LESS, INITIAL_CPI, 1000);
-      await chain.waitForSomeTime(60);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-    });
+      await mockExternalData(INITIAL_RATE_30P_LESS, INITIAL_CPI, 1000)
+      await increaseTime(60)
+    })
 
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
-      const log = r.logs[0];
-      expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-10);
-    });
-  });
-});
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(-10)
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when cpi increases', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI_25P_MORE, 1000);
-      await chain.waitForSomeTime(60);
-      await uFragmentsPolicy.setDeviationThreshold(0);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-    });
+      await mockExternalData(INITIAL_RATE, INITIAL_CPI_25P_MORE, 1000)
+      await increaseTime(60)
+      await uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)
+    })
 
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
-      const log = r.logs[0];
-      expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-6);
-    });
-  });
-});
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(-6)
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('when cpi decreases', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI_25P_LESS, 1000);
-      await chain.waitForSomeTime(60);
-      await uFragmentsPolicy.setDeviationThreshold(0);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-    });
+      await mockExternalData(INITIAL_RATE, INITIAL_CPI_25P_LESS, 1000)
+      await increaseTime(60)
+      await uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)
+    })
 
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
-      const log = r.logs[0];
-      expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(9);
-    });
-  });
-});
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(9)
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  before('setup UFragmentsPolicy contract', setupContractsWithOpenRebaseWindow);
+describe('UFragmentsPolicy:Rebase', async function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
+  })
 
   describe('rate=TARGET_RATE', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
-      await uFragmentsPolicy.setDeviationThreshold(0);
-      await chain.waitForSomeTime(60);
-      r = await uFragmentsPolicy.rebase({from: orchestrator});
-    });
+      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000)
+      await uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)
+      await increaseTime(60)
+    })
 
     it('should emit Rebase with 0 requestedSupplyAdjustment', async function () {
-      const log = r.logs[0];
-      expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(0);
-    });
-  });
-});
+      expect(
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
+      ).to.eq(0)
+    })
+  })
+})
 
-contract('UFragmentsPolicy:Rebase', async function (accounts) {
-  let rbTime, rbWindow, minRebaseTimeIntervalSec, now, prevRebaseTime, nextRebaseWindowOpenTime,
-    timeToWait, lastRebaseTimestamp;
+describe('UFragmentsPolicy:Rebase', async function () {
+  let rbTime: BigNumber,
+    rbWindow: BigNumber,
+    minRebaseTimeIntervalSec: BigNumber,
+    now: BigNumber,
+    nextRebaseWindowOpenTime: BigNumber,
+    timeToWait: BigNumber,
+    lastRebaseTimestamp: BigNumber
 
   beforeEach('setup UFragmentsPolicy contract', async function () {
-    await setupContracts();
-    await uFragmentsPolicy.setRebaseTimingParameters(86400, 72000, 900);
-    rbTime = await uFragmentsPolicy.rebaseWindowOffsetSec.call();
-    rbWindow = await uFragmentsPolicy.rebaseWindowLengthSec.call();
-    minRebaseTimeIntervalSec = await uFragmentsPolicy.minRebaseTimeIntervalSec.call();
-    now = new BigNumber(await chain.currentTime());
-    prevRebaseTime = now.minus(now.mod(minRebaseTimeIntervalSec)).plus(rbTime);
-    nextRebaseWindowOpenTime = prevRebaseTime.plus(minRebaseTimeIntervalSec);
-  });
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+    await uFragmentsPolicy
+      .connect(deployer)
+      .setRebaseTimingParameters(86400, 72000, 900)
+    await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000)
+    rbTime = await uFragmentsPolicy.rebaseWindowOffsetSec()
+    rbWindow = await uFragmentsPolicy.rebaseWindowLengthSec()
+    minRebaseTimeIntervalSec = await uFragmentsPolicy.minRebaseTimeIntervalSec()
+    now = ethers.BigNumber.from(
+      (await ethers.provider.getBlock('latest')).timestamp,
+    )
+    nextRebaseWindowOpenTime = now
+      .sub(now.mod(minRebaseTimeIntervalSec))
+      .add(rbTime)
+      .add(minRebaseTimeIntervalSec)
+  })
 
   describe('when its 5s after the rebase window closes', function () {
     it('should fail', async function () {
-      timeToWait = nextRebaseWindowOpenTime.minus(now).plus(rbWindow).plus(5);
-      await chain.waitForSomeTime(timeToWait.toNumber());
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
-      expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.false;
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.true;
-    });
-  });
+      timeToWait = nextRebaseWindowOpenTime.sub(now).add(rbWindow).add(5)
+      await increaseTime(timeToWait)
+      expect(await uFragmentsPolicy.inRebaseWindow()).to.be.false
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.be
+        .reverted
+    })
+  })
 
   describe('when its 5s before the rebase window opens', function () {
     it('should fail', async function () {
-      timeToWait = nextRebaseWindowOpenTime.minus(now).minus(5);
-      await chain.waitForSomeTime(timeToWait.toNumber());
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
-      expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.false;
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.true;
-    });
-  });
+      timeToWait = nextRebaseWindowOpenTime.sub(now).sub(5)
+      await increaseTime(timeToWait)
+      expect(await uFragmentsPolicy.inRebaseWindow()).to.be.false
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.be
+        .reverted
+    })
+  })
 
   describe('when its 5s after the rebase window opens', function () {
     it('should NOT fail', async function () {
-      timeToWait = nextRebaseWindowOpenTime.minus(now).plus(5);
-      await chain.waitForSomeTime(timeToWait.toNumber());
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
-      expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.true;
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.false;
-      lastRebaseTimestamp = await uFragmentsPolicy.lastRebaseTimestampSec.call();
-      expect(lastRebaseTimestamp.eq(nextRebaseWindowOpenTime)).to.be.true;
-    });
-  });
+      timeToWait = nextRebaseWindowOpenTime.sub(now).add(5)
+      await increaseTime(timeToWait)
+      expect(await uFragmentsPolicy.inRebaseWindow()).to.be.true
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.not.be
+        .reverted
+      lastRebaseTimestamp = await uFragmentsPolicy.lastRebaseTimestampSec()
+      expect(lastRebaseTimestamp).to.eq(nextRebaseWindowOpenTime)
+    })
+  })
 
   describe('when its 5s before the rebase window closes', function () {
     it('should NOT fail', async function () {
-      timeToWait = nextRebaseWindowOpenTime.minus(now).plus(rbWindow).minus(5);
-      await chain.waitForSomeTime(timeToWait.toNumber());
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000);
-      expect(await uFragmentsPolicy.inRebaseWindow.call()).to.be.true;
-      expect(
-        await chain.isEthException(uFragmentsPolicy.rebase({from: orchestrator}))
-      ).to.be.false;
-      lastRebaseTimestamp = await uFragmentsPolicy.lastRebaseTimestampSec.call();
-      expect(lastRebaseTimestamp.eq(nextRebaseWindowOpenTime)).to.be.true;
-    });
-  });
-});
+      timeToWait = nextRebaseWindowOpenTime.sub(now).add(rbWindow).sub(5)
+      await increaseTime(timeToWait)
+      expect(await uFragmentsPolicy.inRebaseWindow()).to.be.true
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.not.be
+        .reverted
+      lastRebaseTimestamp = await uFragmentsPolicy.lastRebaseTimestampSec.call()
+      expect(lastRebaseTimestamp).to.eq(nextRebaseWindowOpenTime)
+    })
+  })
+})

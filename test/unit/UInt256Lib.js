@@ -1,52 +1,48 @@
-const UInt256LibMock = artifacts.require('UInt256LibMock');
+import { ethers } from '@nomiclabs/buidler'
+import { Contract } from 'ethers'
+import { expect } from 'chai'
 
-const BigNumber = web3.BigNumber;
-const _require = require('app-root-path').require;
-const BlockchainCaller = _require('/util/blockchain_caller');
-const chain = new BlockchainCaller(web3);
+describe('UInt256Lib', () => {
+  const MAX_INT256 = ethers.BigNumber.from(2).pow(255).sub(1)
 
-require('chai')
-  .use(require('chai-bignumber')(BigNumber))
-  .should();
-
-contract('UInt256Lib', () => {
-  const MAX_INT256 = new BigNumber(2).pow(255).minus(1);
-
-  let UInt256Lib;
+  let UInt256Lib: Contract
 
   beforeEach(async function () {
-    UInt256Lib = await UInt256LibMock.new();
-  });
-
-  async function returnVal (tx) {
-    return (await tx).logs[0].args.val;
-  }
+    // deploy contract
+    const factory = await ethers.getContractFactory('UInt256LibMock')
+    UInt256Lib = await factory.deploy()
+    await UInt256Lib.deployed()
+  })
 
   describe('toInt256Safe', function () {
     describe('when then number is more than MAX_INT256', () => {
       it('should fail', async function () {
-        expect(
-          await chain.isEthException(UInt256Lib.toInt256Safe(MAX_INT256.plus(1)))
-        ).to.be.true;
-      });
-    });
+        await expect(UInt256Lib.toInt256Safe(MAX_INT256.add(1))).to.be.reverted
+      })
+    })
 
     describe('when then number is MAX_INT256', () => {
       it('converts int to uint256 safely', async function () {
-        (await returnVal(UInt256Lib.toInt256Safe(MAX_INT256))).should.be.bignumber.eq(MAX_INT256);
-      });
-    });
+        await expect(UInt256Lib.toInt256Safe(MAX_INT256))
+          .to.emit(UInt256Lib, 'ReturnValueInt256')
+          .withArgs(MAX_INT256)
+      })
+    })
 
     describe('when then number is less than MAX_INT256', () => {
       it('converts int to uint256 safely', async function () {
-        (await returnVal(UInt256Lib.toInt256Safe(MAX_INT256.minus(1)))).should.be.bignumber.eq(MAX_INT256.minus(1));
-      });
-    });
+        await expect(UInt256Lib.toInt256Safe(MAX_INT256.sub(1)))
+          .to.emit(UInt256Lib, 'ReturnValueInt256')
+          .withArgs(MAX_INT256.sub(1))
+      })
+    })
 
     describe('when then number is 0', () => {
       it('converts int to uint256 safely', async function () {
-        (await returnVal(UInt256Lib.toInt256Safe(0))).should.be.bignumber.eq(0);
-      });
-    });
-  });
-});
+        await expect(UInt256Lib.toInt256Safe(0))
+          .to.emit(UInt256Lib, 'ReturnValueInt256')
+          .withArgs(0)
+      })
+    })
+  })
+})

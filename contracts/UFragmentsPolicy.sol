@@ -7,11 +7,9 @@ import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
 import "./UFragments.sol";
 
-
 interface IOracle {
     function getData() external returns (uint256, bool);
 }
-
 
 /**
  * @title uFragments Monetary Supply Policy
@@ -104,8 +102,9 @@ contract UFragmentsPolicy is Ownable {
         require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
 
         // Snap the rebase time to the start of this window.
-        lastRebaseTimestampSec = now.sub(
-            now.mod(minRebaseTimeIntervalSec)).add(rebaseWindowOffsetSec);
+        lastRebaseTimestampSec = now.sub(now.mod(minRebaseTimeIntervalSec)).add(
+            rebaseWindowOffsetSec
+        );
 
         epoch = epoch.add(1);
 
@@ -114,7 +113,7 @@ contract UFragmentsPolicy is Ownable {
         (cpi, cpiValid) = cpiOracle.getData();
         require(cpiValid);
 
-        uint256 targetRate = cpi.mul(10 ** DECIMALS).div(baseCpi);
+        uint256 targetRate = cpi.mul(10**DECIMALS).div(baseCpi);
 
         uint256 exchangeRate;
         bool rateValid;
@@ -143,10 +142,7 @@ contract UFragmentsPolicy is Ownable {
      * @notice Sets the reference to the CPI oracle.
      * @param cpiOracle_ The address of the cpi oracle contract.
      */
-    function setCpiOracle(IOracle cpiOracle_)
-        external
-        onlyOwner
-    {
+    function setCpiOracle(IOracle cpiOracle_) external onlyOwner {
         cpiOracle = cpiOracle_;
     }
 
@@ -154,10 +150,7 @@ contract UFragmentsPolicy is Ownable {
      * @notice Sets the reference to the market oracle.
      * @param marketOracle_ The address of the market oracle contract.
      */
-    function setMarketOracle(IOracle marketOracle_)
-        external
-        onlyOwner
-    {
+    function setMarketOracle(IOracle marketOracle_) external onlyOwner {
         marketOracle = marketOracle_;
     }
 
@@ -165,10 +158,7 @@ contract UFragmentsPolicy is Ownable {
      * @notice Sets the reference to the orchestrator.
      * @param orchestrator_ The address of the orchestrator contract.
      */
-    function setOrchestrator(address orchestrator_)
-        external
-        onlyOwner
-    {
+    function setOrchestrator(address orchestrator_) external onlyOwner {
         orchestrator = orchestrator_;
     }
 
@@ -178,10 +168,7 @@ contract UFragmentsPolicy is Ownable {
      *         modifications are made. DECIMALS fixed point number.
      * @param deviationThreshold_ The new exchange rate threshold fraction.
      */
-    function setDeviationThreshold(uint256 deviationThreshold_)
-        external
-        onlyOwner
-    {
+    function setDeviationThreshold(uint256 deviationThreshold_) external onlyOwner {
         deviationThreshold = deviationThreshold_;
     }
 
@@ -193,10 +180,7 @@ contract UFragmentsPolicy is Ownable {
                If it is greater than 1, then a correction of 1/R of is applied on each rebase.
      * @param rebaseLag_ The new rebase lag parameter.
      */
-    function setRebaseLag(uint256 rebaseLag_)
-        external
-        onlyOwner
-    {
+    function setRebaseLag(uint256 rebaseLag_) external onlyOwner {
         require(rebaseLag_ > 0);
         rebaseLag = rebaseLag_;
     }
@@ -216,10 +200,8 @@ contract UFragmentsPolicy is Ownable {
     function setRebaseTimingParameters(
         uint256 minRebaseTimeIntervalSec_,
         uint256 rebaseWindowOffsetSec_,
-        uint256 rebaseWindowLengthSec_)
-        external
-        onlyOwner
-    {
+        uint256 rebaseWindowLengthSec_
+    ) external onlyOwner {
         require(minRebaseTimeIntervalSec_ > 0);
         require(rebaseWindowOffsetSec_ < minRebaseTimeIntervalSec_);
 
@@ -233,18 +215,19 @@ contract UFragmentsPolicy is Ownable {
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    function initialize(address owner_, UFragments uFrags_, uint256 baseCpi_)
-        public
-        initializer
-    {
+    function initialize(
+        address owner_,
+        UFragments uFrags_,
+        uint256 baseCpi_
+    ) public initializer {
         Ownable.initialize(owner_);
 
         // deviationThreshold = 0.05e18 = 5e16
-        deviationThreshold = 5 * 10 ** (DECIMALS-2);
+        deviationThreshold = 5 * 10**(DECIMALS - 2);
 
         rebaseLag = 30;
         minRebaseTimeIntervalSec = 1 days;
-        rebaseWindowOffsetSec = 72000;  // 8PM UTC
+        rebaseWindowOffsetSec = 72000; // 8PM UTC
         rebaseWindowLengthSec = 15 minutes;
         lastRebaseTimestampSec = 0;
         epoch = 0;
@@ -258,30 +241,25 @@ contract UFragmentsPolicy is Ownable {
      *         Otherwise, returns false.
      */
     function inRebaseWindow() public view returns (bool) {
-        return (
-            now.mod(minRebaseTimeIntervalSec) >= rebaseWindowOffsetSec &&
-            now.mod(minRebaseTimeIntervalSec) < (rebaseWindowOffsetSec.add(rebaseWindowLengthSec))
-        );
+        return (now.mod(minRebaseTimeIntervalSec) >= rebaseWindowOffsetSec &&
+            now.mod(minRebaseTimeIntervalSec) < (rebaseWindowOffsetSec.add(rebaseWindowLengthSec)));
     }
 
     /**
      * @return Computes the total supply adjustment in response to the exchange rate
      *         and the targetRate.
      */
-    function computeSupplyDelta(uint256 rate, uint256 targetRate)
-        private
-        view
-        returns (int256)
-    {
+    function computeSupplyDelta(uint256 rate, uint256 targetRate) private view returns (int256) {
         if (withinDeviationThreshold(rate, targetRate)) {
             return 0;
         }
 
         // supplyDelta = totalSupply * (rate - targetRate) / targetRate
         int256 targetRateSigned = targetRate.toInt256Safe();
-        return uFrags.totalSupply().toInt256Safe()
-            .mul(rate.toInt256Safe().sub(targetRateSigned))
-            .div(targetRateSigned);
+        return
+            uFrags.totalSupply().toInt256Safe().mul(rate.toInt256Safe().sub(targetRateSigned)).div(
+                targetRateSigned
+            );
     }
 
     /**
@@ -295,10 +273,10 @@ contract UFragmentsPolicy is Ownable {
         view
         returns (bool)
     {
-        uint256 absoluteDeviationThreshold = targetRate.mul(deviationThreshold)
-            .div(10 ** DECIMALS);
+        uint256 absoluteDeviationThreshold = targetRate.mul(deviationThreshold).div(10**DECIMALS);
 
-        return (rate >= targetRate && rate.sub(targetRate) < absoluteDeviationThreshold)
-            || (rate < targetRate && targetRate.sub(rate) < absoluteDeviationThreshold);
+        return
+            (rate >= targetRate && rate.sub(targetRate) < absoluteDeviationThreshold) ||
+            (rate < targetRate && targetRate.sub(rate) < absoluteDeviationThreshold);
     }
 }

@@ -2,19 +2,15 @@ dist: trusty
 sudo: required
 language: node_js
 node_js:
-  - "8"
+  - '12'
 cache:
   directories:
     - node_modules
-    - $(npm config get prefix)/bin/ganache-cli
-before_install:
-  - npm install -g npm@6.4.1 # Locking npm to 6.4.1
-  - npm install -g npx
 script:
-  - ./scripts/setup-ci.sh
-  - npm run lint
-  - npm run test
-  - npm run coverage
+  - yarn format
+  - yarn lint
+  - yarn test
+  - yarn coverage
 after_success:
   - cat coverage/lcov.info | npx coveralls
 notifications:
