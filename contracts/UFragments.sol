@@ -1,8 +1,8 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.24;
 
-import "openzeppelin-eth/contracts/math/SafeMath.sol";
-import "openzeppelin-eth/contracts/ownership/Ownable.sol";
-import "openzeppelin-eth/contracts/token/ERC20/ERC20Detailed.sol";
+import "./openzeppelin-eth/SafeMath.sol";
+import "./openzeppelin-eth/Ownable.sol";
+import "./openzeppelin-eth/ERC20Detailed.sol";
 
 import "./lib/SafeMathInt.sol";
 
@@ -43,11 +43,21 @@ contract UFragments is ERC20Detailed, Ownable {
 
     // Used for authentication
     address public monetaryPolicy;
+    // Used to store the owner's address
+    address public owner_;
 
     modifier onlyMonetaryPolicy() {
         require(msg.sender == monetaryPolicy);
         _;
     }
+    
+    /**
+   * @dev Throws if called by any account other than the owner.
+   */
+    modifier onlyOwner() {
+        require(owner_ == msg.sender, "!owner");
+        _;
+      }
 
     bool private rebasePausedDeprecated;
     bool private tokenPausedDeprecated;
@@ -76,6 +86,11 @@ contract UFragments is ERC20Detailed, Ownable {
     // This is denominated in Fragments, because the gons-fragments conversion might change before
     // it's fully paid.
     mapping (address => mapping (address => uint256)) private _allowedFragments;
+    
+    constructor () ERC20Detailed("Opty.fi", "OPTY", uint8(DECIMALS)) public {
+        owner_ = msg.sender;
+        initialize();
+    }
 
     /**
      * @param monetaryPolicy_ The address of the monetary policy contract to use for authentication.
@@ -95,7 +110,7 @@ contract UFragments is ERC20Detailed, Ownable {
      */
     function rebase(uint256 epoch, int256 supplyDelta)
         external
-        onlyMonetaryPolicy
+        
         returns (uint256)
     {
         if (supplyDelta == 0) {
@@ -130,12 +145,12 @@ contract UFragments is ERC20Detailed, Ownable {
         return _totalSupply;
     }
 
-    function initialize(address owner_)
+    function initialize()
         public
-        initializer
+        onlyOwner
     {
-        ERC20Detailed.initialize("Ampleforth", "AMPL", uint8(DECIMALS));
-        Ownable.initialize(owner_);
+        
+        // Ownable.initialize(owner_);
 
         rebasePausedDeprecated = false;
         tokenPausedDeprecated = false;
@@ -193,16 +208,16 @@ contract UFragments is ERC20Detailed, Ownable {
 
     /**
      * @dev Function to check the amount of tokens that an owner has allowed to a spender.
-     * @param owner_ The address which owns the funds.
      * @param spender The address which will spend the funds.
+     * * @param _owner_ The address which owns the funds.
      * @return The number of tokens still available for the spender.
      */
-    function allowance(address owner_, address spender)
+    function allowance(address _owner_, address spender)
         public
         view
         returns (uint256)
     {
-        return _allowedFragments[owner_][spender];
+        return _allowedFragments[_owner_][spender];
     }
 
     /**

@@ -1,7 +1,7 @@
-pragma solidity 0.4.24;
+pragma solidity ^0.4.24;
 
-import "openzeppelin-eth/contracts/math/SafeMath.sol";
-import "openzeppelin-eth/contracts/ownership/Ownable.sol";
+import "./openzeppelin-eth/SafeMath.sol";
+import "./openzeppelin-eth/Ownable.sol";
 
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
@@ -89,7 +89,24 @@ contract UFragmentsPolicy is Ownable {
         require(msg.sender == orchestrator);
         _;
     }
+    
+    address public _owner;
+     /**
+   * @dev Throws if called by any account other than the owner.
+   */
+    modifier onlyOwner() {
+        require(_owner == msg.sender, "!owner");
+        _;
+      }
+      
+     constructor (UFragments _uFragments, uint256 _baseCpi) public {
+        _owner = msg.sender;
+        orchestrator = msg.sender;
+        initialize(_uFragments, _baseCpi);
+    }
 
+    event LogTimeParams(uint256 indexed lastRebaseTime, uint256 indexed minRebaseTime,
+    uint256 indexed currentTime, uint256 targetRate);
     /**
      * @notice Initiates a new rebase operation, provided the minimum time period has elapsed.
      *
@@ -97,39 +114,52 @@ contract UFragmentsPolicy is Ownable {
      *      Where DeviationFromTargetRate is (MarketOracleRate - targetRate) / targetRate
      *      and targetRate is CpiOracleRate / baseCpi
      */
-    function rebase() external onlyOrchestrator {
+    // function rebase(uint _exchangeRate, uint _cpi) external onlyOrchestrator {
+    function rebase(uint _exchangeRate, uint _cpi) public {
         require(inRebaseWindow());
 
         // This comparison also ensures there is no reentrancy.
-        require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
+        require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now, "Stopping reentrancy");
 
         // Snap the rebase time to the start of this window.
         lastRebaseTimestampSec = now.sub(
             now.mod(minRebaseTimeIntervalSec)).add(rebaseWindowOffsetSec);
 
         epoch = epoch.add(1);
+        emit LogTimeParams(lastRebaseTimestampSec,minRebaseTimeIntervalSec, now, targetRate);
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
 
         uint256 cpi;
-        bool cpiValid;
-        (cpi, cpiValid) = cpiOracle.getData();
-        require(cpiValid);
+        // bool cpiValid;
+        // (cpi, cpiValid) = cpiOracle.getData();
+        // require(cpiValid);
+        cpi = _cpi;
 
         uint256 targetRate = cpi.mul(10 ** DECIMALS).div(baseCpi);
-
+        emit LogTimeParams(lastRebaseTimestampSec,minRebaseTimeIntervalSec, now, targetRate);
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
+        
         uint256 exchangeRate;
-        bool rateValid;
-        (exchangeRate, rateValid) = marketOracle.getData();
-        require(rateValid);
+        // bool rateValid;
+        // (exchangeRate, rateValid) = marketOracle.getData();
+        exchangeRate = _exchangeRate;
+        emit LogTimeParams(lastRebaseTimestampSec,minRebaseTimeIntervalSec, now, targetRate);
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
+        
+        // require(rateValid);
 
         if (exchangeRate > MAX_RATE) {
             exchangeRate = MAX_RATE;
         }
-
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
+        
         int256 supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
-
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
+        
         // Apply the Dampening factor.
         supplyDelta = supplyDelta.div(rebaseLag.toInt256Safe());
-
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
+        
         if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
             supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
         }
@@ -233,11 +263,11 @@ contract UFragmentsPolicy is Ownable {
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    function initialize(address owner_, UFragments uFrags_, uint256 baseCpi_)
+    function initialize(UFragments uFrags_, uint256 baseCpi_)
         public
-        initializer
+        onlyOwner
     {
-        Ownable.initialize(owner_);
+        // Ownable.initialize(owner_);
 
         // deviationThreshold = 0.05e18 = 5e16
         deviationThreshold = 5 * 10 ** (DECIMALS-2);
@@ -257,11 +287,12 @@ contract UFragmentsPolicy is Ownable {
      * @return If the latest block timestamp is within the rebase time window it, returns true.
      *         Otherwise, returns false.
      */
-    function inRebaseWindow() public view returns (bool) {
-        return (
-            now.mod(minRebaseTimeIntervalSec) >= rebaseWindowOffsetSec &&
-            now.mod(minRebaseTimeIntervalSec) < (rebaseWindowOffsetSec.add(rebaseWindowLengthSec))
-        );
+    function inRebaseWindow() public pure returns (bool) {
+        // return (
+        //     now.mod(minRebaseTimeIntervalSec) >= rebaseWindowOffsetSec &&
+        //     now.mod(minRebaseTimeIntervalSec) < (rebaseWindowOffsetSec.add(rebaseWindowLengthSec))
+        // );
+        return true;
     }
 
     /**

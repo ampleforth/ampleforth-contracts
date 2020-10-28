@@ -72,3 +72,4 @@ scDebugLog
 coverage.json
 coverage/
 coverageEnv/
+**/artifacts/*

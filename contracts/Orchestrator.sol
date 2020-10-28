@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "openzeppelin-eth/contracts/ownership/Ownable.sol";
+import "./openzeppelin-eth/Ownable.sol";
 
 import "./UFragmentsPolicy.sol";
 
@@ -29,7 +29,7 @@ contract Orchestrator is Ownable {
      * @param policy_ Address of the UFragments policy.
      */
     constructor(address policy_) public {
-        Ownable.initialize(msg.sender);
+        Ownable(msg.sender);
         policy = UFragmentsPolicy(policy_);
     }
 
@@ -41,24 +41,24 @@ contract Orchestrator is Ownable {
      *         If a transaction in the transaction list reverts, it is swallowed and the remaining
      *         transactions are executed.
      */
-    function rebase()
+    function rebase(uint _exchangeRate, uint _cpi)
         external
     {
-        require(msg.sender == tx.origin);  // solhint-disable-line avoid-tx-origin
+        // require(msg.sender == tx.origin);  // solhint-disable-line avoid-tx-origin
 
-        policy.rebase();
+        policy.rebase(_exchangeRate, _cpi);
 
-        for (uint i = 0; i < transactions.length; i++) {
-            Transaction storage t = transactions[i];
-            if (t.enabled) {
-                bool result =
-                    externalCall(t.destination, t.data);
-                if (!result) {
-                    emit TransactionFailed(t.destination, i, t.data);
-                    revert("Transaction Failed");
-                }
-            }
-        }
+        // for (uint i = 0; i < transactions.length; i++) {
+        //     Transaction storage t = transactions[i];
+        //     if (t.enabled) {
+        //         bool result =
+        //             externalCall(t.destination, t.data);
+        //         if (!result) {
+        //             emit TransactionFailed(t.destination, i, t.data);
+        //             revert("Transaction Failed");
+        //         }
+        //     }
+        // }
     }
 
     /**
