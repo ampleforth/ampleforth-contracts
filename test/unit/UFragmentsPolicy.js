@@ -21,7 +21,7 @@ const MAX_SUPPLY = (new BigNumber(2).pow(255).minus(1)).div(MAX_RATE);
 const BASE_CPI = new BigNumber(100e18);
 const INITIAL_CPI = new BigNumber(251.712e18);
 const INITIAL_CPI_25P_MORE = INITIAL_CPI.mul(1.25).dividedToIntegerBy(1);
-const INITIAL_CPI_25P_LESS = INITIAL_CPI.mul(0.77).dividedToIntegerBy(1);
+const INITIAL_CPI_25P_LESS = INITIAL_CPI.mul(0.75).dividedToIntegerBy(1);
 const INITIAL_RATE = INITIAL_CPI.mul(1e18).dividedToIntegerBy(BASE_CPI);
 const INITIAL_RATE_30P_MORE = INITIAL_RATE.mul(1.3).dividedToIntegerBy(1);
 const INITIAL_RATE_30P_LESS = INITIAL_RATE.mul(0.7).dividedToIntegerBy(1);
@@ -77,10 +77,7 @@ contract('UFragmentsPolicy:initialize', async function (accounts) {
     before('setup UFragmentsPolicy contract', setupContracts);
 
     it('deviationThreshold', async function () {
-      (await uFragmentsPolicy.deviationThreshold.call()).should.be.bignumber.eq(0.05e18);
-    });
-    it('rebaseLag', async function () {
-      (await uFragmentsPolicy.rebaseLag.call()).should.be.bignumber.eq(30);
+      (await uFragmentsPolicy.deviationThreshold.call()).should.be.bignumber.eq(0);
     });
     it('minRebaseTimeIntervalSec', async function () {
       (await uFragmentsPolicy.minRebaseTimeIntervalSec.call()).should.be.bignumber.eq(24 * 60 * 60);
@@ -208,42 +205,76 @@ contract('UFragments:setDeviationThreshold:accessControl', function (accounts) {
   });
 });
 
-contract('UFragmentsPolicy:setRebaseLag', async function (accounts) {
-  let prevLag;
+contract('UFragmentsPolicy:setRebaseFunctionGrowth', async function (accounts) {
   before('setup UFragmentsPolicy contract', async function () {
     await setupContracts();
-    prevLag = await uFragmentsPolicy.rebaseLag.call();
   });
 
-  describe('when rebaseLag is more than 0', async function () {
-    it('should setRebaseLag', async function () {
-      const lag = prevLag.plus(1);
-      await uFragmentsPolicy.setRebaseLag(lag);
-      (await uFragmentsPolicy.rebaseLag.call()).should.be.bignumber.eq(lag);
+  describe('when rebaseFunctionGrowth is more than 0', async function () {
+    it('should setRebaseFunctionGrowth', async function () {
+      await uFragmentsPolicy.setRebaseFunctionGrowth(1000);
+      (await uFragmentsPolicy.rebaseFunctionGrowth.call()).should.be.bignumber.eq(1000);
     });
   });
 
-  describe('when rebaseLag is 0', async function () {
+  describe('when rebaseFunctionGrowth is less than 0', async function () {
     it('should fail', async function () {
       expect(
-        await chain.isEthException(uFragmentsPolicy.setRebaseLag(0))
+        await chain.isEthException(uFragmentsPolicy.setRebaseFunctionGrowth(-1))
       ).to.be.true;
     });
   });
 });
 
-contract('UFragments:setRebaseLag:accessControl', function (accounts) {
+contract('UFragments:setRebaseFunctionGrowth:accessControl', function (accounts) {
   before('setup UFragmentsPolicy contract', setupContracts);
 
   it('should be callable by owner', async function () {
     expect(
-      await chain.isEthException(uFragmentsPolicy.setRebaseLag(1, { from: deployer }))
+      await chain.isEthException(uFragmentsPolicy.setRebaseFunctionGrowth(1, { from: deployer }))
     ).to.be.false;
   });
 
   it('should NOT be callable by non-owner', async function () {
     expect(
-      await chain.isEthException(uFragmentsPolicy.setRebaseLag(1, { from: user }))
+      await chain.isEthException(uFragmentsPolicy.setRebaseFunctionGrowth(1, { from: user }))
+    ).to.be.true;
+  });
+});
+
+contract('UFragmentsPolicy:setRebaseFunctionUpperPercentage', async function (accounts) {
+  before('setup UFragmentsPolicy contract', async function () {
+    await setupContracts();
+  });
+
+  describe('when rebaseFunctionUpperPercentage is more than 0', async function () {
+    it('should setRebaseFunctionUpperPercentage', async function () {
+      await uFragmentsPolicy.setRebaseFunctionUpperPercentage(2000);
+      (await uFragmentsPolicy.rebaseFunctionUpperPercentage.call()).should.be.bignumber.eq(2000);
+    });
+  });
+
+  describe('when rebaseFunctionUpperPercentage is less than 0', async function () {
+    it('should fail', async function () {
+      expect(
+        await chain.isEthException(uFragmentsPolicy.setRebaseFunctionUpperPercentage(-1))
+      ).to.be.true;
+    });
+  });
+});
+
+contract('UFragments:setRebaseFunctionUpperPercentage:accessControl', function (accounts) {
+  before('setup UFragmentsPolicy contract', setupContracts);
+
+  it('should be callable by owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setRebaseFunctionUpperPercentage(1, { from: deployer }))
+    ).to.be.false;
+  });
+
+  it('should NOT be callable by non-owner', async function () {
+    expect(
+      await chain.isEthException(uFragmentsPolicy.setRebaseFunctionUpperPercentage(1, { from: user }))
     ).to.be.true;
   });
 });
@@ -343,6 +374,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
   describe('when rate is within deviationThreshold', function () {
     before(async function () {
       await uFragmentsPolicy.setRebaseTimingParameters(60, 0, 60);
+      await uFragmentsPolicy.setDeviationThreshold(5 * 10 ** (16));
     });
 
     it('should return 0', async function () {
@@ -510,7 +542,8 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       expect(log.args.epoch.eq(prevEpoch.plus(1))).to.be.true;
       log.args.exchangeRate.should.be.bignumber.eq(INITIAL_RATE_60P_MORE);
       log.args.cpi.should.be.bignumber.eq(INITIAL_CPI);
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(20);
+
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(75);
     });
 
     it('should call getData from the market oracle', async function () {
@@ -537,7 +570,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
       const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
         return fnArgs.args[k].map(d => d.toNumber()).concat(m);
       }, [ ]);
-      expect(parsedFnArgs).to.include.members([prevEpoch.toNumber(), 20]);
+      expect(parsedFnArgs).to.include.members([prevEpoch.toNumber(), 75]);
     });
   });
 });
@@ -555,7 +588,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-10);
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-54);
     });
   });
 });
@@ -574,7 +607,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-6);
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-35);
     });
   });
 });
@@ -593,7 +626,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(9);
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(46);
     });
   });
 });

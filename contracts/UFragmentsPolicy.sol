@@ -2,6 +2,7 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-eth/contracts/math/SafeMath.sol";
 import "openzeppelin-eth/contracts/ownership/Ownable.sol";
+//import "balancer-labs/balancer-core/contracts/BNum.sol";
 
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
@@ -53,10 +54,7 @@ contract UFragmentsPolicy is Ownable {
     // DECIMALS Fixed point number.
     uint256 public deviationThreshold;
 
-    // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / rebaseLag
-    // Check setRebaseLag comments for more details.
-    // Natural number, no decimal places.
-    uint256 public rebaseLag;
+    uint256 private rebaseLagDeprecated;
 
     // More than this much time must pass between rebase operations.
     uint256 public minRebaseTimeIntervalSec;
@@ -76,6 +74,8 @@ contract UFragmentsPolicy is Ownable {
 
     uint256 private constant DECIMALS = 18;
 
+    int256 private constant ONE = int256(10**DECIMALS);
+
     // Due to the expression in computeSupplyDelta(), MAX_RATE * MAX_SUPPLY must fit into an int256.
     // Both are 18 decimals fixed point numbers.
     uint256 private constant MAX_RATE = 10**6 * 10**DECIMALS;
@@ -85,6 +85,12 @@ contract UFragmentsPolicy is Ownable {
     // This module orchestrates the rebase execution and downstream notification.
     address public orchestrator;
 
+    // an 18 decimal fixed point number.
+    int256 public rebaseFunctionGrowth;
+
+    // an 18 decimal fixed point number.
+    int256 public rebaseFunctionUpperPercentage;
+
     modifier onlyOrchestrator() {
         require(msg.sender == orchestrator);
         _;
@@ -92,10 +98,6 @@ contract UFragmentsPolicy is Ownable {
 
     /**
      * @notice Initiates a new rebase operation, provided the minimum time period has elapsed.
-     *
-     * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag
-     *      Where DeviationFromTargetRate is (MarketOracleRate - targetRate) / targetRate
-     *      and targetRate is CpiOracleRate / baseCpi
      */
     function rebase() external onlyOrchestrator {
         require(inRebaseWindow());
@@ -125,10 +127,9 @@ contract UFragmentsPolicy is Ownable {
             exchangeRate = MAX_RATE;
         }
 
+
         int256 supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
 
-        // Apply the Dampening factor.
-        supplyDelta = supplyDelta.div(rebaseLag.toInt256Safe());
 
         if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
             supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
@@ -172,6 +173,22 @@ contract UFragmentsPolicy is Ownable {
         orchestrator = orchestrator_;
     }
 
+    function setRebaseFunctionGrowth(int256 rebaseFunctionGrowth_)
+        external
+        onlyOwner
+    {
+        require(rebaseFunctionGrowth_ >= 0);
+        rebaseFunctionGrowth = rebaseFunctionGrowth_;
+    }
+
+    function setRebaseFunctionUpperPercentage(int256 rebaseFunctionUpperPercentage_)
+        external
+        onlyOwner
+    {
+        require(rebaseFunctionUpperPercentage_ >= 0);
+        rebaseFunctionUpperPercentage = rebaseFunctionUpperPercentage_;
+    }
+
     /**
      * @notice Sets the deviation threshold fraction. If the exchange rate given by the market
      *         oracle is within this fractional distance from the targetRate, then no supply
@@ -183,22 +200,6 @@ contract UFragmentsPolicy is Ownable {
         onlyOwner
     {
         deviationThreshold = deviationThreshold_;
-    }
-
-    /**
-     * @notice Sets the rebase lag parameter.
-               It is used to dampen the applied supply adjustment by 1 / rebaseLag
-               If the rebase lag R, equals 1, the smallest value for R, then the full supply
-               correction is applied on each rebase cycle.
-               If it is greater than 1, then a correction of 1/R of is applied on each rebase.
-     * @param rebaseLag_ The new rebase lag parameter.
-     */
-    function setRebaseLag(uint256 rebaseLag_)
-        external
-        onlyOwner
-    {
-        require(rebaseLag_ > 0);
-        rebaseLag = rebaseLag_;
     }
 
     /**
@@ -239,10 +240,11 @@ contract UFragmentsPolicy is Ownable {
     {
         Ownable.initialize(owner_);
 
-        // deviationThreshold = 0.05e18 = 5e16
-        deviationThreshold = 5 * 10 ** (DECIMALS-2);
+        deviationThreshold = 0;
 
-        rebaseLag = 30;
+        rebaseFunctionGrowth = int256(4 * (10**DECIMALS));
+        rebaseFunctionUpperPercentage = int256(11 * (10**(DECIMALS-2))); // .11
+
         minRebaseTimeIntervalSec = 1 days;
         rebaseWindowOffsetSec = 72000;  // 8PM UTC
         rebaseWindowLengthSec = 15 minutes;
@@ -265,6 +267,46 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
+     *
+     * normalizedRate: DECIMALS fixed point number
+     */
+    function computeRebasePercentage(int256 normalizedRate)
+        private
+        view
+        returns (int256)
+    {
+        int256 delta;
+
+        if (normalizedRate > ONE) {
+            delta = (normalizedRate.sub(ONE));
+        } else {
+            // Inverse negative deviation (delta =  1/rate - 1)
+            delta = (ONE.mul(ONE).div(normalizedRate)).sub(ONE);
+        }
+
+        // Compute: 2*Upper/(1+1/2^(Growth*delta))) - Upper
+
+        int256 exponent = rebaseFunctionGrowth.mul(delta).div(ONE);
+
+        if (exponent > ONE.mul(100)) {
+            exponent = ONE.mul(100);
+        }
+
+        int256 pow = exponent.twoPower(ONE); // 2^(Growth*Delta)
+        int256 denominator = ONE.add(ONE.mul(ONE).div(pow)); // 1+1/(2^(Growth*Delta))
+        int256 numerator = rebaseFunctionUpperPercentage.mul(2);  // 2*Upper
+
+        int256 rebasePercentage = (numerator.mul(ONE).div(denominator)).
+            sub(rebaseFunctionUpperPercentage);
+
+        if (normalizedRate < ONE) {
+            // Inverse rebasePercentage percentage =  (1/(1+percentage)) - 1
+            rebasePercentage = (ONE.mul(ONE).div(ONE.add(rebasePercentage))).sub(ONE);
+        }
+        return rebasePercentage;
+    }
+
+    /**
      * @return Computes the total supply adjustment in response to the exchange rate
      *         and the targetRate.
      */
@@ -276,12 +318,12 @@ contract UFragmentsPolicy is Ownable {
         if (withinDeviationThreshold(rate, targetRate)) {
             return 0;
         }
-
-        // supplyDelta = totalSupply * (rate - targetRate) / targetRate
         int256 targetRateSigned = targetRate.toInt256Safe();
+        int256 normalizedRate = rate.toInt256Safe().mul(ONE).div(targetRateSigned);
+        int256 rebasePercentage = computeRebasePercentage(normalizedRate);
+
         return uFrags.totalSupply().toInt256Safe()
-            .mul(rate.toInt256Safe().sub(targetRateSigned))
-            .div(targetRateSigned);
+            .mul(rebasePercentage).div(ONE);
     }
 
     /**
@@ -295,6 +337,7 @@ contract UFragmentsPolicy is Ownable {
         view
         returns (bool)
     {
+        // Set deviationThreshold to zero
         uint256 absoluteDeviationThreshold = targetRate.mul(deviationThreshold)
             .div(10 ** DECIMALS);
 

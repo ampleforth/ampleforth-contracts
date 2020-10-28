@@ -102,4 +102,36 @@ library SafeMathInt {
         require(a != MIN_INT256);
         return a < 0 ? -a : a;
     }
+
+    /**
+    * @dev Computes 2^exp with limited precision where 0 <= exp <= 100 * one
+    */
+    function twoPower(int256 exp, int256 one)
+        internal
+        pure
+        returns (int256)
+    {
+        require(exp >= 0);
+        // Precomputed values for 2^(1/2^i) in 18 decimals fixed point numbers
+        int256[5] memory ks =[
+            int256(1414213562373095049),
+            1189207115002721067,
+            1090507732665257659,
+            1044273782427413840,
+            1021897148654116678];
+        int256 whole = div(exp, one);
+        require(whole <= 100);
+        int256 result = mul(1 << whole, one);
+        int256 remaining = sub(exp, mul(whole, one));
+
+        int256 current = div(one, 2);
+        for (uint i = 0; i < 5; i++) {
+            if (remaining >= current) {
+                remaining = sub(remaining, current);
+                result = div(mul(result, ks[i]), 10**18);
+            }
+            current = div(current, 2);
+        }
+        return result;
+    }
 }
