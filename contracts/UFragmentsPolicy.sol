@@ -272,34 +272,35 @@ contract UFragmentsPolicy is Ownable {
      * Using the function in https://github.com/ampleforth/AIPs/blob/master/AIPs/aip-5.md
      * @param normalizedRate a DECIMALS decimal fixed point number.
      */
-    function computeRebasePercentage(int256 normalizedRate)
+    function computeRebasePercentage(int256 normalizedRate, int256 upper, int256 growth)
         private
-        view
+        pure
         returns (int256)
     {
         int256 delta;
 
-        if (normalizedRate > ONE) {
+        if (normalizedRate >= ONE) {
             delta = (normalizedRate.sub(ONE));
         } else {
             // Inverse negative deviation (delta =  1/rate - 1)
             delta = (ONE.mul(ONE).div(normalizedRate)).sub(ONE);
         }
 
-        // Compute: 2*Upper/(1+1/2^(Growth*delta))) - Upper
+        // Compute: 2*Upper/(1+1/2^(Growth*delta))) - Upper :
 
-        int256 exponent = rebaseFunctionGrowth.mul(delta).div(ONE);
-
+        int256 exponent = growth.mul(delta).div(ONE);
+        // Cap exponent to guarantee it is not too big for twoPower
         if (exponent > ONE.mul(100)) {
             exponent = ONE.mul(100);
         }
 
-        int256 pow = exponent.twoPower(ONE); // 2^(Growth*Delta)
+        int256 pow = SafeMathInt.twoPower(exponent, ONE); // 2^(Growth*Delta)
+
         int256 denominator = ONE.add(ONE.mul(ONE).div(pow)); // 1+1/(2^(Growth*Delta))
-        int256 numerator = rebaseFunctionUpperPercentage.mul(2);  // 2*Upper
+        int256 numerator = upper.mul(2);  // 2*Upper
 
         int256 rebasePercentage = (numerator.mul(ONE).div(denominator)).
-            sub(rebaseFunctionUpperPercentage);
+            sub(upper);
 
         if (normalizedRate < ONE) {
             // Inverse rebasePercentage percentage =  (1/(1+percentage)) - 1
@@ -322,10 +323,10 @@ contract UFragmentsPolicy is Ownable {
         }
         int256 targetRateSigned = targetRate.toInt256Safe();
         int256 normalizedRate = rate.toInt256Safe().mul(ONE).div(targetRateSigned);
-        int256 rebasePercentage = computeRebasePercentage(normalizedRate);
+        int256 rebasePercentage = computeRebasePercentage(normalizedRate,
+            rebaseFunctionUpperPercentage, rebaseFunctionGrowth);
 
-        return uFrags.totalSupply().toInt256Safe()
-            .mul(rebasePercentage).div(ONE);
+        return uFrags.totalSupply().toInt256Safe().mul(rebasePercentage).div(ONE);
     }
 
     /**

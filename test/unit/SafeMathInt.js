@@ -193,4 +193,62 @@ contract('SafeMathInt', () => {
       ).to.be.true;
     });
   });
+
+  describe('twoPower', function () {
+    it('2^0', async function () {
+      const e = new BigNumber(0);
+      const one = new BigNumber(10 ** 18);
+      (await returnVal(safeMathInt.twoPower(e, one))).should.be.bignumber.eq(one);
+    });
+    it('2^1', async function () {
+      const e = (new BigNumber(1)).times(10 ** 18);
+      const one = new BigNumber(10 ** 18);
+      const result = (new BigNumber(2)).times(10 ** 18);
+      (await returnVal(safeMathInt.twoPower(e, one))).should.be.bignumber.eq(result);
+    });
+    it('2^30', async function () {
+      const e = (new BigNumber(30)).times(10 ** 18);
+      const one = new BigNumber(10 ** 18);
+      const result = (new BigNumber(2 ** 30)).times(10 ** 18);
+      (await returnVal(safeMathInt.twoPower(e, one))).should.be.bignumber.eq(result);
+    });
+    it('2^2.5', async function () {
+      const e = (new BigNumber(2.5)).times(10 ** 10);
+      const one = new BigNumber(10 ** 10);
+      const result = (new BigNumber(5.6568542494)).times(one);
+      (await returnVal(safeMathInt.twoPower(e, one))).should.be.bignumber.eq(result);
+    });
+    it('2^2.25', async function () {
+      const e = (new BigNumber(2.25)).times(10 ** 10);
+      const one = new BigNumber(10 ** 10);
+      const result = (new BigNumber(4.75682846)).times(one);
+      (await returnVal(safeMathInt.twoPower(e, one))).should.be.bignumber.eq(result);
+    });
+    it('2^2.96875', async function () {
+      const e = (new BigNumber(2.96875)).times(10 ** 10);
+      const one = new BigNumber(10 ** 10);
+      const result = (new BigNumber(7.8285764964)).times(one);
+      (await returnVal(safeMathInt.twoPower(e, one))).should.be.bignumber.eq(result);
+    });
+    it('2^2.99', async function () {
+      const e = (new BigNumber(2.96875)).times(10 ** 10);
+      const one = new BigNumber(10 ** 10);
+      const result = (new BigNumber(7.8285764964)).times(one);
+      (await returnVal(safeMathInt.twoPower(e, one))).should.be.bignumber.eq(result);
+    });
+    it('should fail on negative exponent', async function () {
+      const e = (new BigNumber(-1.3)).times(10 ** 10);
+      const one = new BigNumber(10 ** 10);
+      expect(
+        await chain.isEthException(safeMathInt.twoPower(e, one))
+      ).to.be.true;
+    });
+    it('should fail on too large exponents', async function () {
+      const e = (new BigNumber(101.1)).times(10 ** 10);
+      const one = new BigNumber(10 ** 10);
+      expect(
+        await chain.isEthException(safeMathInt.twoPower(e, one))
+      ).to.be.true;
+    });
+  });
 });

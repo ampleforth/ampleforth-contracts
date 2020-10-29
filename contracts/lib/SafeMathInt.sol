@@ -105,6 +105,7 @@ library SafeMathInt {
 
     /**
     * @dev Computes 2^exp with limited precision where 0 <= exp <= 100 * one
+    * @param one 1.0 represented in the same fixed point number format as exp
     */
     function twoPower(int256 exp, int256 one)
         internal
@@ -128,7 +129,7 @@ library SafeMathInt {
         for (uint i = 0; i < 5; i++) {
             if (remaining >= current) {
                 remaining = sub(remaining, current);
-                result = div(mul(result, ks[i]), 10**18);
+                result = div(mul(result, ks[i]), 10**18); // 10**18 to match hardcoded ks values
             }
             current = div(current, 2);
         }

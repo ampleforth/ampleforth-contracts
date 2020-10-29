@@ -49,4 +49,13 @@ contract SafeMathIntMock is Mock {
         emit ReturnValueInt256(result);
         return result;
     }
+
+    function twoPower(int256 e, int256 one)
+        external
+        returns (int256)
+    {
+        int256 result = SafeMathInt.twoPower(e, one);
+        emit ReturnValueInt256(result);
+        return result;
+    }
 }
