@@ -2,7 +2,6 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-eth/contracts/math/SafeMath.sol";
 import "openzeppelin-eth/contracts/ownership/Ownable.sol";
-//import "balancer-labs/balancer-core/contracts/BNum.sol";
 
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
@@ -85,10 +84,12 @@ contract UFragmentsPolicy is Ownable {
     // This module orchestrates the rebase execution and downstream notification.
     address public orchestrator;
 
-    // an 18 decimal fixed point number.
+    // a DECIMALS decimal fixed point number.
+    // Used in computation of  2*Upper/(1+1/2^(Growth*delta))) - Upper
     int256 public rebaseFunctionGrowth;
 
-    // an 18 decimal fixed point number.
+    // a DECIMALS decimal fixed point number.
+    // Used in computation of  2*Upper/(1+1/2^(Growth*delta))) - Upper
     int256 public rebaseFunctionUpperPercentage;
 
     modifier onlyOrchestrator() {
@@ -267,8 +268,9 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     *
-     * normalizedRate: DECIMALS fixed point number
+     * @return Computes the percentage of supply to be added or removed.
+     * Using the function in https://github.com/ampleforth/AIPs/blob/master/AIPs/aip-5.md
+     * @param normalizedRate a DECIMALS decimal fixed point number.
      */
     function computeRebasePercentage(int256 normalizedRate)
         private
