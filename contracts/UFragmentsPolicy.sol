@@ -339,7 +339,6 @@ contract UFragmentsPolicy is Ownable {
         view
         returns (bool)
     {
-        // Set deviationThreshold to zero
         uint256 absoluteDeviationThreshold = targetRate.mul(deviationThreshold)
             .div(10 ** DECIMALS);
 
