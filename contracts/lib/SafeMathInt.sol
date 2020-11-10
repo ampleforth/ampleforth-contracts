@@ -112,7 +112,12 @@ library SafeMathInt {
         pure
         returns (int256)
     {
-        require(exp >= 0);
+        bool reciprocal = false;
+        if (exp < 0) {
+            reciprocal = true;
+            exp = abs(exp);
+        }
+
         // Precomputed values for 2^(1/2^i) in 18 decimals fixed point numbers
         int256[5] memory ks =[
             int256(1414213562373095049),
@@ -132,6 +137,9 @@ library SafeMathInt {
                 result = div(mul(result, ks[i]), 10**18); // 10**18 to match hardcoded ks values
             }
             current = div(current, 2);
+        }
+        if (reciprocal) {
+            result = div(mul(one, one), result);
         }
         return result;
     }

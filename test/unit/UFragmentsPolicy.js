@@ -588,7 +588,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-54);
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-42);
     });
   });
 });
@@ -607,7 +607,7 @@ contract('UFragmentsPolicy:Rebase', async function (accounts) {
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       const log = r.logs[0];
       expect(log.event).to.eq('LogRebase');
-      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-35);
+      log.args.requestedSupplyAdjustment.should.be.bignumber.eq(-29);
     });
   });
 });

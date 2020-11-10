@@ -84,13 +84,11 @@ contract UFragmentsPolicy is Ownable {
     // This module orchestrates the rebase execution and downstream notification.
     address public orchestrator;
 
-    // a DECIMALS decimal fixed point number.
-    // Used in computation of  2*Upper/(1+1/2^(Growth*delta))) - Upper
-    int256 public rebaseFunctionGrowth;
-
-    // a DECIMALS decimal fixed point number.
-    // Used in computation of  2*Upper/(1+1/2^(Growth*delta))) - Upper
+    // DECIMALS decimal fixed point numbers.
+    // Used in computation of  (Upper-Lower)/(1-(Upper/Lower)/2^(Growth*delta))) + Lower
+    int256 public rebaseFunctionLowerPercentage;
     int256 public rebaseFunctionUpperPercentage;
+    int256 public rebaseFunctionGrowth;
 
     modifier onlyOrchestrator() {
         require(msg.sender == orchestrator);
@@ -243,6 +241,7 @@ contract UFragmentsPolicy is Ownable {
 
         rebaseFunctionGrowth = int256(4 * (10**DECIMALS));
         rebaseFunctionUpperPercentage = int256(11 * (10**(DECIMALS-2))); // .11
+        rebaseFunctionLowerPercentage = int256((-11) * int256(10**(DECIMALS-2))); // .11
 
         minRebaseTimeIntervalSec = 1 days;
         rebaseWindowOffsetSec = 72000;  // 8PM UTC
@@ -270,21 +269,17 @@ contract UFragmentsPolicy is Ownable {
      * Using the function in https://github.com/ampleforth/AIPs/blob/master/AIPs/aip-5.md
      * @param normalizedRate a DECIMALS decimal fixed point number.
      */
-    function computeRebasePercentage(int256 normalizedRate, int256 upper, int256 growth)
+    function computeRebasePercentage(
+        int256 normalizedRate, int256 lower, int256 upper, int256 growth)
         private
         pure
         returns (int256)
     {
         int256 delta;
 
-        if (normalizedRate >= ONE) {
-            delta = (normalizedRate.sub(ONE));
-        } else {
-            // Inverse negative deviation (delta =  1/rate - 1)
-            delta = (ONE.mul(ONE).div(normalizedRate)).sub(ONE);
-        }
+        delta = (normalizedRate.sub(ONE));
 
-        // Compute: 2*Upper/(1+1/2^(Growth*delta))) - Upper :
+        // Compute: (Upper-Lower)/(1-(Upper/Lower)/2^(Growth*delta))) + Lower
 
         int256 exponent = growth.mul(delta).div(ONE);
         // Cap exponent to guarantee it is not too big for twoPower
@@ -294,16 +289,12 @@ contract UFragmentsPolicy is Ownable {
 
         int256 pow = SafeMathInt.twoPower(exponent, ONE); // 2^(Growth*Delta)
 
-        int256 denominator = ONE.add(ONE.mul(ONE).div(pow)); // 1+1/(2^(Growth*Delta))
-        int256 numerator = upper.mul(2);  // 2*Upper
+        int256 numerator = upper.sub(lower);  //(Upper-Lower)
+        int256 intermediate = upper.mul(ONE).div(lower);
+        intermediate = intermediate.mul(ONE).div(pow);
+        int256 denominator = ONE.sub(intermediate); // (1-(Upper/Lower)/2^(Growth*delta)))
 
-        int256 rebasePercentage = (numerator.mul(ONE).div(denominator)).
-            sub(upper);
-
-        if (normalizedRate < ONE) {
-            // Inverse rebasePercentage percentage =  (1/(1+percentage)) - 1
-            rebasePercentage = (ONE.mul(ONE).div(ONE.add(rebasePercentage))).sub(ONE);
-        }
+        int256 rebasePercentage = (numerator.mul(ONE).div(denominator)).add(lower);
         return rebasePercentage;
     }
 
@@ -322,7 +313,7 @@ contract UFragmentsPolicy is Ownable {
         int256 targetRateSigned = targetRate.toInt256Safe();
         int256 normalizedRate = rate.toInt256Safe().mul(ONE).div(targetRateSigned);
         int256 rebasePercentage = computeRebasePercentage(normalizedRate,
-            rebaseFunctionUpperPercentage, rebaseFunctionGrowth);
+            rebaseFunctionLowerPercentage, rebaseFunctionUpperPercentage, rebaseFunctionGrowth);
 
         return uFrags.totalSupply().toInt256Safe().mul(rebasePercentage).div(ONE);
     }
