@@ -16,8 +16,6 @@ interface IOracle {
 /**
  * @title uFragments Monetary Supply Policy
  * @dev This is an implementation of the uFragments Ideal Money protocol.
- *      uFragments operates symmetrically on expansion and contraction. It will both split and
- *      combine coins to maintain a stable unit price.
  *
  *      This component regulates the token supply of the uFragments ERC20 token in response to
  *      market oracles.
@@ -97,6 +95,8 @@ contract UFragmentsPolicy is Ownable {
 
     /**
      * @notice Initiates a new rebase operation, provided the minimum time period has elapsed.
+     * @dev Changes supply with percentage of:
+     *  (Upper-Lower)/(1-(Upper/Lower)/2^(Growth*NormalizedPriceDelta))) + Lower
      */
     function rebase() external onlyOrchestrator {
         require(inRebaseWindow());
@@ -178,6 +178,14 @@ contract UFragmentsPolicy is Ownable {
         rebaseFunctionGrowth = rebaseFunctionGrowth_;
     }
 
+    function setRebaseFunctionLowerPercentage(int256 rebaseFunctionLowerPercentage_)
+    external
+    onlyOwner
+    {
+        require(rebaseFunctionLowerPercentage_ <= 0);
+        rebaseFunctionLowerPercentage = rebaseFunctionLowerPercentage_;
+    }
+
     function setRebaseFunctionUpperPercentage(int256 rebaseFunctionUpperPercentage_)
         external
         onlyOwner
@@ -240,8 +248,8 @@ contract UFragmentsPolicy is Ownable {
         deviationThreshold = 0;
 
         rebaseFunctionGrowth = int256(4 * (10**DECIMALS));
-        rebaseFunctionUpperPercentage = int256(11 * (10**(DECIMALS-2))); // .11
-        rebaseFunctionLowerPercentage = int256((-11) * int256(10**(DECIMALS-2))); // .11
+        rebaseFunctionUpperPercentage = int256(11 * (10**(DECIMALS-2))); // 0.11
+        rebaseFunctionLowerPercentage = int256((-11) * int256(10**(DECIMALS-2))); // -0.11
 
         minRebaseTimeIntervalSec = 1 days;
         rebaseWindowOffsetSec = 72000;  // 8PM UTC
@@ -265,9 +273,10 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-     * @return Computes the percentage of supply to be added or removed.
+     * Computes the percentage of supply to be added or removed:
      * Using the function in https://github.com/ampleforth/AIPs/blob/master/AIPs/aip-5.md
-     * @param normalizedRate a DECIMALS decimal fixed point number.
+     * @param normalizedRate value of rate/targetRate in DECIMALS decimal fixed point number
+     * @return The percentage of supply to be added or removed.
      */
     function computeRebasePercentage(
         int256 normalizedRate, int256 lower, int256 upper, int256 growth)
