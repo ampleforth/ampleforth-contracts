@@ -20,10 +20,11 @@ class BlockchainCaller {
 
 BlockchainCaller.prototype.sendRawToBlockchain = function (method, params) {
   return new Promise((resolve, reject) => {
-    this.web3.currentProvider.sendAsync(this.rpcmsg(method, params), function (e, r) {
-      if (e) reject(e);
-      resolve(r);
-    });
+    this.web3.currentProvider.send(this.rpcmsg(method, params),
+      function (e, r) {
+        if (e) reject(e);
+        resolve(r);
+      });
   });
 };
 

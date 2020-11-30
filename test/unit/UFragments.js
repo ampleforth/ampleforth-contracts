@@ -2,17 +2,21 @@ const UFragments = artifacts.require('UFragments.sol');
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
-const BigNumber = web3.BigNumber;
+const BN = web3.utils.BN;
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
+const chai = require('chai');
+const toChecksumAddress = web3.utils.toChecksumAddress;
 
-require('chai')
-  .use(require('chai-bignumber')(BigNumber))
+chai
+  .use(require('chai-bn')(BN))
   .should();
 
-function toUFrgDenomination (x) {
-  return new BigNumber(x).mul(10 ** DECIMALS);
-}
 const DECIMALS = 9;
+const BN_DECIMALS = new BN(DECIMALS);
+function toUFrgDenomination (x) {
+  return new BN(x).mul(new BN(10 ** DECIMALS));
+}
+
 const INTIAL_SUPPLY = toUFrgDenomination(50 * 10 ** 6);
 const transferAmount = toUFrgDenomination(10);
 const unitTokenAmount = toUFrgDenomination(1);
@@ -21,8 +25,8 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 let uFragments, b, r, deployer, user, initialSupply;
 async function setupContracts () {
   const accounts = await chain.getUserAccounts();
-  deployer = accounts[0];
-  user = accounts[1];
+  deployer = toChecksumAddress(accounts[0]);
+  user = toChecksumAddress(accounts[1]);
   uFragments = await UFragments.new();
   r = await uFragments.sendTransaction({
     data: encodeCall('initialize', ['address'], [deployer]),
@@ -59,18 +63,20 @@ contract('UFragments:Initialization', function (accounts) {
   });
 
   it('should set the owner', async function () {
-    expect(await uFragments.owner.call()).to.eq(deployer);
+    const call = await uFragments.owner.call();
+    expect(call).to.eq(deployer);
   });
 
   it('should set detailed ERC20 parameters', async function () {
     expect(await uFragments.name.call()).to.eq('Ampleforth');
     expect(await uFragments.symbol.call()).to.eq('AMPL');
-    (await uFragments.decimals.call()).should.be.bignumber.eq(DECIMALS);
+    (await uFragments.decimals.call())
+      .should.be.bignumber.eq(BN_DECIMALS);
   });
 
   it('should have 9 decimals', async function () {
     const decimals = await uFragments.decimals.call();
-    decimals.should.be.bignumber.eq(DECIMALS);
+    decimals.should.be.bignumber.eq(BN_DECIMALS);
   });
 
   it('should have AMPL symbol', async function () {
@@ -147,7 +153,7 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
   const A = accounts[2];
   const B = accounts[3];
   const policy = accounts[1];
-  const rebaseAmt = INTIAL_SUPPLY / 10;
+  const rebaseAmt = new BN(INTIAL_SUPPLY / 10);
 
   before('setup UFragments contract', async function () {
     await setupContracts();
@@ -159,7 +165,7 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
 
   it('should increase the totalSupply', async function () {
     b = await uFragments.totalSupply.call();
-    b.should.be.bignumber.eq(initialSupply.plus(rebaseAmt));
+    b.should.be.bignumber.eq(initialSupply.add(rebaseAmt));
   });
 
   it('should increase individual balances', async function () {
@@ -174,8 +180,8 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
     const log = r.logs[0];
     expect(log).to.exist;
     expect(log.event).to.eq('LogRebase');
-    log.args.epoch.should.be.bignumber.eq(1);
-    log.args.totalSupply.should.be.bignumber.eq(initialSupply.plus(rebaseAmt));
+    log.args.epoch.should.be.bignumber.eq(new BN(1));
+    log.args.totalSupply.should.be.bignumber.eq(initialSupply.add(rebaseAmt));
   });
 
   it('should return the new supply', async function () {
@@ -188,14 +194,16 @@ contract('UFragments:Rebase:Expansion', function (accounts) {
 
 contract('UFragments:Rebase:Expansion', function (accounts) {
   const policy = accounts[1];
-  const MAX_SUPPLY = new BigNumber(2).pow(128).minus(1);
+  const MAX_SUPPLY = new BN(2).pow(new BN(128)).sub(new BN(1));
 
   describe('when totalSupply is less than MAX_SUPPLY and expands beyond', function () {
     before('setup UFragments contract', async function () {
       await setupContracts();
       await uFragments.setMonetaryPolicy(policy, {from: deployer});
       const totalSupply = await uFragments.totalSupply.call();
-      await uFragments.rebase(1, MAX_SUPPLY.minus(totalSupply).minus(toUFrgDenomination(1)), {from: policy});
+      await uFragments.rebase(1,
+        MAX_SUPPLY.sub(totalSupply).sub(toUFrgDenomination(1)),
+        {from: policy});
       r = await uFragments.rebase(2, toUFrgDenomination(2), {from: policy});
     });
 
@@ -266,7 +274,7 @@ contract('UFragments:Rebase:NoChange', function (accounts) {
     const log = r.logs[0];
     expect(log).to.exist;
     expect(log.event).to.eq('LogRebase');
-    log.args.epoch.should.be.bignumber.eq(1);
+    log.args.epoch.should.be.bignumber.eq(new BN(1));
     log.args.totalSupply.should.be.bignumber.eq(initialSupply);
   });
 });
@@ -276,7 +284,7 @@ contract('UFragments:Rebase:Contraction', function (accounts) {
   const A = accounts[2];
   const B = accounts[3];
   const policy = accounts[1];
-  const rebaseAmt = INTIAL_SUPPLY / 10;
+  const rebaseAmt = new BN(INTIAL_SUPPLY / 10);
 
   before('setup UFragments contract', async function () {
     await setupContracts();
@@ -288,7 +296,7 @@ contract('UFragments:Rebase:Contraction', function (accounts) {
 
   it('should decrease the totalSupply', async function () {
     b = await uFragments.totalSupply.call();
-    b.should.be.bignumber.eq(initialSupply.minus(rebaseAmt));
+    b.should.be.bignumber.eq(initialSupply.sub(rebaseAmt));
   });
 
   it('should decrease individual balances', async function () {
@@ -303,8 +311,8 @@ contract('UFragments:Rebase:Contraction', function (accounts) {
     const log = r.logs[0];
     expect(log).to.exist;
     expect(log.event).to.eq('LogRebase');
-    log.args.epoch.should.be.bignumber.eq(1);
-    log.args.totalSupply.should.be.bignumber.eq(initialSupply.minus(rebaseAmt));
+    log.args.epoch.should.be.bignumber.eq(new BN(1));
+    log.args.totalSupply.should.be.bignumber.eq(initialSupply.sub(rebaseAmt));
   });
 });
 
@@ -320,7 +328,7 @@ contract('UFragments:Transfer', function (accounts) {
       const deployerBefore = await uFragments.balanceOf.call(deployer);
       await uFragments.transfer(A, toUFrgDenomination(12), { from: deployer });
       b = await uFragments.balanceOf.call(deployer);
-      b.should.be.bignumber.eq(deployerBefore.minus(toUFrgDenomination(12)));
+      b.should.be.bignumber.eq(deployerBefore.sub(toUFrgDenomination(12)));
       b = await uFragments.balanceOf.call(A);
       b.should.be.bignumber.eq(toUFrgDenomination(12));
     });
@@ -331,7 +339,7 @@ contract('UFragments:Transfer', function (accounts) {
       const deployerBefore = await uFragments.balanceOf.call(deployer);
       await uFragments.transfer(B, toUFrgDenomination(15), { from: deployer });
       b = await uFragments.balanceOf.call(deployer);
-      b.should.be.bignumber.eq(deployerBefore.minus(toUFrgDenomination(15)));
+      b.should.be.bignumber.eq(deployerBefore.sub(toUFrgDenomination(15)));
       b = await uFragments.balanceOf.call(B);
       b.should.be.bignumber.eq(toUFrgDenomination(15));
     });
@@ -342,7 +350,7 @@ contract('UFragments:Transfer', function (accounts) {
       const deployerBefore = await uFragments.balanceOf.call(deployer);
       await uFragments.transfer(C, deployerBefore, { from: deployer });
       b = await uFragments.balanceOf.call(deployer);
-      b.should.be.bignumber.eq(0);
+      b.should.be.bignumber.eq(new BN(0));
       b = await uFragments.balanceOf.call(C);
       b.should.be.bignumber.eq(deployerBefore);
     });

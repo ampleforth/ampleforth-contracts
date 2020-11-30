@@ -15,13 +15,13 @@ const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 const encodeCall = require('zos-lib/lib/helpers/encodeCall').default;
-const BigNumber = web3.BigNumber;
+const BN = web3.utils.BN;
 
-const endSupply = new BigNumber(2).pow(128).minus(1);
+const endSupply = new BN(2).pow(new BN(128)).sub(new BN(1));
 
 let uFragments, preRebaseSupply, postRebaseSupply;
-preRebaseSupply = new BigNumber(0);
-postRebaseSupply = new BigNumber(0);
+preRebaseSupply = new BN(0);
+postRebaseSupply = new BN(0);
 
 async function exec () {
   const accounts = await chain.getUserAccounts();

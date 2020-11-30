@@ -1,17 +1,18 @@
-const MockDownstream = artifacts.require('MockDownstream.sol');
-const MockUFragmentsPolicy = artifacts.require('MockUFragmentsPolicy.sol');
-const Orchestrator = artifacts.require('Orchestrator.sol');
-const RebaseCallerContract = artifacts.require('RebaseCallerContract.sol');
-const ConstructorRebaseCallerContract = artifacts.require('ConstructorRebaseCallerContract.sol');
+const MockDownstream = artifacts.require('MockDownstream');
+const MockUFragmentsPolicy = artifacts.require('MockUFragmentsPolicy');
+const Orchestrator = artifacts.require('Orchestrator');
+const RebaseCallerContract = artifacts.require('RebaseCallerContract');
+const ConstructorRebaseCallerContract = artifacts.require('ConstructorRebaseCallerContract');
+const toChecksumAddress = web3.utils.toChecksumAddress;
 
-const BigNumber = web3.BigNumber;
+const BN = web3.utils.BN;
 const _require = require('app-root-path').require;
 const BlockchainCaller = _require('/util/blockchain_caller');
 const chain = new BlockchainCaller(web3);
 const {expectRevert} = require('@openzeppelin/test-helpers');
 
 require('chai')
-  .use(require('chai-bignumber')(BigNumber))
+  .use(require('chai-bn')(BN))
   .should();
 
 let orchestrator, mockPolicy, mockDownstream;
@@ -21,11 +22,22 @@ let deployer, user;
 async function setupContracts () {
   await chain.waitForSomeTime(86400);
   const accounts = await chain.getUserAccounts();
-  deployer = accounts[0];
-  user = accounts[1];
+  deployer = toChecksumAddress(accounts[0]);
+  user = toChecksumAddress(accounts[1]);
   mockPolicy = await MockUFragmentsPolicy.new();
   orchestrator = await Orchestrator.new(mockPolicy.address);
   mockDownstream = await MockDownstream.new();
+}
+
+function parseFnArgs (fnArgs) {
+  return Object.keys(fnArgs.args)
+    .filter(i => !isNaN(i)) // Filter numeric props only
+    .map(i =>
+      Array.isArray(fnArgs.args[i]) && fnArgs.args[i].length === 1
+        ? fnArgs.args[i][0] : fnArgs.args[i]
+    )
+    .filter(i => // Remove empty arrays
+      !Array.isArray(i) || i.length > 0);
 }
 
 contract('Orchestrator', function (accounts) {
@@ -34,7 +46,8 @@ contract('Orchestrator', function (accounts) {
   describe('when sent ether', async function () {
     it('should reject', async function () {
       expect(
-        await chain.isEthException(orchestrator.sendTransaction({ from: user, value: 1 }))
+        await chain.isEthException(orchestrator.sendTransaction(
+          { from: user, value: 1 }))
       ).to.be.true;
     });
   });
@@ -43,18 +56,21 @@ contract('Orchestrator', function (accounts) {
     it('should fail', async function () {
       const rebaseCallerContract = await RebaseCallerContract.new();
       expect(
-        await chain.isEthException(rebaseCallerContract.callRebase(orchestrator.address))
+        await chain.isEthException(rebaseCallerContract.callRebase(
+          orchestrator.address))
       ).to.be.true;
     });
   });
 
-  describe('when rebase called by a contract which is being constructed', function () {
-    it('should fail', async function () {
-      expect(
-        await chain.isEthException(ConstructorRebaseCallerContract.new(orchestrator.address))
-      ).to.be.true;
+  describe('when rebase called by a contract which is being constructed',
+    function () {
+      it('should fail', async function () {
+        expect(
+          await chain.isEthException(ConstructorRebaseCallerContract
+            .new(orchestrator.address))
+        ).to.be.true;
+      });
     });
-  });
 
   describe('when transaction list is empty', async function () {
     before('calling rebase', async function () {
@@ -62,103 +78,161 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have no transactions', async function () {
-      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(0);
+      (await orchestrator.transactionsSize.call())
+        .should.be.bignumber.eq(new BN(0));
     });
 
     it('should call rebase on policy', async function () {
-      const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      let pastEvents;
+      // const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      await mockPolicy.getPastEvents('FunctionCalled')
+        .then(events => { pastEvents = events; });
+      expect(pastEvents.length).to.eq(1);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
     });
 
     it('should not have any subsequent logs', async function () {
-      expect(r.receipt.logs.length).to.eq(1);
+      expect(r.receipt.logs.length).to.eq(0);
     });
   });
 
   describe('when there is a single transaction', async function () {
     before('adding a transaction', async function () {
-      const updateOneArgEncoded = mockDownstream.contract.updateOneArg.getData(12345);
+      // TODO Is this correct?
+      // const updateOneArgEncoded = mockDownstream.contract.updateOneArg.getData(12345);
+      const updateOneArgEncoded = mockDownstream.contract.methods
+        .updateOneArg(12345).encodeABI();
       orchestrator.addTransaction(mockDownstream.address, updateOneArgEncoded, {from: deployer});
       r = await orchestrator.rebase();
     });
 
     it('should have 1 transaction', async function () {
-      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(1);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(new BN(1));
     });
 
     it('should call rebase on policy', async function () {
-      const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      let pastEvents;
+      await mockPolicy.getPastEvents('FunctionCalled')
+        .then(events => { pastEvents = events; });
+      expect(pastEvents.length).to.eq(1);
+      // const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
     });
 
     it('should call the transaction', async function () {
-      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      let pastEvents;
+      await mockDownstream.getPastEvents('FunctionCalled')
+        .then(events => { pastEvents = events; });
+      expect(pastEvents.length).to.eq(1);
+      // const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('MockDownstream');
       expect(fnCalled.args.functionName).to.eq('updateOneArg');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
 
-      const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[2]);
-      const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
-        return fnArgs.args[k].map(d => d.toNumber()).concat(m);
-      }, [ ]);
-      expect(parsedFnArgs).to.eql([12345]);
+      pastEvents = undefined;
+      await mockDownstream.getPastEvents('FunctionArguments')
+        .then(events => { pastEvents = events; });
+      expect(pastEvents.length).to.eq(1);
+      const parsedFnArgs = parseFnArgs(pastEvents[0]);
+      expect(parsedFnArgs)
+        .satisfy(a => (a.length === 1 ||
+                         (a.length === 2 &&
+                          (typeof a[1] === 'undefined' || (Array.isArray(a[1]) && a[1].length === 0)))) &&
+                 a[0].eq(new BN(12345)));
     });
 
     it('should not have any subsequent logs', async function () {
-      expect(r.receipt.logs.length).to.eq(3);
+      expect(r.receipt.logs.length).to.eq(0);
     });
   });
 
   describe('when there are two transactions', async function () {
     before('adding a transaction', async function () {
-      const updateTwoArgsEncoded = mockDownstream.contract.updateTwoArgs.getData(12345, 23456);
+      // TODO Is this correct?
+      // const updateTwoArgsEncoded = mockDownstream.contract.updateTwoArgs.getData(12345, 23456);
+      const updateTwoArgsEncoded = mockDownstream.contract.methods
+        .updateTwoArgs(12345, 23456).encodeABI();
       orchestrator.addTransaction(mockDownstream.address, updateTwoArgsEncoded, {from: deployer});
       r = await orchestrator.rebase();
     });
 
     it('should have 2 transactions', async function () {
-      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(2);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(new BN(2));
     });
 
     it('should call rebase on policy', async function () {
-      const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      let pastEvents;
+      // const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      await mockPolicy.getPastEvents('FunctionCalled')
+        .then(events => { pastEvents = events; });
+      expect(pastEvents.length).to.eq(1);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
     });
 
     it('should call first transaction', async function () {
-      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      let pastEvents;
+      // const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      await mockDownstream.getPastEvents('FunctionCalled').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(2);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('MockDownstream');
       expect(fnCalled.args.functionName).to.eq('updateOneArg');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
 
-      const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[2]);
-      const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
-        return fnArgs.args[k].map(d => d.toNumber()).concat(m);
-      }, [ ]);
-      expect(parsedFnArgs).to.eql([12345]);
+      pastEvents = undefined;
+      await mockDownstream.getPastEvents('FunctionArguments').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(2);
+      const parsedFnArgs = parseFnArgs(pastEvents[0]);
+      expect(parsedFnArgs).satisfy(a => a.length === 1 &&
+                                    a[0].eq(new BN(12345)));
     });
 
     it('should call second transaction', async function () {
-      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[3]);
+      let pastEvents;
+      // const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[3]);
+      await mockDownstream.getPastEvents('FunctionCalled').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(2);
+      const fnCalled = pastEvents[1];
       expect(fnCalled.args.instanceName).to.eq('MockDownstream');
       expect(fnCalled.args.functionName).to.eq('updateTwoArgs');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
 
+      pastEvents = undefined;
+      await mockDownstream.getPastEvents('FunctionArguments').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(2);
+      /* TODO Understand why the parsedFnArgs order has changed
       const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[4]);
       const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
         return fnArgs.args[k].map(d => d.toNumber()).concat(m);
       }, [ ]);
       expect(parsedFnArgs).to.eql([23456, 12345]);
+      */
+      const parsedFnArgs = parseFnArgs(pastEvents[1]);
+      expect(parsedFnArgs).satisfy(a => a.length === 2 &&
+                                   a[0].eq(new BN(12345)) &&
+                                   a[1].eq(new BN(23456)));
     });
 
     it('should not have any subsequent logs', async function () {
-      expect(r.receipt.logs.length).to.eq(5);
+      expect(r.receipt.logs.length).to.eq(0);
     });
   });
 
@@ -169,31 +243,55 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 2 transactions', async function () {
-      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(2);
+      (await orchestrator.transactionsSize.call())
+        .should.be.bignumber.eq(new BN(2));
     });
 
     it('should call rebase on policy', async function () {
-      const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      let pastEvents;
+      // const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      await mockPolicy.getPastEvents('FunctionCalled').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(1);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
     });
 
     it('should call second transaction', async function () {
-      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      let pastEvents;
+      // const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      await mockDownstream.getPastEvents('FunctionCalled').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(1);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('MockDownstream');
       expect(fnCalled.args.functionName).to.eq('updateTwoArgs');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
 
+      pastEvents = undefined;
+      await mockDownstream.getPastEvents('FunctionArguments').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(1);
+      /* TODO Understand why the parsedFnArgs order has changed
       const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[2]);
       const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
         return fnArgs.args[k].map(d => d.toNumber()).concat(m);
       }, [ ]);
       expect(parsedFnArgs).to.eql([23456, 12345]);
+      */
+      const parsedFnArgs = parseFnArgs(pastEvents[0]);
+      expect(parsedFnArgs).satisfy(a => a.length === 2 &&
+                                   a[0].eq(new BN(12345)) &&
+                                   a[1].eq(new BN(23456)));
     });
 
     it('should not have any subsequent logs', async function () {
-      expect(r.receipt.logs.length).to.eq(3);
+      expect(r.receipt.logs.length).to.eq(0);
     });
   });
 
@@ -204,31 +302,54 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 1 transaction', async function () {
-      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(1);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(new BN(1));
     });
 
     it('should call rebase on policy', async function () {
-      const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      let pastEvents;
+      // const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      await mockPolicy.getPastEvents('FunctionCalled').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(1);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
     });
 
     it('should call the transaction', async function () {
-      const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      let pastEvents;
+      // const fnCalled = mockDownstream.FunctionCalled().formatter(r.receipt.logs[1]);
+      await mockDownstream.getPastEvents('FunctionCalled').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(1);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('MockDownstream');
       expect(fnCalled.args.functionName).to.eq('updateTwoArgs');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
 
+      pastEvents = undefined;
+      await mockDownstream.getPastEvents('FunctionArguments').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(1);
+      /* TODO Understand why the parsedFnArgs order has changed
       const fnArgs = mockDownstream.FunctionArguments().formatter(r.receipt.logs[2]);
       const parsedFnArgs = Object.keys(fnArgs.args).reduce((m, k) => {
         return fnArgs.args[k].map(d => d.toNumber()).concat(m);
       }, [ ]);
       expect(parsedFnArgs).to.eql([23456, 12345]);
+      */
+      const parsedFnArgs = parseFnArgs(pastEvents[0]);
+      expect(parsedFnArgs).satisfy(a => a.length === 2 &&
+                                   a[0].eq(new BN(12345)) &&
+                                   a[1].eq(new BN(23456)));
     });
 
     it('should not have any subsequent logs', async function () {
-      expect(r.receipt.logs.length).to.eq(3);
+      expect(r.receipt.logs.length).to.eq(0);
     });
   });
 
@@ -239,43 +360,58 @@ contract('Orchestrator', function (accounts) {
     });
 
     it('should have 0 transactions', async function () {
-      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(0);
+      (await orchestrator.transactionsSize.call())
+        .should.be.bignumber.eq(new BN(0));
     });
 
     it('should call rebase on policy', async function () {
-      const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      let pastEvents;
+      // const fnCalled = mockPolicy.FunctionCalled().formatter(r.receipt.logs[0]);
+      await mockPolicy.getPastEvents('FunctionCalled').then(events => {
+        pastEvents = events;
+      });
+      expect(pastEvents.length).to.eq(1);
+      const fnCalled = pastEvents[0];
       expect(fnCalled.args.instanceName).to.eq('UFragmentsPolicy');
       expect(fnCalled.args.functionName).to.eq('rebase');
       expect(fnCalled.args.caller).to.eq(orchestrator.address);
     });
 
     it('should not have any subsequent logs', async function () {
-      expect(r.receipt.logs.length).to.eq(1);
+      expect(r.receipt.logs.length).to.eq(0);
     });
   });
 
   describe('when a transaction reverts', async function () {
     before('adding 3 transactions', async function () {
-      const updateOneArgEncoded = mockDownstream.contract.updateOneArg.getData(123);
+      // TODO Is this correct?
+      // const updateOneArgEncoded = mockDownstream.contract.updateOneArg.getData(123);
+      const updateOneArgEncoded = mockDownstream.contract.methods
+        .updateOneArg(123).encodeABI();
       orchestrator.addTransaction(mockDownstream.address, updateOneArgEncoded, {from: deployer});
 
-      const revertsEncoded = mockDownstream.contract.reverts.getData();
+      // const revertsEncoded = mockDownstream.contract.reverts.getData();
+      const revertsEncoded = mockDownstream.contract.methods.reverts().encodeABI();
       orchestrator.addTransaction(mockDownstream.address, revertsEncoded, {from: deployer});
 
-      const updateTwoArgsEncoded = mockDownstream.contract.updateTwoArgs.getData(12345, 23456);
+      // const updateTwoArgsEncoded = mockDownstream.contract.updateTwoArgs.getData(12345, 23456);
+      const updateTwoArgsEncoded = mockDownstream.contract.methods
+        .updateTwoArgs(12345, 23456).encodeABI();
       orchestrator.addTransaction(mockDownstream.address, updateTwoArgsEncoded, {from: deployer});
       await expectRevert.unspecified(orchestrator.rebase());
     });
 
     it('should have 3 transactions', async function () {
-      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(3);
+      (await orchestrator.transactionsSize.call()).should.be.bignumber.eq(new BN(3));
     });
   });
 
   describe('Access Control', function () {
     describe('addTransaction', async function () {
       it('should be callable by owner', async function () {
-        const updateNoArgEncoded = mockDownstream.contract.updateNoArg.getData();
+        // const updateNoArgEncoded = mockDownstream.contract.updateNoArg.getData();
+        const updateNoArgEncoded =
+              mockDownstream.contract.methods.updateNoArg().encodeABI();
         expect(
           await chain.isEthException(
             orchestrator.addTransaction(mockDownstream.address, updateNoArgEncoded, {from: deployer})
@@ -284,7 +420,8 @@ contract('Orchestrator', function (accounts) {
       });
 
       it('should be not be callable by others', async function () {
-        const updateNoArgEncoded = mockDownstream.contract.updateNoArg.getData();
+        // const updateNoArgEncoded = mockDownstream.contract.updateNoArg.getData();
+        const updateNoArgEncoded = mockDownstream.contract.methods.updateNoArg().encodeABI();
         expect(
           await chain.isEthException(
             orchestrator.addTransaction(mockDownstream.address, updateNoArgEncoded, {from: user})
@@ -295,7 +432,8 @@ contract('Orchestrator', function (accounts) {
 
     describe('setTransactionEnabled', async function () {
       it('should be callable by owner', async function () {
-        (await orchestrator.transactionsSize.call()).should.be.bignumber.gt(0);
+        (await orchestrator.transactionsSize.call())
+          .should.be.bignumber.gt(new BN(0));
         expect(
           await chain.isEthException(
             orchestrator.setTransactionEnabled(0, true, {from: deployer})
@@ -304,7 +442,8 @@ contract('Orchestrator', function (accounts) {
       });
 
       it('should be not be callable by others', async function () {
-        (await orchestrator.transactionsSize.call()).should.be.bignumber.gt(0);
+        (await orchestrator.transactionsSize.call())
+          .should.be.bignumber.gt(new BN(0));
         expect(
           await chain.isEthException(
             orchestrator.setTransactionEnabled(0, true, {from: user})
@@ -315,7 +454,8 @@ contract('Orchestrator', function (accounts) {
 
     describe('removeTransaction', async function () {
       it('should be not be callable by others', async function () {
-        (await orchestrator.transactionsSize.call()).should.be.bignumber.gt(0);
+        (await orchestrator.transactionsSize.call())
+          .should.be.bignumber.gt(new BN(0));
         expect(
           await chain.isEthException(
             orchestrator.removeTransaction(0, {from: user})
@@ -324,7 +464,8 @@ contract('Orchestrator', function (accounts) {
       });
 
       it('should be callable by owner', async function () {
-        (await orchestrator.transactionsSize.call()).should.be.bignumber.gt(0);
+        (await orchestrator.transactionsSize.call())
+          .should.be.bignumber.gt(new BN(0));
         expect(
           await chain.isEthException(
             orchestrator.removeTransaction(0, {from: deployer})

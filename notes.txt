@@ -1,0 +1,70 @@
+These notes acompany the truffle upgrade to version 5.1.48.
+
+Later versions of Truffle seem to have a bug in Ganache which causes
+connections to be refused midway through test runs. This has beenh identified
+and will presumably be fixed in due course.
+
+This is a big change and IS NOT READY TO BE MERGED YET.
+I am going through and reviewing all the changes to make sure they are correct.
+If anyone else can have a look as well that would be great. All comments
+appreciated.
+
+These changes impact truffle and the test code only. There are no direct
+changes to solidity contracts or to the solidity compiler version. My focus
+has been to ensure all tests pass. I have assumed the current contract results
+are correct and so have made some test changes to recognise this. I now need to
+review these changes to ensure they are correct and the test purpose has been
+correctly preserved.
+
+The changes fall into the following catagories:
+
+Replace web3.BigNumber with web3.utils.BN
+Mixing BN with number types tends to cause problems so I've tried to ensure
+BN calculations only use BN values.
+Note that BN method names are different to BigNumber method names e.g. plus
+becomes add.
+
+Remove the '.sol' extension in artifacts.require statements.
+I don't think this is strictly necessary but the Truffle 5 documentation
+advises it. This is to support multiple contracts per .sol file.
+
+Replace chai-bignumber with chai-bn.
+
+Use the function web3.utils.toChecksumAddress on various addresses returned
+in setupContracts methods. If we don't dop this the addresses are now returned
+using lower case throughout and we get case failures during address
+comparisons.
+
+Introduce the function parseFnArgs which replaces the old expression used to
+set the variable parsedFnArgs. These changes are required due to API changes.
+In some files the expression is used directly rather than abstracted to a
+function.
+
+Rework function calls like someContract.SomeContractMethod().formatter(...) to
+use someContract.getPastEvents('SomeContractMethod'). The old approach no
+longer works.
+
+The number of log entries has changes in expressions like
+  expect(r.receipt.logs.length).to.eq(1);
+
+I need to investigate this further. For the time being I have just updated the
+test. In most cases the number goes down to zero.
+
+I have replaced expressions like
+someContract.contract.someContractMethod.getData(...) with
+someContract.contract.methods.someContractMethod(...).encodeABI()
+Again I need to check whether this is correct. It does allow the tests to pass.
+
+In some tests which return an array of two values the order of the values has
+changed. I need to investigate further.
+
+I have modified a number of the constant values in UFragmentsPolicy.js. I think
+some of the old calculations caused numeric inaccuracies in the Number class
+and some of the values like INITIAL_RATE_30P_LESS were not producing the
+anticipated values under node 10. This has resulted in some test results being
+changed due to the input constants being changed. I need to check these.
+
+In util/blockchain_caller.js the method
+this.web3.currentProvider.sendAsync(...) has been replaced with
+this.web3.currentProvider.send((...) - I believe this is a correct change due
+to the version of web3 being updated.

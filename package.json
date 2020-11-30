@@ -35,20 +35,20 @@
     "frg-ethereum-runners": "https://github.com/ampleforth/frg-ethereum-runners.git#v1.0.0-alpha",
     "js-yaml": "^3.13.1",
     "openzeppelin-eth": "2.0.2",
-    "truffle": "4.1.14"
+    "truffle": "5.1.48"
   },
   "devDependencies": {
-    "@openzeppelin/test-environment": "^0.1.2",
+    "@openzeppelin/test-environment": "^0.1.6",
     "@openzeppelin/test-helpers": "^0.5.4",
-    "chai": "^4.1.2",
-    "chai-bignumber": "^2.0.2",
+    "chai": "^4.2.0",
+    "chai-bn": "^0.2.1",
     "coveralls": "^3.0.2",
     "eslint": "^4.19.1",
     "eslint-config-google": "^0.9.1",
     "eslint-config-mocha": "0.0.0",
     "eslint-config-prettier": "^2.9.0",
     "eslint-config-standard": "^5.3.5",
-    "eslint-plugin-chai-friendly": "^0.4.1",
+    "eslint-plugin-chai-friendly": "^0.6.0",
     "eslint-plugin-import": "^1.16.0",
     "eslint-plugin-mocha-only": "0.0.3",
     "eslint-plugin-prettier": "^2.6.0",
@@ -60,6 +60,7 @@
     "solhint": "^1.1.10",
     "solidity-coverage": "0.5.8",
     "stochasm": "^0.5.0",
+    "web3": "1.2.11",
     "zos-lib": "^2.2.2"
   }
 }
