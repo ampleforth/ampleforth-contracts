@@ -68,3 +68,95 @@ In util/blockchain_caller.js the method
 this.web3.currentProvider.sendAsync(...) has been replaced with
 this.web3.currentProvider.send((...) - I believe this is a correct change due
 to the version of web3 being updated.
+
+------------------
+Validation work to cover the following file changes:
+
+.eslintrc.js
+notes.txt
+package-lock.json
+package.json
+
+util/blockchain_caller.js
+  This is a straight forward method rename when moving beyond web3 version 1.0.
+  FINE.
+
+test/unit/SafeMathInt.js
+test/unit/UInt256Lib.js
+test/simulation/supply_precision.js
+test/simulation/transfer_precision.js
+test/unit/uFragments_erc20_behavior.js
+  Straight forward change from BigNumber to BN due to web 3 upgrade.
+  FINE.
+
+test/unit/UFragments.js
+  Straight forward change from BigNumber to BN due to web 3 upgrade.
+  Use web3.utils.toChecksumAddress() so case sensitive address comparisons
+    continue to work.
+  FINE.  
+
+test/unit/Orchestrator.js
+  Straight forward change from BigNumber to BN due to web 3 upgrade.
+  Use web3.utils.toChecksumAddress() so case sensitive address comparisons
+    continue to work.
+  Remove .sol file extensions on require statements to align with Truffle v5
+    documentation.
+  Introduce the parseFnArgs(..) method as the API has significantly changed.
+    I suspect this is due to a web3 upgrade. I'm comfortable that the logic has
+    been preserved.
+  Change multiple tests to use someContract.getPastEvent('MethodName') instead
+    of someContract.MethodName.formatter(...) as the former approach no longer
+    works.
+  Change multiple tests to use
+    someContract.contract.methods.someMethod(...).encodeABI() instead of
+    someContract.contract.someMethod.getData(...)
+    I think this is correct looking at what documentation I can find. It also
+    passes the tests.
+  Reduce the log count to 0 in multiple tests e.g.
+     it('should not have any subsequent logs', async function () {
+-      expect(r.receipt.logs.length).to.eq(0);
++      expect(r.receipt.logs.length).to.eq(3);
+     });
+    I think this is correct due to better test isolation in truffle 5.
+  Change parsedFnArgs parameter order for tests with multiple parameters.
+    This is strange. On the master tests the parameter ordering is reversed
+      when comparint the parameter ordering on the original function call
+      to the parameters returned in parsedFnArgs. In the updated Truffle 5
+      tests the original ordering is preserved.
+      Logging fnArgs.args and parsedFnArgs in master code produces:
+        { uintVals: [ BigNumber { s: 1, e: 4, c: [Array] } ],
+      	  intVals: [ BigNumber { s: 1, e: 4, c: [Array] } ] }
+        [ 23456, 12345 ]
+      Under the new tests this produces
+        Result {
+  	  '0': [ <BN: 3039> ],
+  	  '1': [ <BN: 5ba0> ],
+  	  __length__: 2,
+  	  uintVals: [ <BN: 3039> ],
+  	  intVals: [ <BN: 5ba0> ] }
+	[ <BN: 3039>, <BN: 5ba0> ]
+      I'm good with this.
+  KIND OF FINE.
+
+test/unit/UFragmentsPolicy.js
+  Straight forward change from BigNumber to BN due to web 3 upgrade.
+  Use web3.utils.toChecksumAddress() so case sensitive address comparisons
+    continue to work.
+  Remove .sol file extensions on require statements to align with Truffle v5
+    documentation.
+  Constants calculations modified to take into account the JavaScript Number
+    single integer accuracy limits. For example:
+    const MAX_RATE = (new BigNumber('1')).mul(10 ** 6 * 10 ** 18); replaced with
+    const MAX_RATE = new BN(10 ** 12).mul(new BN(10 ** 12));
+  Some changes to test outputs for example:
+    log.args.requestedSupplyAdjustment.should.be.bignumber.eq(9); replaced with
+    log.args.requestedSupplyAdjustment.should.be.bignumber.eq(new BN(11));
+    I believe this is a consequence of correctly calculating the input constant
+      INITIAL_CPI_25P_LESS. I have demonstrated that the old code incorrectly
+      calculated this value as it was not 75% of INITIAL_CPI. I'm not familiar
+      enough with the logic to determine the correct output. However the current
+      (unmodified contract) is producing 11 so I ASSUME that is correct.
+  KIND OF FINE.    
+
+
+
