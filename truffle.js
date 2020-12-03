@@ -1,3 +1,4 @@
+
 const connectionConfig = require('frg-ethereum-runners/config/network_config.json');
 
 module.exports = {
@@ -6,6 +7,7 @@ module.exports = {
     gethUnitTest: connectionConfig.gethUnitTest,
     testrpcCoverage: connectionConfig.testrpcCoverage
   },
+  plugins: ['solidity-coverage'],
   compilers: {
     solc: {
       version: '0.4.24',

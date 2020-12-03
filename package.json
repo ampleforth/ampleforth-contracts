@@ -58,7 +58,7 @@
     "lodash": ">=4.17.13",
     "pre-commit": "^1.2.2",
     "solhint": "^1.1.10",
-    "solidity-coverage": "0.5.8",
+    "solidity-coverage": "0.6.7",
     "stochasm": "^0.5.0",
     "web3": "1.2.11",
     "zos-lib": "^2.2.2"
