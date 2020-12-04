@@ -19,7 +19,7 @@
   "author": "dev-support@ampleforth.org",
   "scripts": {
     "precommit": "./scripts/pre-commit.sh",
-    "coverage": "npx frg-coverage",
+    "coverage": "npx truffle run coverage",
     "lint": "npx eslint ./scripts ./test ./util *.js --cache --fix && npx solhint ./contracts/*.sol ./contracts/*/*.sol",
     "setup-ganache": "npx start-chain ganacheUnitTest && npm run deploy-contracts ganacheUnitTest",
     "test": "./scripts/test.sh"
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "app-root-path": "2.1.0",
-    "frg-ethereum-runners": "https://github.com/ampleforth/frg-ethereum-runners.git#v1.0.0-alpha",
+    "frg-ethereum-runners": "https://github.com/ampleforth/frg-ethereum-runners.git#v1.0.2",
     "js-yaml": "^3.13.1",
     "openzeppelin-eth": "2.0.2",
     "truffle": "5.1.48"
@@ -58,7 +58,7 @@
     "lodash": ">=4.17.13",
     "pre-commit": "^1.2.2",
     "solhint": "^1.1.10",
-    "solidity-coverage": "0.6.7",
+    "solidity-coverage": "0.7.13",
     "stochasm": "^0.5.0",
     "web3": "1.2.11",
     "zos-lib": "^2.2.2"

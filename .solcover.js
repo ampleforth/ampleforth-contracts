@@ -13,3 +13,6 @@ module.exports = {
     skipFiles: ['mocks'],
     copyPackages: ['openzeppelin-eth'],
 };
+
+const DIR = './node_modules/.bin'
+console.log('.solcover.js running...')
