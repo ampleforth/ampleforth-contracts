@@ -1,7 +1,5 @@
 # Ahoj.Token
 
-Ahoj
-
 Ahoj.Token is a decentralized elastic supply protocol. It is forked from Ampleforth which operates under the codename "uFragments". This monetary protocol maintains a stable unit price by adjusting supply directly to and from wallet holders.
 
 This repository is a collection of smart contracts that implement the Ahoj.Token protocol on the Ethereum blockchain.
