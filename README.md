@@ -60,7 +60,7 @@ npx start-chain [ganacheUnitTest|gethUnitTest]
 npm test
 
 # Run unit tests in isolation
-npx truffle --network ganacheUnitTest test test/unit/uFragments.js
+npx truffle --network ganacheUnitTest test test/unit/ahoj.js
 ```
 
 ## Contribute
