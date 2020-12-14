@@ -1,7 +1,7 @@
 {
-  "name": "uFragments",
+  "name": "ahoj.token",
   "version": "0.0.1",
-  "description": "Ampleforth protocol smart contracts on Ethereum.",
+  "description": "Ahoj.Token protocol runs on Avalanche.",
   "keywords": [
     "ethereum",
     "smart-contracts",
@@ -16,7 +16,7 @@
     "url": "git+https://github.com/ampleforth/uFragments.git"
   },
   "license": "ISC",
-  "author": "dev-support@ampleforth.org",
+  "author": "hello@bayro.io",
   "scripts": {
     "precommit": "./scripts/pre-commit.sh",
     "coverage": "npx frg-coverage",
