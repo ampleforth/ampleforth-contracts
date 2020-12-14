@@ -6,7 +6,7 @@ This repository is a collection of smart contracts that implement the Ahoj.Token
 
 The challenge with the Ahoj.Token protocol is to coordinate the balance of the Ahoj assets issued on the X-chain and exported to the C-chain. The first approach adopted is that in the original Ampleforth / uFragment protocol the "gnos" can be considered the existing Ahoj assets in the C-chain.
 
-Ahoj is a Czech word from English ahoy. *Hello*: informal greeting said when meeting someone. *Bye*: informal farewell.
+Ahoj is a Czech word from English ahoy. The word Ahoj is used to say *Hello* (informal greeting said when meeting someone) or inclusive to say *Bye* (informal farewell).
 
 ## Mainnet
 The official Avalanche mainnet addresses are:
