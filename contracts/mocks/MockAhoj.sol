@@ -18,7 +18,7 @@ contract MockAhoj is Mock {
         public
         returns (uint256)
     {
-        emit FunctionCalled("UFragments", "rebase", msg.sender);
+        emit FunctionCalled("Ahoj", "rebase", msg.sender);
         uint256[] memory uintVals = new uint256[](1);
         uintVals[0] = epoch;
         int256[] memory intVals = new int256[](1);
