@@ -11,7 +11,7 @@ Ahoj is a Czech word from English ahoy. *Hello*: informal greeting said when mee
 ## Mainnet
 The official Avalanche mainnet addresses are:
 ### X-chain
-- Asset:
+- Asset Id: TBD
 
 ### C-chain
 - ERC-20 Token: TBD
