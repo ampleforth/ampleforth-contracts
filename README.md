@@ -66,7 +66,7 @@ npx truffle --network ganacheUnitTest test test/unit/ahoj.js
 ## Contribute
 
 To report bugs within this package, create an issue in this repository.
-For security issues, please contact dev-support@ampleforth.org.
+For security issues, please contact hello@bayro.io
 When submitting code ensure that it is free of lint errors and has 100% test coverage.
 
 ``` bash
