@@ -2,7 +2,7 @@
 
 Ahoj.Token is a decentralized elastic supply protocol. It is forked from Ampleforth which operates under the codename "uFragments". This monetary protocol maintains a stable unit price by adjusting supply directly to and from wallet holders.
 
-This repository is a collection of smart contracts that implement the Ahoj.Token protocol on the Ethereum blockchain.
+This repository is a collection of smart contracts that implement the Ahoj.Token protocol on Avalanche.
 
 The challenge with the Ahoj.Token protocol is to coordinate the balance of the Ahoj assets issued on the X-chain and exported to the C-chain. The first approach adopted is that in the original Ampleforth / uFragment protocol the "gnos" can be considered the existing Ahoj assets in the C-chain.
 
@@ -10,6 +10,10 @@ Ahoj is a Czech word from English ahoy. *Hello*: informal greeting said when mee
 
 ## Mainnet
 The official Avalanche mainnet addresses are:
+# X-chain
+- Asset:
+
+# C-chain
 - ERC-20 Token: TBD
 - Supply Policy: TBD
 - Orchestrator: TBD
@@ -17,7 +21,11 @@ The official Avalanche mainnet addresses are:
 - CPI Oracle: TBD
 
 ## Testnet
-There is a testnet deployment on Avalanche Fuji. It rebases hourly using real market data.
+There is a testnet deployment on Avalanche Fuji.
+# X-chain
+- Asset Id: 2pGHaiML1aAPtV5x9H5TNEYFJPK4DeJgBAT8C784U6WTfBd6VF
+
+# C-chain
 - ERC-20 Token: TBD
 - Supply Policy: TBD
 - Orchestrator: TBD
