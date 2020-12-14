@@ -3,17 +3,17 @@
   "version": "0.0.1",
   "description": "Ahoj.Token protocol runs on Avalanche.",
   "keywords": [
-    "ethereum",
+    "avalanche",
     "smart-contracts",
-    "solidity"
+    "solidity",
+    "defi",
+    "stablecoin",
+    "bayro",
+    "avax"
   ],
-  "homepage": "https://github.com/ampleforth/uFragments#readme",
+  "homepage": "https://github.com/bayroio/AhojToken#readme",
   "bugs": {
-    "url": "https://github.com/ampleforth/uFragments/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ampleforth/uFragments.git"
+    "url": "https://github.com/bayroio/AhojToken/issues"
   },
   "license": "ISC",
   "author": "hello@bayro.io",
