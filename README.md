@@ -23,10 +23,10 @@ The official Avalanche mainnet addresses are:
 ## Testnet
 There is a testnet deployment on Avalanche Fuji.
 ### X-chain
-- Asset Id: 2pGHaiML1aAPtV5x9H5TNEYFJPK4DeJgBAT8C784U6WTfBd6VF
+- Ahoj Token (Asset Id): 2pGHaiML1aAPtV5x9H5TNEYFJPK4DeJgBAT8C784U6WTfBd6VF
 
 ### C-chain
-- ERC-20 Token: TBD
+- Ahoj Token (ERC-20): TBD
 - Supply Policy: TBD
 - Orchestrator: TBD
 - Market Oracle: TBD
