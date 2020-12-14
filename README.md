@@ -10,10 +10,10 @@ Ahoj is a Czech word from English ahoy. *Hello*: informal greeting said when mee
 
 ## Mainnet
 The official Avalanche mainnet addresses are:
-# X-chain
+### X-chain
 - Asset:
 
-# C-chain
+### C-chain
 - ERC-20 Token: TBD
 - Supply Policy: TBD
 - Orchestrator: TBD
@@ -22,10 +22,10 @@ The official Avalanche mainnet addresses are:
 
 ## Testnet
 There is a testnet deployment on Avalanche Fuji.
-# X-chain
+### X-chain
 - Asset Id: 2pGHaiML1aAPtV5x9H5TNEYFJPK4DeJgBAT8C784U6WTfBd6VF
 
-# C-chain
+### C-chain
 - ERC-20 Token: TBD
 - Supply Policy: TBD
 - Orchestrator: TBD
