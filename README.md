@@ -1,23 +1,35 @@
-# Ampleforth
+# Ahoj.Token
 
-[![Build Status](https://travis-ci.com/ampleforth/uFragments.svg?token=xxNsLhLrTiyG3pc78i5v&branch=master)](https://travis-ci.com/ampleforth/uFragments)&nbsp;&nbsp;[![Coverage Status](https://coveralls.io/repos/github/frgprotocol/uFragments/badge.svg?branch=master&t=GiWi8p)](https://coveralls.io/github/frgprotocol/uFragments?branch=master)
+Ahoj
 
-Ampleforth (code name uFragments) is a decentralized elastic supply protocol. It maintains a stable unit price by adjusting supply directly to and from wallet holders. You can read the [whitepaper](https://www.ampleforth.org/paper/) for the motivation and a complete description of the protocol.
+Ahoj.Token is a decentralized elastic supply protocol. It is forked from Ampleforth which operates under the codename "uFragments". This monetary protocol maintains a stable unit price by adjusting supply directly to and from wallet holders.
 
-This repository is a collection of [smart contracts](http://ampleforth.org/docs) that implement the Ampleforth protocol on the Ethereum blockchain.
+This repository is a collection of smart contracts that implement the Ahoj.Token protocol on the Ethereum blockchain.
 
-The official mainnet addresses are:
-- ERC-20 Token: [0xD46bA6D942050d489DBd938a2C909A5d5039A161](https://etherscan.io/token/0xd46ba6d942050d489dbd938a2c909a5d5039a161)
-- Supply Policy: [0x1B228a749077b8e307C5856cE62Ef35d96Dca2ea](https://etherscan.io/address/0x1b228a749077b8e307c5856ce62ef35d96dca2ea)
-- Orchestrator: [0x6fb00a180781e75f87e2b690af0196baa77c7e7c](https://etherscan.io/address/0x6fb00a180781e75f87e2b690af0196baa77c7e7c)
-- Market Oracle: [0x99c9775e076fdf99388c029550155032ba2d8914](https://etherscan.io/address/0x99c9775e076fdf99388c029550155032ba2d8914)
-- CPI Oracle: [0xa759f960dd59a1ad32c995ecabe802a0c35f244f](https://etherscan.io/address/0xa759f960dd59a1ad32c995ecabe802a0c35f244f)
+The challenge with the Ahoj.Token protocol is to coordinate the balance of the Ahoj assets issued on the X-chain and exported to the C-chain. The first approach adopted is that in the original Ampleforth / uFragment protocol the "gnos" can be considered the existing Ahoj assets in the C-chain.
+
+Ahoj is a Czech word from English ahoy. *Hello*: informal greeting said when meeting someone. *Bye*: informal farewell.
+
+## Mainnet
+The official Avalanche mainnet addresses are:
+- ERC-20 Token: TBD
+- Supply Policy: TBD
+- Orchestrator: TBD
+- Market Oracle: TBD
+- CPI Oracle: TBD
+
+## Testnet
+There is a testnet deployment on Avalanche Fuji. It rebases hourly using real market data.
+- ERC-20 Token: TBD
+- Supply Policy: TBD
+- Orchestrator: TBD
+- Market Oracle: TBD
+- CPI Oracle: TBD
 
 ## Table of Contents
 
 - [Install](#install)
 - [Testing](#testing)
-- [Testnets](#testnets)
 - [Contribute](#contribute)
 - [License](#license)
 
@@ -44,14 +56,6 @@ npm test
 # Run unit tests in isolation
 npx truffle --network ganacheUnitTest test test/unit/uFragments.js
 ```
-
-## Testnets
-There is a testnet deployment on Rinkeby. It rebases hourly using real market data.
-- ERC-20 Token: [0x027dbcA046ca156De9622cD1e2D907d375e53aa7](https://rinkeby.etherscan.io/token/0x027dbcA046ca156De9622cD1e2D907d375e53aa7)
-- Supply Policy: [0x1D2771AFC894107c4edc072e3bd15Cb7F1BCC007](https://rinkeby.etherscan.io/address/0x1D2771AFC894107c4edc072e3bd15Cb7F1BCC007)
-- Orchestrator: [0xF473604Be74A69a6bB4ebED33A91a291f6C5b5DE](https://rinkeby.etherscan.io/address/0xF473604Be74A69a6bB4ebED33A91a291f6C5b5DE)
-- Market Oracle: [0x47fB203e1d75FB2c518Cd56f3a8094D22A46aF83](https://rinkeby.etherscan.io/address/0x47fB203e1d75FB2c518Cd56f3a8094D22A46aF83)
-- CPI Oracle: [0xDB021b1B247fe2F1fa57e0A87C748Cc1E321F07F](https://rinkeby.etherscan.io/address/0xDB021b1B247fe2F1fa57e0A87C748Cc1E321F07F)
 
 ## Contribute
 
