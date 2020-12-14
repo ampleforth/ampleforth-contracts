@@ -8,24 +8,24 @@ import "./lib/SafeMathInt.sol";
 
 
 /**
- * @title uFragments ERC20 token
- * @dev This is part of an implementation of the uFragments Ideal Money protocol.
- *      uFragments is a normal ERC20 token, but its supply can be adjusted by splitting and
+ * @title Ahoj ERC20 token
+ * @dev This is part of an implementation of the Ahoj Ideal Money protocol.
+ *      Ahoj is a normal ERC20 token, but its supply can be adjusted by splitting and
  *      combining tokens proportionally across all wallets.
  *
- *      uFragment balances are internally represented with a hidden denomination, 'gons'.
+ *      Ahoj balances are internally represented with a hidden denomination, 'gons'/'ahojassets'.
  *      We support splitting the currency in expansion and combining the currency on contraction by
- *      changing the exchange rate between the hidden 'gons' and the public 'fragments'.
+ *      changing the exchange rate between the hidden 'gons'/'ahojassets' and the public 'fragments'.
  */
-contract UFragments is ERC20Detailed, Ownable {
+contract Ahoj is ERC20Detailed, Ownable {
     // PLEASE READ BEFORE CHANGING ANY ACCOUNTING OR MATH
     // Anytime there is division, there is a risk of numerical instability from rounding errors. In
     // order to minimize this risk, we adhere to the following guidelines:
-    // 1) The conversion rate adopted is the number of gons that equals 1 fragment.
-    //    The inverse rate must not be used--TOTAL_GONS is always the numerator and _totalSupply is
-    //    always the denominator. (i.e. If you want to convert gons to fragments instead of
+    // 1) The conversion rate adopted is the number of gons/ahojassets that equals 1 fragment.
+    //    The inverse rate must not be used--TOTAL_GONS/TOTAL_AHOJASSETs is always the numerator and _totalSupply is
+    //    always the denominator. (i.e. If you want to convert gons/ahojasset to fragments instead of
     //    multiplying by the inverse rate, you should divide by the normal rate)
-    // 2) Gon balances converted into Fragments are always rounded down (truncated).
+    // 2) Gon/AhojAsset balances converted into Fragments are always rounded down (truncated).
     //
     // We make the following guarantees:
     // - If address 'A' transfers x Fragments to address 'B'. A's resulting external balance will
