@@ -24,6 +24,10 @@
     "format": "yarn prettier --config .prettierrc --write '**/*.ts' 'contracts/**/*.sol'",
     "lint": "yarn solhint 'contracts/**/*.sol'"
   },
+  "pre-commit": [
+    "format",
+    "lint"
+  ],
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",

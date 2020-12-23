@@ -2,9 +2,7 @@ pragma solidity 0.4.24;
 
 import "./Mock.sol";
 
-
 contract MockDownstream is Mock {
-
     function updateNoArg() external returns (bool) {
         emit FunctionCalled("MockDownstream", "updateNoArg", msg.sender);
         uint256[] memory uintVals = new uint256[](0);

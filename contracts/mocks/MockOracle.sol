@@ -2,7 +2,6 @@ pragma solidity 0.4.24;
 
 import "./Mock.sol";
 
-
 contract MockOracle is Mock {
     bool private _validity = true;
     uint256 private _data;
@@ -13,10 +12,7 @@ contract MockOracle is Mock {
     }
 
     // Mock methods
-    function getData()
-        external
-        returns (uint256, bool)
-    {
+    function getData() external returns (uint256, bool) {
         emit FunctionCalled(name, "getData", msg.sender);
         uint256[] memory uintVals = new uint256[](0);
         int256[] memory intVals = new int256[](0);
@@ -25,15 +21,11 @@ contract MockOracle is Mock {
     }
 
     // Methods to mock data on the chain
-    function storeData(uint256 data)
-        public
-    {
+    function storeData(uint256 data) public {
         _data = data;
     }
 
-    function storeValidity(bool validity)
-        public
-    {
+    function storeValidity(bool validity) public {
         _validity = validity;
     }
 }
