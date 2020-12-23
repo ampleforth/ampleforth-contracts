@@ -1,4 +1,4 @@
-import { ethers, upgrades, waffle } from '@nomiclabs/buidler'
+import { ethers, upgrades, waffle } from 'hardhat'
 import { Contract, Signer, BigNumber, BigNumberish, Event } from 'ethers'
 import { TransactionResponse } from '@ethersproject/providers'
 import { expect } from 'chai'

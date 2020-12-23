@@ -22,11 +22,10 @@
   https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/test/token/ERC20/ERC20.test.js
 */
 
-import { ethers, upgrades, waffle } from '@nomiclabs/buidler'
+import { ethers, upgrades, waffle } from 'hardhat'
 import { Contract, Signer, BigNumber } from 'ethers'
 import { TransactionResponse } from '@ethersproject/providers'
 import { expect } from 'chai'
-import { AnySrvRecord } from 'dns'
 
 const toUFrgDenomination = (ample: string): BigNumber =>
   ethers.utils.parseUnits(ample, DECIMALS)
@@ -261,7 +260,7 @@ describe('UFragments:ERC20:approve', () => {
   describe('when the spender is NOT the zero address', function () {
     describe('when the sender has enough balance', function () {
       describe('when there was no approved amount before', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)
@@ -293,7 +292,7 @@ describe('UFragments:ERC20:approve', () => {
       })
 
       describe('when the spender had an approved amount', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)
@@ -327,7 +326,7 @@ describe('UFragments:ERC20:approve', () => {
 
     describe('when the sender does not have enough balance', function () {
       describe('when there was no approved amount before', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)
@@ -359,7 +358,7 @@ describe('UFragments:ERC20:approve', () => {
       })
 
       describe('when the spender had an approved amount', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)
@@ -403,7 +402,7 @@ describe('UFragments:ERC20:increaseAllowance', () => {
   describe('when the spender is NOT the zero address', function () {
     describe('when the sender has enough balance', function () {
       describe('when there was no approved amount before', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)
@@ -437,7 +436,7 @@ describe('UFragments:ERC20:increaseAllowance', () => {
       })
 
       describe('when the spender had an approved amount', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         beforeEach(async function () {
           await token
             .connect(owner)
@@ -474,7 +473,7 @@ describe('UFragments:ERC20:increaseAllowance', () => {
 
     describe('when the sender does not have enough balance', function () {
       describe('when there was no approved amount before', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)
@@ -509,7 +508,7 @@ describe('UFragments:ERC20:increaseAllowance', () => {
       })
 
       describe('when the spender had an approved amount', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         beforeEach(async function () {
           await token
             .connect(owner)
@@ -556,7 +555,7 @@ describe('UFragments:ERC20:decreaseAllowance', () => {
   describe('when the spender is NOT the zero address', function () {
     describe('when the sender does NOT have enough balance', function () {
       describe('when there was no approved amount before', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           r = token
             .connect(owner)
@@ -588,7 +587,7 @@ describe('UFragments:ERC20:decreaseAllowance', () => {
       })
 
       describe('when the spender had an approved amount', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)
@@ -625,7 +624,7 @@ describe('UFragments:ERC20:decreaseAllowance', () => {
 
     describe('when the sender has enough balance', function () {
       describe('when there was no approved amount before', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)
@@ -660,7 +659,7 @@ describe('UFragments:ERC20:decreaseAllowance', () => {
       })
 
       describe('when the spender had an approved amount', function () {
-        let r: any
+        let r: Promise<TransactionResponse>
         before(async function () {
           await token
             .connect(owner)

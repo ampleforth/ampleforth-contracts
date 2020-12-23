@@ -6,7 +6,7 @@
       - the difference in totalSupply() before and after the rebase(+1) should be exactly 1.
 */
 
-import { ethers, upgrades } from '@nomiclabs/buidler'
+import { ethers, upgrades } from 'hardhat'
 import { expect } from 'chai'
 
 async function exec() {

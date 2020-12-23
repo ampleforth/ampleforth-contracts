@@ -1,10 +1,11 @@
-import { ethers, waffle } from '@nomiclabs/buidler'
+import { ethers, waffle } from 'hardhat'
 import { Contract, Signer } from 'ethers'
 import { increaseTime } from '../utils/utils'
 import { expect } from 'chai'
+import { TransactionResponse } from '@ethersproject/providers'
 
 let orchestrator: Contract, mockPolicy: Contract, mockDownstream: Contract
-let r: any
+let r: Promise<TransactionResponse>
 let deployer: Signer, user: Signer
 
 async function mockedOrchestrator() {

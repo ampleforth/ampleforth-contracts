@@ -9,7 +9,7 @@
   increased by x fragments.
 */
 
-import { ethers, upgrades } from '@nomiclabs/buidler'
+import { ethers, upgrades } from 'hardhat'
 import { expect } from 'chai'
 import { BigNumber, BigNumberish, Contract, Signer } from 'ethers'
 import { imul } from '../utils/utils'

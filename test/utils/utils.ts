@@ -1,4 +1,4 @@
-import { ethers } from '@nomiclabs/buidler'
+import { ethers } from 'hardhat'
 import { BigNumberish } from 'ethers'
 import { BigNumber as BN } from 'bignumber.js'
 

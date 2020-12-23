@@ -1,4 +1,4 @@
-import { ethers, upgrades } from '@nomiclabs/buidler'
+import { ethers, upgrades } from 'hardhat'
 import { Contract, Signer, BigNumber } from 'ethers'
 import { expect } from 'chai'
 

@@ -1,8 +1,8 @@
-import { task } from '@nomiclabs/buidler/config'
+import { task } from 'hardhat/config'
 import { getAdminAddress } from '@openzeppelin/upgrades-core'
 import ProxyAdmin from '@openzeppelin/upgrades-core/artifacts/ProxyAdmin.json'
 import MultiSigWallet from './MultiSigWalletWithDailyLimit.json'
-import { Interface } from 'ethers/lib/utils'
+import { Interface } from '@ethersproject/abi'
 import { TransactionReceipt } from '@ethersproject/providers'
 
 const parseEvents = (
