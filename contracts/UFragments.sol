@@ -6,7 +6,6 @@ import "openzeppelin-eth/contracts/token/ERC20/ERC20Detailed.sol";
 
 import "./lib/SafeMathInt.sol";
 
-
 /**
  * @title uFragments ERC20 token
  * @dev This is part of an implementation of the uFragments Ideal Money protocol.
@@ -67,7 +66,7 @@ contract UFragments is ERC20Detailed, Ownable {
     uint256 private constant TOTAL_GONS = MAX_UINT256 - (MAX_UINT256 % INITIAL_FRAGMENTS_SUPPLY);
 
     // MAX_SUPPLY = maximum integer < (sqrt(4*TOTAL_GONS + 1) - 1) / 2
-    uint256 private constant MAX_SUPPLY = ~uint128(0);  // (2^128) - 1
+    uint256 private constant MAX_SUPPLY = ~uint128(0); // (2^128) - 1
 
     uint256 private _totalSupply;
     uint256 private _gonsPerFragment;
@@ -75,15 +74,12 @@ contract UFragments is ERC20Detailed, Ownable {
 
     // This is denominated in Fragments, because the gons-fragments conversion might change before
     // it's fully paid.
-    mapping (address => mapping (address => uint256)) private _allowedFragments;
+    mapping(address => mapping(address => uint256)) private _allowedFragments;
 
     /**
      * @param monetaryPolicy_ The address of the monetary policy contract to use for authentication.
      */
-    function setMonetaryPolicy(address monetaryPolicy_)
-        external
-        onlyOwner
-    {
+    function setMonetaryPolicy(address monetaryPolicy_) external onlyOwner {
         monetaryPolicy = monetaryPolicy_;
         emit LogMonetaryPolicyUpdated(monetaryPolicy_);
     }
@@ -130,10 +126,7 @@ contract UFragments is ERC20Detailed, Ownable {
         return _totalSupply;
     }
 
-    function initialize(address owner_)
-        public
-        initializer
-    {
+    function initialize(address owner_) public initializer {
         ERC20Detailed.initialize("Ampleforth", "AMPL", uint8(DECIMALS));
         Ownable.initialize(owner_);
 
@@ -150,11 +143,7 @@ contract UFragments is ERC20Detailed, Ownable {
     /**
      * @return The total number of fragments.
      */
-    function totalSupply()
-        public
-        view
-        returns (uint256)
-    {
+    function totalSupply() public view returns (uint256) {
         return _totalSupply;
     }
 
@@ -162,11 +151,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param who The address to query.
      * @return The balance of the specified address.
      */
-    function balanceOf(address who)
-        public
-        view
-        returns (uint256)
-    {
+    function balanceOf(address who) public view returns (uint256) {
         return _gonBalances[who].div(_gonsPerFragment);
     }
 
@@ -176,11 +161,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param value The amount to be transferred.
      * @return True on success, false otherwise.
      */
-    function transfer(address to, uint256 value)
-        public
-        validRecipient(to)
-        returns (bool)
-    {
+    function transfer(address to, uint256 value) public validRecipient(to) returns (bool) {
         require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
         require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
 
@@ -197,11 +178,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @return The number of tokens still available for the spender.
      */
-    function allowance(address owner_, address spender)
-        public
-        view
-        returns (uint256)
-    {
+    function allowance(address owner_, address spender) public view returns (uint256) {
         return _allowedFragments[owner_][spender];
     }
 
@@ -211,11 +188,11 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param to The address you want to transfer to.
      * @param value The amount of tokens to be transferred.
      */
-    function transferFrom(address from, address to, uint256 value)
-        public
-        validRecipient(to)
-        returns (bool)
-    {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) public validRecipient(to) returns (bool) {
         require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
         require(from != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
         require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
@@ -241,10 +218,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @param value The amount of tokens to be spent.
      */
-    function approve(address spender, uint256 value)
-        public
-        returns (bool)
-    {
+    function approve(address spender, uint256 value) public returns (bool) {
         _allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;
@@ -257,12 +231,10 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @param addedValue The amount of tokens to increase the allowance by.
      */
-    function increaseAllowance(address spender, uint256 addedValue)
-        public
-        returns (bool)
-    {
-        _allowedFragments[msg.sender][spender] =
-            _allowedFragments[msg.sender][spender].add(addedValue);
+    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
+        _allowedFragments[msg.sender][spender] = _allowedFragments[msg.sender][spender].add(
+            addedValue
+        );
         emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
         return true;
     }
@@ -273,10 +245,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
-        returns (bool)
-    {
+    function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
         uint256 oldValue = _allowedFragments[msg.sender][spender];
         if (subtractedValue >= oldValue) {
             _allowedFragments[msg.sender][spender] = 0;
