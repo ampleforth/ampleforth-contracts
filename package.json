@@ -18,48 +18,36 @@
   "license": "ISC",
   "author": "dev-support@ampleforth.org",
   "scripts": {
-    "precommit": "./scripts/pre-commit.sh",
-    "coverage": "npx frg-coverage",
-    "lint": "npx eslint ./scripts ./test ./util *.js --cache --fix && npx solhint ./contracts/*.sol ./contracts/*/*.sol",
-    "setup-ganache": "npx start-chain ganacheUnitTest && npm run deploy-contracts ganacheUnitTest",
-    "test": "./scripts/test.sh"
-  },
-  "pre-commit": {
-    "run": [
-      "precommit",
-      "lint"
-    ]
-  },
-  "dependencies": {
-    "app-root-path": "2.1.0",
-    "frg-ethereum-runners": "https://github.com/ampleforth/frg-ethereum-runners.git#v1.0.0-alpha",
-    "js-yaml": "^3.13.1",
-    "openzeppelin-eth": "2.0.2",
-    "truffle": "4.1.14"
+    "compile": "yarn hardhat compile",
+    "test": "yarn hardhat test",
+    "coverage": "yarn hardhat coverage --testfiles 'test/unit/*.ts'",
+    "format": "yarn prettier --config .prettierrc --write '**/*.ts' 'contracts/**/*.sol'",
+    "lint": "yarn solhint 'contracts/**/*.sol'"
   },
   "devDependencies": {
-    "@openzeppelin/test-environment": "^0.1.2",
-    "@openzeppelin/test-helpers": "^0.5.4",
-    "chai": "^4.1.2",
-    "chai-bignumber": "^2.0.2",
-    "coveralls": "^3.0.2",
-    "eslint": "^4.19.1",
-    "eslint-config-google": "^0.9.1",
-    "eslint-config-mocha": "0.0.0",
-    "eslint-config-prettier": "^2.9.0",
-    "eslint-config-standard": "^5.3.5",
-    "eslint-plugin-chai-friendly": "^0.4.1",
-    "eslint-plugin-import": "^1.16.0",
-    "eslint-plugin-mocha-only": "0.0.3",
-    "eslint-plugin-prettier": "^2.6.0",
-    "eslint-plugin-promise": "^1.3.2",
-    "eslint-plugin-spellcheck": "0.0.10",
-    "eslint-plugin-standard": "^1.3.3",
-    "lodash": ">=4.17.19",
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/hardhat-upgrades": "^1.4.3",
+    "@types/chai": "^4.2.12",
+    "@types/mocha": "^8.0.3",
+    "@types/node": "^14.6.1",
+    "bignumber.js": "^9.0.0",
+    "chai": "^4.2.0",
+    "ethereum-waffle": "^3.2.1",
+    "ethers": "^5.0.24",
+    "hardhat": "^2.0.6",
     "pre-commit": "^1.2.2",
-    "solhint": "^1.1.10",
-    "solidity-coverage": "0.5.8",
+    "prettier": "^2.1.1",
+    "prettier-plugin-solidity": "^1.0.0-alpha.57",
+    "solc": "0.4.24",
+    "solhint": "^3.2.0",
+    "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.7.13",
     "stochasm": "^0.5.0",
-    "zos-lib": "^2.2.2"
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.2"
+  },
+  "dependencies": {
+    "openzeppelin-eth": "2.0.2-standalone"
   }
 }
