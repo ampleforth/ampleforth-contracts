@@ -156,6 +156,21 @@ contract UFragments is ERC20Detailed, Ownable {
     }
 
     /**
+     * @param who The address to query.
+     * @return The gon balance of the specified address.
+     */
+    function scaledBalanceOf(address who) public view returns (uint256) {
+        return _gonBalances[who];
+    }
+
+    /**
+     * @return the total number of gons.
+     */
+    function scaledTotalSupply() public view returns (uint256) {
+        return TOTAL_GONS;
+    }
+
+    /**
      * @dev Transfer tokens to a specified address.
      * @param to The address to transfer to.
      * @param value The amount to be transferred.
