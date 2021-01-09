@@ -61,6 +61,9 @@ yarn format
 
 # Run solidity coverage report (compatible with node v12)
 yarn coverage
+
+# Run solidity gas usage report
+yarn profile
 ```
 
 ## License

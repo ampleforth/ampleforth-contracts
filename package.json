@@ -20,6 +20,7 @@
   "scripts": {
     "compile": "yarn hardhat compile",
     "test": "yarn hardhat test",
+    "profile": "REPORT_GAS=true yarn hardhat test test/unit/*.ts",
     "coverage": "yarn hardhat coverage --testfiles 'test/unit/*.ts'",
     "format": "yarn prettier --config .prettierrc --write '**/*.ts' 'contracts/**/*.sol'",
     "lint": "yarn solhint 'contracts/**/*.sol'"
@@ -52,6 +53,7 @@
     "typescript": "^4.0.2"
   },
   "dependencies": {
+    "hardhat-gas-reporter": "^1.0.4",
     "openzeppelin-eth": "2.0.2-standalone"
   }
 }
