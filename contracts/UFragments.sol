@@ -94,25 +94,28 @@ contract UFragments is ERC20Detailed, Ownable {
         onlyMonetaryPolicy
         returns (uint256)
     {
+        uint256 oldTotalSupply = _totalSupply;
         if (supplyDelta == 0) {
-            emit LogRebase(epoch, _totalSupply);
-            return _totalSupply;
+            emit LogRebase(epoch, oldTotalSupply);
+            return oldTotalSupply;
         }
 
+        uint256 newTotalSupply;
         if (supplyDelta < 0) {
-            _totalSupply = _totalSupply.sub(uint256(supplyDelta.abs()));
+            newTotalSupply = oldTotalSupply.sub(uint256(supplyDelta.abs()));
         } else {
-            _totalSupply = _totalSupply.add(uint256(supplyDelta));
+            newTotalSupply = oldTotalSupply.add(uint256(supplyDelta));
         }
 
-        if (_totalSupply > MAX_SUPPLY) {
-            _totalSupply = MAX_SUPPLY;
+        if (newTotalSupply > MAX_SUPPLY) {
+            newTotalSupply = MAX_SUPPLY;
         }
 
-        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
+        _gonsPerFragment = TOTAL_GONS.div(newTotalSupply);
+        _totalSupply = newTotalSupply;
 
         // From this point forward, _gonsPerFragment is taken as the source of truth.
-        // We recalculate a new _totalSupply to be in agreement with the _gonsPerFragment
+        // We recalculate a newTotalSupply to be in agreement with the _gonsPerFragment
         // conversion rate.
         // This means our applied supplyDelta can deviate from the requested supplyDelta,
         // but this deviation is guaranteed to be < (_totalSupply^2)/(TOTAL_GONS - _totalSupply).
@@ -122,8 +125,8 @@ contract UFragments is ERC20Detailed, Ownable {
         // ever increased, it must be re-included.
         // _totalSupply = TOTAL_GONS.div(_gonsPerFragment)
 
-        emit LogRebase(epoch, _totalSupply);
-        return _totalSupply;
+        emit LogRebase(epoch, newTotalSupply);
+        return newTotalSupply;
     }
 
     function initialize(address owner_) public initializer {
@@ -232,10 +235,11 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param addedValue The amount of tokens to increase the allowance by.
      */
     function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
-        _allowedFragments[msg.sender][spender] = _allowedFragments[msg.sender][spender].add(
-            addedValue
-        );
-        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
+        uint256 oldValue = _allowedFragments[msg.sender][spender];
+        uint256 newValue = oldValue.add(addedValue);
+
+        _allowedFragments[msg.sender][spender] = newValue;
+        emit Approval(msg.sender, spender, newValue);
         return true;
     }
 
@@ -247,12 +251,15 @@ contract UFragments is ERC20Detailed, Ownable {
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
         uint256 oldValue = _allowedFragments[msg.sender][spender];
+        uint256 newValue;
         if (subtractedValue >= oldValue) {
-            _allowedFragments[msg.sender][spender] = 0;
+            newValue = 0;
         } else {
-            _allowedFragments[msg.sender][spender] = oldValue.sub(subtractedValue);
+            newValue = oldValue.sub(subtractedValue);
         }
-        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
+
+        _allowedFragments[msg.sender][spender] = newValue;
+        emit Approval(msg.sender, spender, newValue);
         return true;
     }
 }
