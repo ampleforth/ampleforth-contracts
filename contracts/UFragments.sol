@@ -76,6 +76,21 @@ contract UFragments is ERC20Detailed, Ownable {
     // it's fully paid.
     mapping(address => mapping(address => uint256)) private _allowedFragments;
 
+    // EIP-2612: permit – 712-signed approvals
+    // https://eips.ethereum.org/EIPS/eip-2612
+    string public constant EIP712_REVISION = "1";
+    bytes32 public constant EIP712_DOMAIN =
+        keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        );
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
+
+    // EIP-2612: keeps track of number of permits per address
+    mapping(address => uint256) private _nonces;
+
     /**
      * @param monetaryPolicy_ The address of the monetary policy contract to use for authentication.
      */
@@ -172,6 +187,35 @@ contract UFragments is ERC20Detailed, Ownable {
      */
     function scaledTotalSupply() external pure returns (uint256) {
         return TOTAL_GONS;
+    }
+
+    /**
+     * @return The number of successful permits by the specified address.
+     */
+    function nonces(address who) public view returns (uint256) {
+        return _nonces[who];
+    }
+
+    /**
+     * @return The computed DOMAIN_SEPARATOR to be used off-chain services
+     *         which implement EIP-712.
+     *         https://eips.ethereum.org/EIPS/eip-2612
+     */
+    function DOMAIN_SEPARATOR() public view returns (bytes32) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        return
+            keccak256(
+                abi.encode(
+                    EIP712_DOMAIN,
+                    keccak256(bytes(name())),
+                    keccak256(bytes(EIP712_REVISION)),
+                    chainId,
+                    address(this)
+                )
+            );
     }
 
     /**
@@ -325,5 +369,40 @@ contract UFragments is ERC20Detailed, Ownable {
         emit Approval(msg.sender, spender, newValue);
 
         return true;
+    }
+
+    /**
+     * @dev Allows for approvals to be made via secp256k1 signatures.
+     * @param owner The owner of the funds
+     * @param spender The spender
+     * @param value The amount
+     * @param deadline The deadline timestamp, type(uint256).max for max deadline
+     * @param v Signature param
+     * @param s Signature param
+     * @param r Signature param
+     */
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public {
+        require(block.timestamp <= deadline);
+
+        uint256 ownerNonce = _nonces[owner];
+        bytes32 permitDataDigest =
+            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, ownerNonce, deadline));
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), permitDataDigest));
+
+        require(owner == ecrecover(digest, v, r, s));
+
+        _nonces[owner] = ownerNonce.add(1);
+
+        _allowedFragments[owner][spender] = value;
+        emit Approval(owner, spender, value);
     }
 }
