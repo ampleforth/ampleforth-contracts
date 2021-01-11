@@ -112,7 +112,6 @@ contract UFragments is ERC20Detailed, Ownable {
         }
 
         _gonsPerFragment = TOTAL_GONS.div(newTotalSupply);
-        _totalSupply = newTotalSupply;
 
         // From this point forward, _gonsPerFragment is taken as the source of truth.
         // We recalculate a newTotalSupply to be in agreement with the _gonsPerFragment
@@ -123,7 +122,9 @@ contract UFragments is ERC20Detailed, Ownable {
         // In the case of _totalSupply <= MAX_UINT128 (our current supply cap), this
         // deviation is guaranteed to be < 1, so we can omit this step. If the supply cap is
         // ever increased, it must be re-included.
-        // _totalSupply = TOTAL_GONS.div(_gonsPerFragment)
+        // _totalSupply = newTotalSupply
+
+        _totalSupply = newTotalSupply;
 
         emit LogRebase(epoch, newTotalSupply);
         return newTotalSupply;
