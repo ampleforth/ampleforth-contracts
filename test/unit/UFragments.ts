@@ -7,6 +7,10 @@ const toUFrgDenomination = (ample: string): BigNumber =>
 
 const DECIMALS = 9
 const INITIAL_SUPPLY = ethers.utils.parseUnits('50', 6 + DECIMALS)
+const MAX_UINT256 = ethers.BigNumber.from(2).pow(256).sub(1)
+const MAX_INT256 = ethers.BigNumber.from(2).pow(255).sub(1)
+const TOTAL_GONS = MAX_UINT256.sub(MAX_UINT256.mod(INITIAL_SUPPLY))
+
 const transferAmount = toUFrgDenomination('10')
 const unitTokenAmount = toUFrgDenomination('1')
 
@@ -51,8 +55,18 @@ describe('UFragments:Initialization', () => {
     )
   })
 
+  it("should set the deployer's scaled balance", async function () {
+    expect(await uFragments.scaledBalanceOf(await deployer.getAddress())).to.eq(
+      TOTAL_GONS,
+    )
+  })
+
   it('should set the totalSupply to 50M', async function () {
     expect(await uFragments.totalSupply()).to.eq(INITIAL_SUPPLY)
+  })
+
+  it('should set the scaledTotalSupply', async function () {
+    expect(await uFragments.scaledTotalSupply()).to.eq(TOTAL_GONS)
   })
 
   it('should set the owner', async function () {
@@ -154,6 +168,22 @@ describe('UFragments:Rebase:Expansion', async () => {
     await uFragments
       .connect(deployer)
       .transfer(await B.getAddress(), toUFrgDenomination('250'))
+
+    expect(await uFragments.totalSupply()).to.eq(INITIAL_SUPPLY)
+    expect(await uFragments.balanceOf(await A.getAddress())).to.eq(
+      toUFrgDenomination('750'),
+    )
+    expect(await uFragments.balanceOf(await B.getAddress())).to.eq(
+      toUFrgDenomination('250'),
+    )
+
+    expect(await uFragments.scaledTotalSupply()).to.eq(TOTAL_GONS)
+    expect(await uFragments.scaledBalanceOf(await A.getAddress())).to.eq(
+      '1736881338559742931353564775130318617799049769984608460591863250000000000',
+    )
+    expect(await uFragments.scaledBalanceOf(await B.getAddress())).to.eq(
+      '578960446186580977117854925043439539266349923328202820197287750000000000',
+    )
   })
 
   it('should emit Rebase', async function () {
@@ -166,12 +196,25 @@ describe('UFragments:Rebase:Expansion', async () => {
     expect(await uFragments.totalSupply()).to.eq(initialSupply.add(rebaseAmt))
   })
 
+  it('should NOT CHANGE the scaledTotalSupply', async function () {
+    expect(await uFragments.scaledTotalSupply()).to.eq(TOTAL_GONS)
+  })
+
   it('should increase individual balances', async function () {
     expect(await uFragments.balanceOf(await A.getAddress())).to.eq(
       toUFrgDenomination('825'),
     )
     expect(await uFragments.balanceOf(await B.getAddress())).to.eq(
       toUFrgDenomination('275'),
+    )
+  })
+
+  it('should NOT CHANGE the individual scaled balances', async function () {
+    expect(await uFragments.scaledBalanceOf(await A.getAddress())).to.eq(
+      '1736881338559742931353564775130318617799049769984608460591863250000000000',
+    )
+    expect(await uFragments.scaledBalanceOf(await B.getAddress())).to.eq(
+      '578960446186580977117854925043439539266349923328202820197287750000000000',
     )
   })
 
@@ -251,6 +294,22 @@ describe('UFragments:Rebase:NoChange', function () {
     await uFragments
       .connect(deployer)
       .transfer(await B.getAddress(), toUFrgDenomination('250'))
+
+    expect(await uFragments.totalSupply()).to.eq(INITIAL_SUPPLY)
+    expect(await uFragments.balanceOf(await A.getAddress())).to.eq(
+      toUFrgDenomination('750'),
+    )
+    expect(await uFragments.balanceOf(await B.getAddress())).to.eq(
+      toUFrgDenomination('250'),
+    )
+
+    expect(await uFragments.scaledTotalSupply()).to.eq(TOTAL_GONS)
+    expect(await uFragments.scaledBalanceOf(await A.getAddress())).to.eq(
+      '1736881338559742931353564775130318617799049769984608460591863250000000000',
+    )
+    expect(await uFragments.scaledBalanceOf(await B.getAddress())).to.eq(
+      '578960446186580977117854925043439539266349923328202820197287750000000000',
+    )
   })
 
   it('should emit Rebase', async function () {
@@ -263,12 +322,25 @@ describe('UFragments:Rebase:NoChange', function () {
     expect(await uFragments.totalSupply()).to.eq(initialSupply)
   })
 
+  it('should NOT CHANGE the scaledTotalSupply', async function () {
+    expect(await uFragments.scaledTotalSupply()).to.eq(TOTAL_GONS)
+  })
+
   it('should NOT CHANGE individual balances', async function () {
     expect(await uFragments.balanceOf(await A.getAddress())).to.eq(
       toUFrgDenomination('750'),
     )
     expect(await uFragments.balanceOf(await B.getAddress())).to.eq(
       toUFrgDenomination('250'),
+    )
+  })
+
+  it('should NOT CHANGE the individual scaled balances', async function () {
+    expect(await uFragments.scaledBalanceOf(await A.getAddress())).to.eq(
+      '1736881338559742931353564775130318617799049769984608460591863250000000000',
+    )
+    expect(await uFragments.scaledBalanceOf(await B.getAddress())).to.eq(
+      '578960446186580977117854925043439539266349923328202820197287750000000000',
     )
   })
 })
@@ -292,6 +364,22 @@ describe('UFragments:Rebase:Contraction', function () {
     await uFragments
       .connect(deployer)
       .transfer(await B.getAddress(), toUFrgDenomination('250'))
+
+    expect(await uFragments.totalSupply()).to.eq(INITIAL_SUPPLY)
+    expect(await uFragments.balanceOf(await A.getAddress())).to.eq(
+      toUFrgDenomination('750'),
+    )
+    expect(await uFragments.balanceOf(await B.getAddress())).to.eq(
+      toUFrgDenomination('250'),
+    )
+
+    expect(await uFragments.scaledTotalSupply()).to.eq(TOTAL_GONS)
+    expect(await uFragments.scaledBalanceOf(await A.getAddress())).to.eq(
+      '1736881338559742931353564775130318617799049769984608460591863250000000000',
+    )
+    expect(await uFragments.scaledBalanceOf(await B.getAddress())).to.eq(
+      '578960446186580977117854925043439539266349923328202820197287750000000000',
+    )
   })
 
   it('should emit Rebase', async function () {
@@ -304,12 +392,25 @@ describe('UFragments:Rebase:Contraction', function () {
     expect(await uFragments.totalSupply()).to.eq(initialSupply.sub(rebaseAmt))
   })
 
+  it('should NOT. CHANGE the scaledTotalSupply', async function () {
+    expect(await uFragments.scaledTotalSupply()).to.eq(TOTAL_GONS)
+  })
+
   it('should decrease individual balances', async function () {
     expect(await uFragments.balanceOf(await A.getAddress())).to.eq(
       toUFrgDenomination('675'),
     )
     expect(await uFragments.balanceOf(await B.getAddress())).to.eq(
       toUFrgDenomination('225'),
+    )
+  })
+
+  it('should NOT CHANGE the individual scaled balances', async function () {
+    expect(await uFragments.scaledBalanceOf(await A.getAddress())).to.eq(
+      '1736881338559742931353564775130318617799049769984608460591863250000000000',
+    )
+    expect(await uFragments.scaledBalanceOf(await B.getAddress())).to.eq(
+      '578960446186580977117854925043439539266349923328202820197287750000000000',
     )
   })
 })
