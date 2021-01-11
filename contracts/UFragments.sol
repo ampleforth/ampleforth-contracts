@@ -122,7 +122,7 @@ contract UFragments is ERC20Detailed, Ownable {
         // In the case of _totalSupply <= MAX_UINT128 (our current supply cap), this
         // deviation is guaranteed to be < 1, so we can omit this step. If the supply cap is
         // ever increased, it must be re-included.
-        // _totalSupply = newTotalSupply
+        // newTotalSupply = TOTAL_GONS.div(_gonsPerFragment)
 
         _totalSupply = newTotalSupply;
 
