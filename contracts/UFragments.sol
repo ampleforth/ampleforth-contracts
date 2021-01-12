@@ -147,7 +147,7 @@ contract UFragments is ERC20Detailed, Ownable {
     /**
      * @return The total number of fragments.
      */
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() external view returns (uint256) {
         return _totalSupply;
     }
 
@@ -155,7 +155,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param who The address to query.
      * @return The balance of the specified address.
      */
-    function balanceOf(address who) public view returns (uint256) {
+    function balanceOf(address who) external view returns (uint256) {
         return _gonBalances[who].div(_gonsPerFragment);
     }
 
@@ -163,14 +163,14 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param who The address to query.
      * @return The gon balance of the specified address.
      */
-    function scaledBalanceOf(address who) public view returns (uint256) {
+    function scaledBalanceOf(address who) external view returns (uint256) {
         return _gonBalances[who];
     }
 
     /**
      * @return the total number of gons.
      */
-    function scaledTotalSupply() public view returns (uint256) {
+    function scaledTotalSupply() external pure returns (uint256) {
         return TOTAL_GONS;
     }
 
@@ -180,7 +180,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param value The amount to be transferred.
      * @return True on success, false otherwise.
      */
-    function transfer(address to, uint256 value) public validRecipient(to) returns (bool) {
+    function transfer(address to, uint256 value) external validRecipient(to) returns (bool) {
         require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
         require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
 
@@ -197,7 +197,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @return The number of tokens still available for the spender.
      */
-    function allowance(address owner_, address spender) public view returns (uint256) {
+    function allowance(address owner_, address spender) external view returns (uint256) {
         return _allowedFragments[owner_][spender];
     }
 
@@ -211,7 +211,7 @@ contract UFragments is ERC20Detailed, Ownable {
         address from,
         address to,
         uint256 value
-    ) public validRecipient(to) returns (bool) {
+    ) external validRecipient(to) returns (bool) {
         require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
         require(from != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
         require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
@@ -237,7 +237,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @param value The amount of tokens to be spent.
      */
-    function approve(address spender, uint256 value) public returns (bool) {
+    function approve(address spender, uint256 value) external returns (bool) {
         _allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;
@@ -250,7 +250,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @param addedValue The amount of tokens to increase the allowance by.
      */
-    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
         uint256 oldValue = _allowedFragments[msg.sender][spender];
         uint256 newValue = oldValue.add(addedValue);
 
@@ -265,7 +265,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @param subtractedValue The amount of tokens to decrease the allowance by.
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 oldValue = _allowedFragments[msg.sender][spender];
         uint256 newValue;
         if (subtractedValue >= oldValue) {
