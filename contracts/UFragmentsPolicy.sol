@@ -211,6 +211,20 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
+     * @notice A multi-chain AMPL interface method. The Ampleforth monetary policy contract
+     *         on the base-chain and XCAmpleController contracts on the satellite-chains
+     *         implement this method. It returns what the current contract believes to be
+     *         the globalAmpleforthEpoch and globalAMPLSupply.
+     * @return globalAmpleforthEpoch The current epoch number.
+     * @return globalAMPLSupply The total supply at the current epoch.
+     */
+    function getGlobalAmpleforthEpochAndAMPLSupply() external view returns (uint256, uint256) {
+        uint256 globalAmpleforthEpoch = epoch;
+        uint256 globalAMPLSupply = uFrags.totalSupply();
+        return (globalAmpleforthEpoch, globalAMPLSupply);
+    }
+
+    /**
      * @dev ZOS upgradable contract initialization method.
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
