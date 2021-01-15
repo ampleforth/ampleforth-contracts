@@ -164,6 +164,11 @@ describe('UFragmentsPolicy:initialize', async function () {
     it('epoch', async function () {
       expect(await uFragmentsPolicy.epoch()).to.eq(0)
     })
+    it('getGlobalAmpleforthEpochAndAMPLSupply', async function () {
+      const r = await uFragmentsPolicy.getGlobalAmpleforthEpochAndAMPLSupply()
+      expect(r[0]).to.eq(0)
+      expect(r[1]).to.eq(0)
+    })
     it('rebaseWindowOffsetSec', async function () {
       expect(await uFragmentsPolicy.rebaseWindowOffsetSec()).to.eq(72000)
     })
@@ -826,6 +831,13 @@ describe('UFragmentsPolicy:Rebase', async function () {
     it('should increment epoch', async function () {
       await uFragmentsPolicy.connect(orchestrator).rebase()
       expect(await uFragmentsPolicy.epoch()).to.eq(prevEpoch.add(1))
+    })
+
+    it('should update getGlobalAmpleforthEpochAndAMPLSupply', async function () {
+      await uFragmentsPolicy.connect(orchestrator).rebase()
+      const r = await uFragmentsPolicy.getGlobalAmpleforthEpochAndAMPLSupply()
+      expect(r[0]).to.eq(prevEpoch.add(1))
+      expect(r[1]).to.eq('1010')
     })
 
     it('should update lastRebaseTimestamp', async function () {
