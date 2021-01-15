@@ -262,7 +262,7 @@ contract UFragmentsPolicy is Ownable {
      * @return Computes the total supply adjustment in response to the exchange rate
      *         and the targetRate.
      */
-    function computeSupplyDelta(uint256 rate, uint256 targetRate) private view returns (int256) {
+    function computeSupplyDelta(uint256 rate, uint256 targetRate) internal view returns (int256) {
         if (withinDeviationThreshold(rate, targetRate)) {
             return 0;
         }
@@ -282,7 +282,7 @@ contract UFragmentsPolicy is Ownable {
      *         Otherwise, returns false.
      */
     function withinDeviationThreshold(uint256 rate, uint256 targetRate)
-        private
+        internal
         view
         returns (bool)
     {
