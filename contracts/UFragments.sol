@@ -262,7 +262,7 @@ contract UFragments is ERC20Detailed, Ownable {
 
         _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value);
 
-        _gonBalances[from] = _gonBalances[from].sub(gonValue);
+        delete _gonBalances[from];
         _gonBalances[to] = _gonBalances[to].add(gonValue);
 
         emit Transfer(from, to, value);
