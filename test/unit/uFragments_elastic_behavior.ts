@@ -29,7 +29,7 @@ async function upgradeableToken() {
   return { token, owner, recipient, anotherAccount }
 }
 
-describe('UFragments:ElasticERC20', () => {
+describe('UFragments:Elastic', () => {
   beforeEach('setup UFragments contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
       upgradeableToken,
@@ -61,7 +61,7 @@ describe('UFragments:ElasticERC20', () => {
   })
 })
 
-describe('UFragments:ERC20:transferAll', () => {
+describe('UFragments:Elastic:transferAll', () => {
   beforeEach('setup UFragments contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
       upgradeableToken,
@@ -120,7 +120,7 @@ describe('UFragments:ERC20:transferAll', () => {
   })
 })
 
-describe('UFragments:ERC20:transferAllFrom', () => {
+describe('UFragments:Elastic:transferAllFrom', () => {
   beforeEach('setup UFragments contract', async function () {
     ;({ token, owner, recipient, anotherAccount } = await waffle.loadFixture(
       upgradeableToken,
