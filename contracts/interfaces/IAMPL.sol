@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// Interface definition for the AMPL - ERC20 token on Ethereum (the base-chain)
+// Public interface definition for the AMPL - ERC20 token on Ethereum (the base-chain)
 interface IAMPL {
     // ERC20
     function totalSupply() external view returns (uint256);
@@ -23,10 +23,6 @@ interface IAMPL {
         uint256 value
     ) external returns (bool);
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-
     // EIP-2612
     function permit(
         address owner,
@@ -45,19 +41,9 @@ interface IAMPL {
     // Elastic token interface
     function scaledBalanceOf(address who) external view returns (uint256);
 
-    function scaledTotalSupply() external pure returns (uint256);
+    function scaledTotalSupply() external view returns (uint256);
 
     function transferAll(address to) external returns (bool);
 
     function transferAllFrom(address from, address to) external returns (bool);
-
-    // AMPL specific
-    function monetaryPolicy() external view returns (address);
-
-    event LogRebase(uint256 indexed epoch, uint256 totalSupply);
-
-    event LogMonetaryPolicyUpdated(address monetaryPolicy);
-
-    // Multi-chain AMPL
-    function globalAMPLSupply() external view returns (uint256);
 }
