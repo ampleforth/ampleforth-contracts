@@ -39,6 +39,7 @@ contract UFragments is ERC20Detailed, Ownable {
 
     event LogRebase(uint256 indexed epoch, uint256 totalSupply);
     event LogMonetaryPolicyUpdated(address monetaryPolicy);
+    event BalanceScalar(uint256 scalar);
 
     // Used for authentication
     address public monetaryPolicy;
@@ -58,6 +59,7 @@ contract UFragments is ERC20Detailed, Ownable {
     }
 
     uint256 private constant DECIMALS = 9;
+    uint256 private constant SCALAR_DECIMALS = 18;
     uint256 private constant MAX_UINT256 = ~uint256(0);
     uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 50 * 10**6 * 10**DECIMALS;
 
@@ -142,6 +144,7 @@ contract UFragments is ERC20Detailed, Ownable {
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
 
         emit Transfer(address(0x0), owner_, _totalSupply);
+        emit BalanceScalar(scalar());
     }
 
     /**
@@ -164,6 +167,7 @@ contract UFragments is ERC20Detailed, Ownable {
      * @return The gon balance of the specified address.
      */
     function scaledBalanceOf(address who) external view returns (uint256) {
+        // scalar()/1eSCALAR_DECIMALS * balanceOf()
         return _gonBalances[who];
     }
 
@@ -171,7 +175,15 @@ contract UFragments is ERC20Detailed, Ownable {
      * @return the total number of gons.
      */
     function scaledTotalSupply() external pure returns (uint256) {
+        // scalar()/1eSCALAR_DECIMALS * totalSupply()
         return TOTAL_GONS;
+    }
+
+    /**
+     * @return the balance scalar.
+     */
+    function scalar() public view returns (uint256) {
+        return (10 ** SCALAR_DECIMALS).div(_gonsPerFragment);
     }
 
     /**
@@ -188,6 +200,7 @@ contract UFragments is ERC20Detailed, Ownable {
         _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
         emit Transfer(msg.sender, to, value);
+        emit BalanceScalar(scalar());
         return true;
     }
 
@@ -222,7 +235,7 @@ contract UFragments is ERC20Detailed, Ownable {
         _gonBalances[from] = _gonBalances[from].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
         emit Transfer(from, to, value);
-
+        emit BalanceScalar(scalar());
         return true;
     }
 
