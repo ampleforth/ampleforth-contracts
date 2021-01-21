@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.4.24;
 
 // Public interface definition for the Ampleforth supply policy on Ethereum (the base-chain)
 interface IAmpleforth {
