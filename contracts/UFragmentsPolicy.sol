@@ -212,14 +212,14 @@ contract UFragmentsPolicy is Ownable {
 
     /**
      * @notice A multi-chain AMPL interface method. The Ampleforth monetary policy contract
-     *         on the base-chain and XCAmpleController contracts on the satellite-chains
+     *         on the base-chain and XC-AmpleController contracts on the satellite-chains
      *         implement this method. It atomically returns two values:
      *         what the current contract believes to be,
      *         the globalAmpleforthEpoch and globalAMPLSupply.
      * @return globalAmpleforthEpoch The current epoch number.
      * @return globalAMPLSupply The total supply at the current epoch.
      */
-    function getGlobalAmpleforthEpochAndAMPLSupply() external view returns (uint256, uint256) {
+    function globalAmpleforthEpochAndAMPLSupply() external view returns (uint256, uint256) {
         return (epoch, uFrags.totalSupply());
     }
 
