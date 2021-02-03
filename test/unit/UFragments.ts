@@ -55,18 +55,8 @@ describe('UFragments:Initialization', () => {
     )
   })
 
-  it("should set the deployer's scaled balance", async function () {
-    expect(await uFragments.scaledBalanceOf(await deployer.getAddress())).to.eq(
-      TOTAL_GONS,
-    )
-  })
-
   it('should set the totalSupply to 50M', async function () {
     expect(await uFragments.totalSupply()).to.eq(INITIAL_SUPPLY)
-  })
-
-  it('should set the scaledTotalSupply', async function () {
-    expect(await uFragments.scaledTotalSupply()).to.eq(TOTAL_GONS)
   })
 
   it('should set the owner', async function () {

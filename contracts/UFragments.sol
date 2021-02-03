@@ -185,8 +185,28 @@ contract UFragments is ERC20Detailed, Ownable {
         require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
 
         uint256 gonValue = value.mul(_gonsPerFragment);
+
         _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
+
+        emit Transfer(msg.sender, to, value);
+        return true;
+    }
+
+    /**
+     * @dev Transfer all of the sender's wallet balance to a specified address.
+     * @param to The address to transfer to.
+     * @return True on success, false otherwise.
+     */
+    function transferAll(address to) external validRecipient(to) returns (bool) {
+        require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
+
+        uint256 gonValue = _gonBalances[msg.sender];
+        uint256 value = gonValue.div(_gonsPerFragment);
+
+        delete _gonBalances[msg.sender];
+        _gonBalances[to] = _gonBalances[to].add(gonValue);
+
         emit Transfer(msg.sender, to, value);
         return true;
     }
@@ -221,8 +241,28 @@ contract UFragments is ERC20Detailed, Ownable {
         uint256 gonValue = value.mul(_gonsPerFragment);
         _gonBalances[from] = _gonBalances[from].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
-        emit Transfer(from, to, value);
 
+        emit Transfer(from, to, value);
+        return true;
+    }
+
+    /**
+     * @dev Transfer all balance tokens from one address to another.
+     * @param from The address you want to send tokens from.
+     * @param to The address you want to transfer to.
+     */
+    function transferAllFrom(address from, address to) external validRecipient(to) returns (bool) {
+        require(from != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
+
+        uint256 gonValue = _gonBalances[from];
+        uint256 value = gonValue.div(_gonsPerFragment);
+
+        _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value);
+
+        delete _gonBalances[from];
+        _gonBalances[to] = _gonBalances[to].add(gonValue);
+
+        emit Transfer(from, to, value);
         return true;
     }
 
@@ -239,6 +279,7 @@ contract UFragments is ERC20Detailed, Ownable {
      */
     function approve(address spender, uint256 value) external returns (bool) {
         _allowedFragments[msg.sender][spender] = value;
+
         emit Approval(msg.sender, spender, value);
         return true;
     }
@@ -256,6 +297,7 @@ contract UFragments is ERC20Detailed, Ownable {
 
         _allowedFragments[msg.sender][spender] = newValue;
         emit Approval(msg.sender, spender, newValue);
+
         return true;
     }
 
@@ -276,6 +318,7 @@ contract UFragments is ERC20Detailed, Ownable {
 
         _allowedFragments[msg.sender][spender] = newValue;
         emit Approval(msg.sender, spender, newValue);
+
         return true;
     }
 }
