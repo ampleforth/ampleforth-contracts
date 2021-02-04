@@ -6296,11 +6296,6 @@ onetime@^2.0.0:
   dependencies:
     mimic-fn "^1.0.0"
 
-openzeppelin-eth@2.0.2-standalone:
-  version "2.0.2-standalone"
-  resolved "https://registry.yarnpkg.com/openzeppelin-eth/-/openzeppelin-eth-2.0.2-standalone.tgz#d52067848fc94377fe6976afd79233f6885a0b8c"
-  integrity sha512-4cSt8Eg2Ta894mmoIKW5xaZBfDjuWqR77LNCd722zB9bIyb36+DgYU0mOGXxVNvFNuECwo69zZJkgkGgvX0n2A==
-
 optionator@^0.8.1, optionator@^0.8.2:
   version "0.8.3"
   resolved "https://registry.yarnpkg.com/optionator/-/optionator-0.8.3.tgz#84fa1d036fe9d3c7e21d99884b601167ec8fb495"
