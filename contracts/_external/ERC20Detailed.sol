@@ -1,8 +1,7 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.6.12;
 
-import "../../zos-lib/Initializable.sol";
+import "./Initializable.sol";
 import "./IERC20.sol";
-
 
 /**
  * @title ERC20Detailed token
@@ -10,37 +9,41 @@ import "./IERC20.sol";
  * All the operations are done using the smallest and indivisible token unit,
  * just as on Ethereum all the operations are done in wei.
  */
-contract ERC20Detailed is Initializable, IERC20 {
-  string private _name;
-  string private _symbol;
-  uint8 private _decimals;
+abstract contract ERC20Detailed is Initializable, IERC20 {
+    string private _name;
+    string private _symbol;
+    uint8 private _decimals;
 
-  function initialize(string name, string symbol, uint8 decimals) public initializer {
-    _name = name;
-    _symbol = symbol;
-    _decimals = decimals;
-  }
+    function initialize(
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) public virtual initializer {
+        _name = name;
+        _symbol = symbol;
+        _decimals = decimals;
+    }
 
-  /**
-   * @return the name of the token.
-   */
-  function name() public view returns(string) {
-    return _name;
-  }
+    /**
+     * @return the name of the token.
+     */
+    function name() public view returns (string memory) {
+        return _name;
+    }
 
-  /**
-   * @return the symbol of the token.
-   */
-  function symbol() public view returns(string) {
-    return _symbol;
-  }
+    /**
+     * @return the symbol of the token.
+     */
+    function symbol() public view returns (string memory) {
+        return _symbol;
+    }
 
-  /**
-   * @return the number of decimals of the token.
-   */
-  function decimals() public view returns(uint8) {
-    return _decimals;
-  }
+    /**
+     * @return the number of decimals of the token.
+     */
+    function decimals() public view returns (uint8) {
+        return _decimals;
+    }
 
-  uint256[50] private ______gap;
+    uint256[50] private ______gap;
 }
