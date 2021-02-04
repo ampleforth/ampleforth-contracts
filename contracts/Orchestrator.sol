@@ -1,6 +1,6 @@
-pragma solidity 0.4.24;
+pragma solidity 0.6.12;
 
-import "openzeppelin-eth/contracts/ownership/Ownable.sol";
+import "./_external/Ownable.sol";
 
 import "./UFragmentsPolicy.sol";
 
@@ -61,7 +61,7 @@ contract Orchestrator is Ownable {
      * @param destination Address of contract destination
      * @param data Transaction data payload
      */
-    function addTransaction(address destination, bytes data) external onlyOwner {
+    function addTransaction(address destination, bytes memory data) external onlyOwner {
         transactions.push(Transaction({enabled: true, destination: destination, data: data}));
     }
 
@@ -76,7 +76,7 @@ contract Orchestrator is Ownable {
             transactions[index] = transactions[transactions.length - 1];
         }
 
-        transactions.length--;
+        transactions.pop();
     }
 
     /**
@@ -101,7 +101,7 @@ contract Orchestrator is Ownable {
      * @param data The encoded data payload.
      * @return True on success
      */
-    function externalCall(address destination, bytes data) internal returns (bool) {
+    function externalCall(address destination, bytes memory data) internal returns (bool) {
         bool result;
         assembly {
             // solhint-disable-line no-inline-assembly
@@ -117,7 +117,7 @@ contract Orchestrator is Ownable {
                 // It includes callGas (700) + callVeryLow (3, to pay for SUB)
                 // + callValueTransferGas (9000) + callNewAccountGas
                 // (25000, in case the destination address does not exist and needs creating)
-                sub(gas, 34710),
+                sub(gas(), 34710),
                 destination,
                 0, // transfer value in wei
                 dataAddress,

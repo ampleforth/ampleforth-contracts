@@ -10,7 +10,14 @@ require('./scripts/deploy')
 
 export default {
   solidity: {
-    version: '0.4.24',
+    compilers: [
+      {
+        version: '0.6.12',
+      },
+      {
+        version: '0.4.24',
+      },
+    ],
   },
   mocha: {
     timeout: 100000,

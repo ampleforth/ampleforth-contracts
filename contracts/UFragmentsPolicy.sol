@@ -1,11 +1,16 @@
-pragma solidity 0.4.24;
+pragma solidity 0.6.12;
 
-import "openzeppelin-eth/contracts/math/SafeMath.sol";
-import "openzeppelin-eth/contracts/ownership/Ownable.sol";
+import "./_external/SafeMath.sol";
+import "./_external/Ownable.sol";
 
 import "./lib/SafeMathInt.sol";
 import "./lib/UInt256Lib.sol";
-import "./UFragments.sol";
+
+interface IUFragments {
+    function totalSupply() external view returns (uint256);
+
+    function rebase(uint256 epoch, int256 supplyDelta) external returns (uint256);
+}
 
 interface IOracle {
     function getData() external returns (uint256, bool);
@@ -33,7 +38,7 @@ contract UFragmentsPolicy is Ownable {
         uint256 timestampSec
     );
 
-    UFragments public uFrags;
+    IUFragments public uFrags;
 
     // Provides the current CPI, as an 18 decimal fixed point number.
     IOracle public cpiOracle;
@@ -230,7 +235,7 @@ contract UFragmentsPolicy is Ownable {
      */
     function initialize(
         address owner_,
-        UFragments uFrags_,
+        IUFragments uFrags_,
         uint256 baseCpi_
     ) public initializer {
         Ownable.initialize(owner_);
