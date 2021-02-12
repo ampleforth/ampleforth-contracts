@@ -58,7 +58,7 @@ contract UFragments is ERC20Detailed, Ownable {
     }
 
     uint256 private constant DECIMALS = 9;
-    uint256 private constant MAX_UINT256 = ~uint256(0);
+    uint256 private constant MAX_UINT256 = type(uint256).max;
     uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 50 * 10**6 * 10**DECIMALS;
 
     // TOTAL_GONS is a multiple of INITIAL_FRAGMENTS_SUPPLY so that _gonsPerFragment is an integer.
@@ -66,7 +66,7 @@ contract UFragments is ERC20Detailed, Ownable {
     uint256 private constant TOTAL_GONS = MAX_UINT256 - (MAX_UINT256 % INITIAL_FRAGMENTS_SUPPLY);
 
     // MAX_SUPPLY = maximum integer < (sqrt(4*TOTAL_GONS + 1) - 1) / 2
-    uint256 private constant MAX_SUPPLY = ~uint128(0); // (2^128) - 1
+    uint256 private constant MAX_SUPPLY = type(uint128).max; // (2^128) - 1
 
     uint256 private _totalSupply;
     uint256 private _gonsPerFragment;
