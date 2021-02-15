@@ -358,7 +358,7 @@ contract UFragments is ERC20Detailed, Ownable {
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 oldValue = _allowedFragments[msg.sender][spender];
-        uint256 newValue = subtractedValue >= oldValue ? 0 : oldValue.sub(subtractedValue);
+        uint256 newValue = (subtractedValue >= oldValue) ? 0 : oldValue.sub(subtractedValue);
 
         _allowedFragments[msg.sender][spender] = newValue;
         emit Approval(msg.sender, spender, newValue);
