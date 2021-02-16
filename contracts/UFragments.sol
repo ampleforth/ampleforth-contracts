@@ -109,27 +109,25 @@ contract UFragments is ERC20Detailed, Ownable {
         onlyMonetaryPolicy
         returns (uint256)
     {
-        uint256 oldTotalSupply = _totalSupply;
         if (supplyDelta == 0) {
-            emit LogRebase(epoch, oldTotalSupply);
-            return oldTotalSupply;
+            emit LogRebase(epoch, _totalSupply);
+            return _totalSupply;
         }
 
-        uint256 newTotalSupply;
         if (supplyDelta < 0) {
-            newTotalSupply = oldTotalSupply.sub(uint256(supplyDelta.abs()));
+            _totalSupply = _totalSupply.sub(uint256(supplyDelta.abs()));
         } else {
-            newTotalSupply = oldTotalSupply.add(uint256(supplyDelta));
+            _totalSupply = _totalSupply.add(uint256(supplyDelta));
         }
 
-        if (newTotalSupply > MAX_SUPPLY) {
-            newTotalSupply = MAX_SUPPLY;
+        if (_totalSupply > MAX_SUPPLY) {
+            _totalSupply = MAX_SUPPLY;
         }
 
-        _gonsPerFragment = TOTAL_GONS.div(newTotalSupply);
+        _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
 
         // From this point forward, _gonsPerFragment is taken as the source of truth.
-        // We recalculate a newTotalSupply to be in agreement with the _gonsPerFragment
+        // We recalculate a new _totalSupply to be in agreement with the _gonsPerFragment
         // conversion rate.
         // This means our applied supplyDelta can deviate from the requested supplyDelta,
         // but this deviation is guaranteed to be < (_totalSupply^2)/(TOTAL_GONS - _totalSupply).
@@ -137,12 +135,10 @@ contract UFragments is ERC20Detailed, Ownable {
         // In the case of _totalSupply <= MAX_UINT128 (our current supply cap), this
         // deviation is guaranteed to be < 1, so we can omit this step. If the supply cap is
         // ever increased, it must be re-included.
-        // newTotalSupply = TOTAL_GONS.div(_gonsPerFragment)
+        // _totalSupply = TOTAL_GONS.div(_gonsPerFragment)
 
-        _totalSupply = newTotalSupply;
-
-        emit LogRebase(epoch, newTotalSupply);
-        return newTotalSupply;
+        emit LogRebase(epoch, _totalSupply);
+        return _totalSupply;
     }
 
     function initialize(address owner_) public override initializer {
@@ -340,13 +336,12 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param spender The address which will spend the funds.
      * @param addedValue The amount of tokens to increase the allowance by.
      */
-    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
-        uint256 oldValue = _allowedFragments[msg.sender][spender];
-        uint256 newValue = oldValue.add(addedValue);
+    function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
+        _allowedFragments[msg.sender][spender] = _allowedFragments[msg.sender][spender].add(
+            addedValue
+        );
 
-        _allowedFragments[msg.sender][spender] = newValue;
-        emit Approval(msg.sender, spender, newValue);
-
+        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
         return true;
     }
 
@@ -358,11 +353,11 @@ contract UFragments is ERC20Detailed, Ownable {
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 oldValue = _allowedFragments[msg.sender][spender];
-        uint256 newValue = (subtractedValue >= oldValue) ? 0 : oldValue.sub(subtractedValue);
+        _allowedFragments[msg.sender][spender] = (subtractedValue >= oldValue)
+            ? 0
+            : oldValue.sub(subtractedValue);
 
-        _allowedFragments[msg.sender][spender] = newValue;
-        emit Approval(msg.sender, spender, newValue);
-
+        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
         return true;
     }
 
