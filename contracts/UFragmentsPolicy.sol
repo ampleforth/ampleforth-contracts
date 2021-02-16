@@ -1,4 +1,4 @@
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
 import "./_external/SafeMath.sol";
 import "./_external/Ownable.sol";
@@ -104,12 +104,13 @@ contract UFragmentsPolicy is Ownable {
         require(inRebaseWindow());
 
         // This comparison also ensures there is no reentrancy.
-        require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < now);
+        require(lastRebaseTimestampSec.add(minRebaseTimeIntervalSec) < block.timestamp);
 
         // Snap the rebase time to the start of this window.
-        lastRebaseTimestampSec = now.sub(now.mod(minRebaseTimeIntervalSec)).add(
-            rebaseWindowOffsetSec
-        );
+        lastRebaseTimestampSec = block
+            .timestamp
+            .sub(block.timestamp.mod(minRebaseTimeIntervalSec))
+            .add(rebaseWindowOffsetSec);
 
         epoch = epoch.add(1);
 
@@ -140,7 +141,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, now);
+        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, block.timestamp);
     }
 
     /**
@@ -259,8 +260,9 @@ contract UFragmentsPolicy is Ownable {
      *         Otherwise, returns false.
      */
     function inRebaseWindow() public view returns (bool) {
-        return (now.mod(minRebaseTimeIntervalSec) >= rebaseWindowOffsetSec &&
-            now.mod(minRebaseTimeIntervalSec) < (rebaseWindowOffsetSec.add(rebaseWindowLengthSec)));
+        return (block.timestamp.mod(minRebaseTimeIntervalSec) >= rebaseWindowOffsetSec &&
+            block.timestamp.mod(minRebaseTimeIntervalSec) <
+            (rebaseWindowOffsetSec.add(rebaseWindowLengthSec)));
     }
 
     /**
