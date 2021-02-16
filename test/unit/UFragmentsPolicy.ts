@@ -822,10 +822,10 @@ describe('UFragmentsPolicy:Rebase', async function () {
         .setRebaseTimingParameters(60, 0, 60)
       await increaseTime(60)
       await uFragmentsPolicy.connect(orchestrator).rebase()
-      await increaseTime(59)
       prevEpoch = await uFragmentsPolicy.epoch()
       prevTime = await uFragmentsPolicy.lastRebaseTimestampSec()
       await mockExternalData(INITIAL_RATE_60P_MORE, INITIAL_CPI, 1010)
+      await increaseTime(60)
     })
 
     it('should increment epoch', async function () {
@@ -843,7 +843,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
     it('should update lastRebaseTimestamp', async function () {
       await uFragmentsPolicy.connect(orchestrator).rebase()
       const time = await uFragmentsPolicy.lastRebaseTimestampSec()
-      expect(time.sub(prevTime)).to.eq(60)
+      expect(time.sub(prevTime)).to.gte(60)
     })
 
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
