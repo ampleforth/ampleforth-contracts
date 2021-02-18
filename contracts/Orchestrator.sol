@@ -36,8 +36,8 @@ contract Orchestrator is Ownable {
      *         The Orchestrator calls rebase on the policy and notifies downstream applications.
      *         Contracts are guarded from calling, to avoid flash loan attacks on liquidity
      *         providers.
-     *         If a transaction in the transaction list reverts, it is swallowed and the remaining
-     *         transactions are executed.
+     *         If a transaction in the transaction list fails, Orchestrator will stop execution
+     *         and revert to prevent a gas underprice attack.
      */
     function rebase() external {
         require(msg.sender == tx.origin); // solhint-disable-line avoid-tx-origin
