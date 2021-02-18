@@ -83,7 +83,7 @@ contract UFragmentsPolicy is Ownable {
     // Both are 18 decimals fixed point numbers.
     uint256 private constant MAX_RATE = 10**6 * 10**DECIMALS;
     // MAX_SUPPLY = MAX_INT256 / MAX_RATE
-    uint256 public constant MAX_SUPPLY = uint256(type(int256).max) / MAX_RATE;
+    uint256 private constant MAX_SUPPLY = uint256(type(int256).max) / MAX_RATE;
 
     // This module orchestrates the rebase execution and downstream notification.
     address public orchestrator;
