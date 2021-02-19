@@ -32,5 +32,6 @@ export default {
     currency: 'USD',
     enabled: process.env.REPORT_GAS ? true : false,
     excludeContracts: ['mocks/'],
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
   },
 } as HardhatUserConfig
