@@ -47,7 +47,7 @@ contract Orchestrator is Ownable {
         for (uint256 i = 0; i < transactions.length; i++) {
             Transaction storage t = transactions[i];
             if (t.enabled) {
-                bool result = t.destination.call(t.data);
+                (bool result, bytes memory reason) = t.destination.call(t.data);
                 if (!result) {
                     emit TransactionFailed(t.destination, i, t.data);
                     revert("Transaction Failed");
