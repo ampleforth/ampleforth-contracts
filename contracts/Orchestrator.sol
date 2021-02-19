@@ -47,7 +47,7 @@ contract Orchestrator is Ownable {
         for (uint256 i = 0; i < transactions.length; i++) {
             Transaction storage t = transactions[i];
             if (t.enabled) {
-                bool result = externalCall(t.destination, t.data);
+                bool result = t.destination.call(t.data);
                 if (!result) {
                     emit TransactionFailed(t.destination, i, t.data);
                     revert("Transaction Failed");
@@ -93,39 +93,5 @@ contract Orchestrator is Ownable {
      */
     function transactionsSize() external view returns (uint256) {
         return transactions.length;
-    }
-
-    /**
-     * @dev wrapper to call the encoded transactions on downstream consumers.
-     * @param destination Address of destination contract.
-     * @param data The encoded data payload.
-     * @return True on success
-     */
-    function externalCall(address destination, bytes memory data) internal returns (bool) {
-        bool result;
-        assembly {
-            // solhint-disable-line no-inline-assembly
-            // "Allocate" memory for output
-            // (0x40 is where "free memory" pointer is stored by convention)
-            let outputAddress := mload(0x40)
-
-            // First 32 bytes are the padded length of data, so exclude that
-            let dataAddress := add(data, 32)
-
-            result := call(
-                // 34710 is the value that solidity is currently emitting
-                // It includes callGas (700) + callVeryLow (3, to pay for SUB)
-                // + callValueTransferGas (9000) + callNewAccountGas
-                // (25000, in case the destination address does not exist and needs creating)
-                sub(gas(), 34710),
-                destination,
-                0, // transfer value in wei
-                dataAddress,
-                mload(data), // Size of the input, in bytes. Stored in position 0 of the array.
-                outputAddress,
-                0 // Output is ignored, therefore the output size is zero
-            )
-        }
-        return result;
     }
 }
