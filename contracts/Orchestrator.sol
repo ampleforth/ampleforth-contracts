@@ -16,8 +16,6 @@ contract Orchestrator is Ownable {
         bytes data;
     }
 
-    event TransactionFailed(address indexed destination, uint256 index, bytes data);
-
     // Stable ordering is not guaranteed.
     Transaction[] public transactions;
 
