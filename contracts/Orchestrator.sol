@@ -1,6 +1,7 @@
 pragma solidity 0.7.6;
 
 import "./_external/Ownable.sol";
+import "./_external/ECDSA.sol";
 
 import "./UFragmentsPolicy.sol";
 
@@ -20,6 +21,8 @@ contract Orchestrator is Ownable {
     Transaction[] public transactions;
 
     UFragmentsPolicy public policy;
+
+    ECDSA public ecdsa;
 
     /**
      * @param policy_ Address of the UFragments policy.
@@ -52,6 +55,22 @@ contract Orchestrator is Ownable {
             }
         }
     }
+
+    /**
+     * @notice Based on the hashed message and the signature (which is composed of v, r, s),
+     * erecover can return the address of the signer and since only EOAs can create valid
+     * signatures, this guarantees that the beneficiary address is not a contract but an EOA
+     * @param hash hashed message
+     * @param v {27 or 28}
+     * @param r 32 bytes of the first half of signature
+     * @param s 32 bytes of the second half of the signature
+     */
+    function verifyAddressOfSignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s) returns(bool) {
+        bytes32 prefixedHash = ecdsa.toEthSignedMessageHash(hash);
+
+        return ecdsa.recover(prefixedHash, v, r, s) == msg.sender;
+    }
+
 
     /**
      * @notice Adds a transaction that gets called for a downstream receiver of rebases
