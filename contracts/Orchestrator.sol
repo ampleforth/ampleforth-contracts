@@ -1,9 +1,9 @@
 pragma solidity 0.7.6;
 
 import "./_external/Ownable.sol";
-import { ECDSA } from "./_external/ECDSA.sol";
 
 import "./UFragmentsPolicy.sol";
+import { ECDSA } from "./_external/ECDSA.sol";
 
 /**
  * @title Orchestrator
@@ -22,7 +22,8 @@ contract Orchestrator is Ownable {
 
     UFragmentsPolicy public policy;
 
-    ECDSA public ecdsa;
+    // using ECDSA library to return an address
+    using ECDSA for address;
 
     /**
      * @param policy_ Address of the UFragments policy.
@@ -71,9 +72,9 @@ contract Orchestrator is Ownable {
         bytes32 r,
         bytes32 s
     ) internal returns (bool) {
-        bytes32 prefixedHash = ecdsa.toEthSignedMessageHash(hash);
+        bytes32 prefixedHash = ECDSA.toEthSignedMessageHash(hash);
 
-        return ecdsa.recover(prefixedHash, v, r, s) == msg.sender;
+        return ECDSA.recover(prefixedHash, v, r, s) == msg.sender;
     }
 
     /**
