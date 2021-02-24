@@ -1,7 +1,7 @@
 pragma solidity 0.7.6;
 
 import "./_external/Ownable.sol";
-import "./_external/ECDSA.sol";
+import { ECDSA } from "./_external/ECDSA.sol";
 
 import "./UFragmentsPolicy.sol";
 
@@ -65,12 +65,16 @@ contract Orchestrator is Ownable {
      * @param r 32 bytes of the first half of signature
      * @param s 32 bytes of the second half of the signature
      */
-    function verifyAddressOfSignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s) returns(bool) {
+    function verifyAddressOfSignature(
+        bytes32 hash,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal returns (bool) {
         bytes32 prefixedHash = ecdsa.toEthSignedMessageHash(hash);
 
         return ecdsa.recover(prefixedHash, v, r, s) == msg.sender;
     }
-
 
     /**
      * @notice Adds a transaction that gets called for a downstream receiver of rebases
