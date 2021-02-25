@@ -3,7 +3,8 @@ pragma solidity 0.7.6;
 import "./_external/Ownable.sol";
 
 import "./UFragmentsPolicy.sol";
-import { ECDSA } from "./_external/ECDSA.sol";
+
+import "openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title Orchestrator
@@ -11,6 +12,8 @@ import { ECDSA } from "./_external/ECDSA.sol";
  * actions with external consumers.
  */
 contract Orchestrator is Ownable {
+    using ECDSA for address;
+
     struct Transaction {
         bool enabled;
         address destination;
@@ -21,9 +24,6 @@ contract Orchestrator is Ownable {
     Transaction[] public transactions;
 
     UFragmentsPolicy public policy;
-
-    // using ECDSA library to return an address
-    using ECDSA for address;
 
     /**
      * @param policy_ Address of the UFragments policy.
