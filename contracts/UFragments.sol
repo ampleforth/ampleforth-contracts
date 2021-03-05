@@ -226,9 +226,6 @@ contract UFragments is ERC20Detailed, Ownable {
         validRecipient(to)
         returns (bool)
     {
-        require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
-        require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
-
         uint256 gonValue = value.mul(_gonsPerFragment);
 
         _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
@@ -244,8 +241,6 @@ contract UFragments is ERC20Detailed, Ownable {
      * @return True on success, false otherwise.
      */
     function transferAll(address to) external validRecipient(to) returns (bool) {
-        require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
-
         uint256 gonValue = _gonBalances[msg.sender];
         uint256 value = gonValue.div(_gonsPerFragment);
 
@@ -277,10 +272,6 @@ contract UFragments is ERC20Detailed, Ownable {
         address to,
         uint256 value
     ) external override validRecipient(to) returns (bool) {
-        require(msg.sender != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
-        require(from != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
-        require(to != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
-
         _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value);
 
         uint256 gonValue = value.mul(_gonsPerFragment);
@@ -297,8 +288,6 @@ contract UFragments is ERC20Detailed, Ownable {
      * @param to The address you want to transfer to.
      */
     function transferAllFrom(address from, address to) external validRecipient(to) returns (bool) {
-        require(from != 0xeB31973E0FeBF3e3D7058234a5eBbAe1aB4B8c23);
-
         uint256 gonValue = _gonBalances[from];
         uint256 value = gonValue.div(_gonsPerFragment);
 
