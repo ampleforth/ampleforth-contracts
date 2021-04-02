@@ -324,7 +324,7 @@ describe('Orchestrator', function () {
       }
       expect(!exp).to.be.false
       expect(exp.message.replace(/\0/g, '')).to.eq(
-        'VM Exception while processing transaction: revert Orchestrator: critical {job} reverted with {reason}:1|reverted',
+        'VM Exception while processing transaction: revert Orchestrator: critical index:{job} reverted with:{reason}:1|reverted',
       )
     })
 
@@ -370,7 +370,7 @@ describe('Orchestrator', function () {
       }
       expect(!exp).to.be.false
       expect(exp.message.replace(/\0/g, '')).to.eq(
-        'VM Exception while processing transaction: revert Orchestrator: critical {job} reverted with {reason}:2|Transaction reverted silently',
+        'VM Exception while processing transaction: revert Orchestrator: critical index:{job} reverted with:{reason}:2|Transaction reverted silently',
       )
     })
 
