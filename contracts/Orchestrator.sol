@@ -1,8 +1,13 @@
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity 0.8.2;
 
-import "./_external/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {BytesLib} from "./_external/BytesLib.sol";
+import {StringUtils} from "./_external/StringUtils.sol";
 
-import "./UFragmentsPolicy.sol";
+interface IUFragmentsPolicy {
+    function rebase() external;
+}
 
 /**
  * @title Orchestrator
@@ -10,8 +15,15 @@ import "./UFragmentsPolicy.sol";
  * actions with external consumers.
  */
 contract Orchestrator is Ownable {
+    using BytesLib for bytes;
+    using StringUtils for uint256;
+
+    // Reference to the Ampleforth Policy
+    address public policy;
+
     struct Transaction {
         bool enabled;
+        bool critical;
         address destination;
         bytes data;
     }
@@ -19,14 +31,14 @@ contract Orchestrator is Ownable {
     // Stable ordering is not guaranteed.
     Transaction[] public transactions;
 
-    UFragmentsPolicy public policy;
+    // events
+    event TransactionFailed(uint256 index);
 
     /**
      * @param policy_ Address of the UFragments policy.
      */
-    constructor(address policy_) public {
-        Ownable.initialize(msg.sender);
-        policy = UFragmentsPolicy(policy_);
+    constructor(address policy_) {
+        policy = policy_;
     }
 
     /**
@@ -34,20 +46,27 @@ contract Orchestrator is Ownable {
      *         The Orchestrator calls rebase on the policy and notifies downstream applications.
      *         Contracts are guarded from calling, to avoid flash loan attacks on liquidity
      *         providers.
-     *         If a transaction in the transaction list fails, Orchestrator will stop execution
-     *         and revert to prevent a gas underprice attack.
+     *         If a transaction marked 'critical' in the transaction list fails,
+     *         Orchestrator will stop execution and revert.
      */
     function rebase() external {
         require(msg.sender == tx.origin); // solhint-disable-line avoid-tx-origin
 
-        policy.rebase();
+        IUFragmentsPolicy(policy).rebase();
 
         for (uint256 i = 0; i < transactions.length; i++) {
             Transaction storage t = transactions[i];
             if (t.enabled) {
-                (bool result, ) = t.destination.call(t.data);
-                if (!result) {
-                    revert("Transaction Failed");
+                (bool success, bytes memory reason) = t.destination.call(t.data);
+
+                // Critical transaction failed, revert with message
+                if (!success && t.critical) {
+                    revert(buildRevertReason(i, reason));
+                }
+
+                // Non-Critical transaction failed, log error and continue
+                if (!success) {
+                    emit TransactionFailed(i);
                 }
             }
         }
@@ -58,8 +77,14 @@ contract Orchestrator is Ownable {
      * @param destination Address of contract destination
      * @param data Transaction data payload
      */
-    function addTransaction(address destination, bytes memory data) external onlyOwner {
-        transactions.push(Transaction({enabled: true, destination: destination, data: data}));
+    function addTransaction(
+        bool critical,
+        address destination,
+        bytes memory data
+    ) external onlyOwner {
+        transactions.push(
+            Transaction({enabled: true, critical: critical, destination: destination, data: data})
+        );
     }
 
     /**
@@ -67,7 +92,7 @@ contract Orchestrator is Ownable {
      *              Transaction ordering may have changed since adding.
      */
     function removeTransaction(uint256 index) external onlyOwner {
-        require(index < transactions.length, "index out of bounds");
+        require(index < transactions.length, "Orchestrator: index out of bounds");
 
         if (index < transactions.length - 1) {
             transactions[index] = transactions[transactions.length - 1];
@@ -81,8 +106,23 @@ contract Orchestrator is Ownable {
      * @param enabled True for enabled, false for disabled.
      */
     function setTransactionEnabled(uint256 index, bool enabled) external onlyOwner {
-        require(index < transactions.length, "index must be in range of stored tx list");
+        require(
+            index < transactions.length,
+            "Orchestrator: index must be in range of stored tx list"
+        );
         transactions[index].enabled = enabled;
+    }
+
+    /**
+     * @param index Index of transaction. Transaction ordering may have changed since adding.
+     * @param critical True for critical, false for non-critical.
+     */
+    function setTransactionCritical(uint256 index, bool critical) external onlyOwner {
+        require(
+            index < transactions.length,
+            "Orchestrator: index must be in range of stored tx list"
+        );
+        transactions[index].critical = critical;
     }
 
     /**
@@ -90,5 +130,43 @@ contract Orchestrator is Ownable {
      */
     function transactionsSize() external view returns (uint256) {
         return transactions.length;
+    }
+
+    /**
+     * @param txIndex The index of the failing transaction in the transaction array.
+     * @param reason The revert reason in bytes.
+     * @return Number of transactions, both enabled and disabled, in transactions list.
+     */
+    function buildRevertReason(uint256 txIndex, bytes memory reason)
+        internal
+        pure
+        returns (string memory)
+    {
+        return
+            string(
+                abi.encodePacked(
+                    "Orchestrator: critical {job} reverted with {reason}:",
+                    txIndex.uintToBytes(),
+                    "|",
+                    revertReasonToString(reason)
+                )
+            );
+    }
+
+    /**
+     * @dev github.com/authereum/contracts/account/BaseAccount.sol#L132
+     * @param reason The revert reason in bytes.
+     * @return The revert reason as a string.
+     */
+    function revertReasonToString(bytes memory reason) internal pure returns (string memory) {
+        // If the reason length is less than 68, then the transaction failed
+        // silently (without a revert message)
+        if (reason.length < 68) return "Transaction reverted silently";
+
+        // Remove the selector which is the first 4 bytes
+        bytes memory revertData = reason.slice(4, reason.length - 4);
+
+        // All that remains is the revert string
+        return abi.decode(revertData, (string));
     }
 }

@@ -102,7 +102,7 @@ describe('Orchestrator', function () {
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(mockDownstream.address, updateOneArgEncoded.data)
+        .addTransaction(true, mockDownstream.address, updateOneArgEncoded.data)
       r = orchestrator.connect(deployer).rebase()
     })
 
@@ -139,7 +139,7 @@ describe('Orchestrator', function () {
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(mockDownstream.address, updateTwoArgsEncoded.data)
+        .addTransaction(true, mockDownstream.address, updateTwoArgsEncoded.data)
       r = orchestrator.connect(deployer).rebase()
     })
 
@@ -261,19 +261,52 @@ describe('Orchestrator', function () {
     })
   })
 
-  describe('when a transaction reverts', async function () {
+  describe('when a non-critical transaction reverts', async function () {
+    before('adding 2 transactions', async function () {
+      expect(await orchestrator.transactionsSize()).to.eq(0);
+
+      const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
+        999,
+      )
+      await orchestrator
+        .connect(deployer)
+        .addTransaction(true, mockDownstream.address, updateOneArgEncoded.data)
+
+      const revertsEncoded = await mockDownstream.populateTransaction.reverts()
+      await orchestrator
+        .connect(deployer)
+        .addTransaction(false, mockDownstream.address, revertsEncoded.data)
+
+      await expect(orchestrator.connect(deployer).rebase())
+        // .not.to.be.reverted
+        .to.emit(orchestrator, 'TransactionFailed')
+        .withArgs(1);
+    })
+
+    it('should have 2 transactions', async function () {
+      expect(await orchestrator.transactionsSize()).to.eq(2)
+    })
+
+    after('removing 2 transactions', async function() {
+      await orchestrator.connect(deployer).removeTransaction(1);
+      await orchestrator.connect(deployer).removeTransaction(0);
+      expect(await orchestrator.transactionsSize()).to.eq(0);
+    })
+  })
+
+  describe('when a critical transaction reverts with message', async function () {
     before('adding 3 transactions', async function () {
       const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
         123,
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(mockDownstream.address, updateOneArgEncoded.data)
+        .addTransaction(true, mockDownstream.address, updateOneArgEncoded.data)
 
       const revertsEncoded = await mockDownstream.populateTransaction.reverts()
       await orchestrator
         .connect(deployer)
-        .addTransaction(mockDownstream.address, revertsEncoded.data)
+        .addTransaction(true, mockDownstream.address, revertsEncoded.data)
 
       const updateTwoArgsEncoded = await mockDownstream.populateTransaction.updateTwoArgs(
         12345,
@@ -281,12 +314,71 @@ describe('Orchestrator', function () {
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(mockDownstream.address, updateTwoArgsEncoded.data)
-      await expect(orchestrator.connect(deployer).rebase()).to.be.reverted
+        .addTransaction(true, mockDownstream.address, updateTwoArgsEncoded.data)
+
+      let exp;
+      try{
+        await orchestrator.connect(deployer).rebase();
+      } catch(e) {
+        exp = e;
+      }
+      expect(!exp).to.be.false;
+      expect(exp.message.replace(/\0/g, '')).to.eq('VM Exception while processing transaction: revert Orchestrator: critical {job} reverted with {reason}:1|reverted');
     })
 
     it('should have 3 transactions', async function () {
       expect(await orchestrator.transactionsSize()).to.eq(3)
+    })
+
+    after('removing 3 transactions', async function() {
+      await orchestrator.connect(deployer).removeTransaction(2);
+      await orchestrator.connect(deployer).removeTransaction(1);
+      await orchestrator.connect(deployer).removeTransaction(0);
+      expect(await orchestrator.transactionsSize()).to.eq(0);
+    })
+  })
+
+  describe('when a critical transaction reverts without message', async function () {
+    before('adding 3 transactions', async function () {
+      const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
+        555,
+      )
+      await orchestrator
+        .connect(deployer)
+        .addTransaction(true, mockDownstream.address, updateOneArgEncoded.data)
+
+      const updateTwoArgsEncoded = await mockDownstream.populateTransaction.updateTwoArgs(
+        72,
+        33,
+      )
+      await orchestrator
+        .connect(deployer)
+        .addTransaction(true, mockDownstream.address, updateTwoArgsEncoded.data)
+
+      const revertsEncoded = await mockDownstream.populateTransaction.revertsWithoutMessage()
+      await orchestrator
+        .connect(deployer)
+        .addTransaction(true, mockDownstream.address, revertsEncoded.data)
+
+      let exp;
+      try{
+        await orchestrator.connect(deployer).rebase();
+      } catch(e) {
+        exp = e;
+      }
+      expect(!exp).to.be.false;
+      expect(exp.message.replace(/\0/g, '')).to.eq('VM Exception while processing transaction: revert Orchestrator: critical {job} reverted with {reason}:2|Transaction reverted silently');
+    })
+
+    it('should have 3 transactions', async function () {
+      expect(await orchestrator.transactionsSize()).to.eq(3)
+    })
+
+    after('removing 3 transactions', async function() {
+      await orchestrator.connect(deployer).removeTransaction(2);
+      await orchestrator.connect(deployer).removeTransaction(1);
+      await orchestrator.connect(deployer).removeTransaction(0);
+      expect(await orchestrator.transactionsSize()).to.eq(0);
     })
   })
 
@@ -297,7 +389,11 @@ describe('Orchestrator', function () {
         await expect(
           orchestrator
             .connect(deployer)
-            .addTransaction(mockDownstream.address, updateNoArgEncoded.data),
+            .addTransaction(
+              true,
+              mockDownstream.address,
+              updateNoArgEncoded.data,
+            ),
         ).to.not.be.reverted
       })
 
@@ -306,7 +402,11 @@ describe('Orchestrator', function () {
         await expect(
           orchestrator
             .connect(user)
-            .addTransaction(mockDownstream.address, updateNoArgEncoded.data),
+            .addTransaction(
+              true,
+              mockDownstream.address,
+              updateNoArgEncoded.data,
+            ),
         ).to.be.reverted
       })
     })
@@ -320,9 +420,9 @@ describe('Orchestrator', function () {
       })
 
       it('should revert if index out of bounds', async function () {
-        expect(await orchestrator.transactionsSize()).to.lt(5)
+        expect(await orchestrator.transactionsSize()).to.lt(2)
         await expect(
-          orchestrator.connect(deployer).setTransactionEnabled(5, true),
+          orchestrator.connect(deployer).setTransactionEnabled(2, true),
         ).to.be.reverted
       })
 
@@ -341,8 +441,8 @@ describe('Orchestrator', function () {
       })
 
       it('should revert if index out of bounds', async function () {
-        expect(await orchestrator.transactionsSize()).to.lt(5)
-        await expect(orchestrator.connect(deployer).removeTransaction(5)).to.be
+        expect(await orchestrator.transactionsSize()).to.lt(2)
+        await expect(orchestrator.connect(deployer).removeTransaction(2)).to.be
           .reverted
       })
 
