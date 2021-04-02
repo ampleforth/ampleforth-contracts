@@ -23,6 +23,7 @@ contract Orchestrator is Ownable {
 
     struct Transaction {
         bool enabled;
+        // A failed Transaction marked critical will also cause rebase to fail.
         bool critical;
         address destination;
         bytes data;
