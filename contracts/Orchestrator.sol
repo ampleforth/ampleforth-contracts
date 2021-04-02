@@ -38,7 +38,7 @@ contract Orchestrator is Ownable {
     /**
      * @param policy_ Address of the UFragments policy.
      */
-    constructor(address policy_) {
+    constructor(address policy_) Ownable() {
         policy = policy_;
     }
 
