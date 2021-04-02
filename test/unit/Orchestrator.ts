@@ -263,7 +263,7 @@ describe('Orchestrator', function () {
 
   describe('when a non-critical transaction reverts', async function () {
     before('adding 2 transactions', async function () {
-      expect(await orchestrator.transactionsSize()).to.eq(0);
+      expect(await orchestrator.transactionsSize()).to.eq(0)
 
       const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
         999,
@@ -280,17 +280,17 @@ describe('Orchestrator', function () {
       await expect(orchestrator.connect(deployer).rebase())
         // .not.to.be.reverted
         .to.emit(orchestrator, 'TransactionFailed')
-        .withArgs(1);
+        .withArgs(1)
     })
 
     it('should have 2 transactions', async function () {
       expect(await orchestrator.transactionsSize()).to.eq(2)
     })
 
-    after('removing 2 transactions', async function() {
-      await orchestrator.connect(deployer).removeTransaction(1);
-      await orchestrator.connect(deployer).removeTransaction(0);
-      expect(await orchestrator.transactionsSize()).to.eq(0);
+    after('removing 2 transactions', async function () {
+      await orchestrator.connect(deployer).removeTransaction(1)
+      await orchestrator.connect(deployer).removeTransaction(0)
+      expect(await orchestrator.transactionsSize()).to.eq(0)
     })
   })
 
@@ -316,25 +316,27 @@ describe('Orchestrator', function () {
         .connect(deployer)
         .addTransaction(true, mockDownstream.address, updateTwoArgsEncoded.data)
 
-      let exp;
-      try{
-        await orchestrator.connect(deployer).rebase();
-      } catch(e) {
-        exp = e;
+      let exp
+      try {
+        await orchestrator.connect(deployer).rebase()
+      } catch (e) {
+        exp = e
       }
-      expect(!exp).to.be.false;
-      expect(exp.message.replace(/\0/g, '')).to.eq('VM Exception while processing transaction: revert Orchestrator: critical {job} reverted with {reason}:1|reverted');
+      expect(!exp).to.be.false
+      expect(exp.message.replace(/\0/g, '')).to.eq(
+        'VM Exception while processing transaction: revert Orchestrator: critical {job} reverted with {reason}:1|reverted',
+      )
     })
 
     it('should have 3 transactions', async function () {
       expect(await orchestrator.transactionsSize()).to.eq(3)
     })
 
-    after('removing 3 transactions', async function() {
-      await orchestrator.connect(deployer).removeTransaction(2);
-      await orchestrator.connect(deployer).removeTransaction(1);
-      await orchestrator.connect(deployer).removeTransaction(0);
-      expect(await orchestrator.transactionsSize()).to.eq(0);
+    after('removing 3 transactions', async function () {
+      await orchestrator.connect(deployer).removeTransaction(2)
+      await orchestrator.connect(deployer).removeTransaction(1)
+      await orchestrator.connect(deployer).removeTransaction(0)
+      expect(await orchestrator.transactionsSize()).to.eq(0)
     })
   })
 
@@ -360,25 +362,27 @@ describe('Orchestrator', function () {
         .connect(deployer)
         .addTransaction(true, mockDownstream.address, revertsEncoded.data)
 
-      let exp;
-      try{
-        await orchestrator.connect(deployer).rebase();
-      } catch(e) {
-        exp = e;
+      let exp
+      try {
+        await orchestrator.connect(deployer).rebase()
+      } catch (e) {
+        exp = e
       }
-      expect(!exp).to.be.false;
-      expect(exp.message.replace(/\0/g, '')).to.eq('VM Exception while processing transaction: revert Orchestrator: critical {job} reverted with {reason}:2|Transaction reverted silently');
+      expect(!exp).to.be.false
+      expect(exp.message.replace(/\0/g, '')).to.eq(
+        'VM Exception while processing transaction: revert Orchestrator: critical {job} reverted with {reason}:2|Transaction reverted silently',
+      )
     })
 
     it('should have 3 transactions', async function () {
       expect(await orchestrator.transactionsSize()).to.eq(3)
     })
 
-    after('removing 3 transactions', async function() {
-      await orchestrator.connect(deployer).removeTransaction(2);
-      await orchestrator.connect(deployer).removeTransaction(1);
-      await orchestrator.connect(deployer).removeTransaction(0);
-      expect(await orchestrator.transactionsSize()).to.eq(0);
+    after('removing 3 transactions', async function () {
+      await orchestrator.connect(deployer).removeTransaction(2)
+      await orchestrator.connect(deployer).removeTransaction(1)
+      await orchestrator.connect(deployer).removeTransaction(0)
+      expect(await orchestrator.transactionsSize()).to.eq(0)
     })
   })
 

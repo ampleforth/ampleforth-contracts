@@ -16,7 +16,7 @@ interface IUFragmentsPolicy {
  */
 contract Orchestrator is Ownable {
     using BytesLib for bytes;
-    using StringUtils for uint256;
+    using StringUtils for uint16;
 
     // Reference to the Ampleforth Policy
     address public policy;
@@ -32,7 +32,7 @@ contract Orchestrator is Ownable {
     Transaction[] public transactions;
 
     // events
-    event TransactionFailed(uint256 index);
+    event TransactionFailed(uint16 index);
 
     /**
      * @param policy_ Address of the UFragments policy.
@@ -54,7 +54,7 @@ contract Orchestrator is Ownable {
 
         IUFragmentsPolicy(policy).rebase();
 
-        for (uint256 i = 0; i < transactions.length; i++) {
+        for (uint16 i = 0; i < transactions.length; i++) {
             Transaction storage t = transactions[i];
             if (t.enabled) {
                 (bool success, bytes memory reason) = t.destination.call(t.data);
@@ -91,7 +91,7 @@ contract Orchestrator is Ownable {
      * @param index Index of transaction to remove.
      *              Transaction ordering may have changed since adding.
      */
-    function removeTransaction(uint256 index) external onlyOwner {
+    function removeTransaction(uint16 index) external onlyOwner {
         require(index < transactions.length, "Orchestrator: index out of bounds");
 
         if (index < transactions.length - 1) {
@@ -105,7 +105,7 @@ contract Orchestrator is Ownable {
      * @param index Index of transaction. Transaction ordering may have changed since adding.
      * @param enabled True for enabled, false for disabled.
      */
-    function setTransactionEnabled(uint256 index, bool enabled) external onlyOwner {
+    function setTransactionEnabled(uint16 index, bool enabled) external onlyOwner {
         require(
             index < transactions.length,
             "Orchestrator: index must be in range of stored tx list"
@@ -117,7 +117,7 @@ contract Orchestrator is Ownable {
      * @param index Index of transaction. Transaction ordering may have changed since adding.
      * @param critical True for critical, false for non-critical.
      */
-    function setTransactionCritical(uint256 index, bool critical) external onlyOwner {
+    function setTransactionCritical(uint16 index, bool critical) external onlyOwner {
         require(
             index < transactions.length,
             "Orchestrator: index must be in range of stored tx list"
@@ -137,7 +137,7 @@ contract Orchestrator is Ownable {
      * @param reason The revert reason in bytes.
      * @return Number of transactions, both enabled and disabled, in transactions list.
      */
-    function buildRevertReason(uint256 txIndex, bytes memory reason)
+    function buildRevertReason(uint16 txIndex, bytes memory reason)
         internal
         pure
         returns (string memory)
