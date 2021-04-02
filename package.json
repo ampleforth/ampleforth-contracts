@@ -56,7 +56,6 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.0.0",
-    "hardhat-gas-reporter": "^1.0.4",
-    "solidity-bytes-utils": "0.1.1"
+    "hardhat-gas-reporter": "^1.0.4"
   }
 }
