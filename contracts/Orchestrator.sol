@@ -146,7 +146,7 @@ contract Orchestrator is Ownable {
         return
             string(
                 abi.encodePacked(
-                    "Orchestrator: critical {job} reverted with {reason}:",
+                    "Orchestrator: critical index:{job} reverted with: {reason}:",
                     txIndex.uintToBytes(),
                     "|",
                     revertReasonToString(reason)
