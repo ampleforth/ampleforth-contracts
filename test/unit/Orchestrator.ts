@@ -102,7 +102,7 @@ describe('Orchestrator', function () {
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(true, mockDownstream.address, updateOneArgEncoded.data)
+        .addTransaction(mockDownstream.address, updateOneArgEncoded.data)
       r = orchestrator.connect(deployer).rebase()
     })
 
@@ -139,7 +139,7 @@ describe('Orchestrator', function () {
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(true, mockDownstream.address, updateTwoArgsEncoded.data)
+        .addTransaction(mockDownstream.address, updateTwoArgsEncoded.data)
       r = orchestrator.connect(deployer).rebase()
     })
 
@@ -261,52 +261,19 @@ describe('Orchestrator', function () {
     })
   })
 
-  describe('when a non-critical transaction reverts', async function () {
-    before('adding 2 transactions', async function () {
-      expect(await orchestrator.transactionsSize()).to.eq(0)
-
-      const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
-        999,
-      )
-      await orchestrator
-        .connect(deployer)
-        .addTransaction(true, mockDownstream.address, updateOneArgEncoded.data)
-
-      const revertsEncoded = await mockDownstream.populateTransaction.reverts()
-      await orchestrator
-        .connect(deployer)
-        .addTransaction(false, mockDownstream.address, revertsEncoded.data)
-
-      await expect(orchestrator.connect(deployer).rebase())
-        // .not.to.be.reverted
-        .to.emit(orchestrator, 'TransactionFailed')
-        .withArgs(1)
-    })
-
-    it('should have 2 transactions', async function () {
-      expect(await orchestrator.transactionsSize()).to.eq(2)
-    })
-
-    after('removing 2 transactions', async function () {
-      await orchestrator.connect(deployer).removeTransaction(1)
-      await orchestrator.connect(deployer).removeTransaction(0)
-      expect(await orchestrator.transactionsSize()).to.eq(0)
-    })
-  })
-
-  describe('when a critical transaction reverts with message', async function () {
+  describe('when a transaction reverts with message', async function () {
     before('adding 3 transactions', async function () {
       const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
         123,
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(true, mockDownstream.address, updateOneArgEncoded.data)
+        .addTransaction(mockDownstream.address, updateOneArgEncoded.data)
 
       const revertsEncoded = await mockDownstream.populateTransaction.reverts()
       await orchestrator
         .connect(deployer)
-        .addTransaction(true, mockDownstream.address, revertsEncoded.data)
+        .addTransaction(mockDownstream.address, revertsEncoded.data)
 
       const updateTwoArgsEncoded = await mockDownstream.populateTransaction.updateTwoArgs(
         12345,
@@ -314,7 +281,7 @@ describe('Orchestrator', function () {
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(true, mockDownstream.address, updateTwoArgsEncoded.data)
+        .addTransaction(mockDownstream.address, updateTwoArgsEncoded.data)
 
       let exp
       try {
@@ -324,7 +291,7 @@ describe('Orchestrator', function () {
       }
       expect(!exp).to.be.false
       expect(exp.message.replace(/\0/g, '')).to.eq(
-        'VM Exception while processing transaction: revert Orchestrator: critical index:{job} reverted with:{reason}:1|reverted',
+        'VM Exception while processing transaction: revert Orchestrator: transaction:{index} reverted:1',
       )
     })
 
@@ -340,14 +307,14 @@ describe('Orchestrator', function () {
     })
   })
 
-  describe('when a critical transaction reverts without message', async function () {
+  describe('when a transaction reverts without message', async function () {
     before('adding 3 transactions', async function () {
       const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
         555,
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(true, mockDownstream.address, updateOneArgEncoded.data)
+        .addTransaction(mockDownstream.address, updateOneArgEncoded.data)
 
       const updateTwoArgsEncoded = await mockDownstream.populateTransaction.updateTwoArgs(
         72,
@@ -355,12 +322,12 @@ describe('Orchestrator', function () {
       )
       await orchestrator
         .connect(deployer)
-        .addTransaction(true, mockDownstream.address, updateTwoArgsEncoded.data)
+        .addTransaction(mockDownstream.address, updateTwoArgsEncoded.data)
 
       const revertsEncoded = await mockDownstream.populateTransaction.revertsWithoutMessage()
       await orchestrator
         .connect(deployer)
-        .addTransaction(true, mockDownstream.address, revertsEncoded.data)
+        .addTransaction(mockDownstream.address, revertsEncoded.data)
 
       let exp
       try {
@@ -370,7 +337,7 @@ describe('Orchestrator', function () {
       }
       expect(!exp).to.be.false
       expect(exp.message.replace(/\0/g, '')).to.eq(
-        'VM Exception while processing transaction: revert Orchestrator: critical index:{job} reverted with:{reason}:2|Transaction reverted silently',
+        'VM Exception while processing transaction: revert Orchestrator: transaction:{index} reverted:2',
       )
     })
 
@@ -393,11 +360,7 @@ describe('Orchestrator', function () {
         await expect(
           orchestrator
             .connect(deployer)
-            .addTransaction(
-              true,
-              mockDownstream.address,
-              updateNoArgEncoded.data,
-            ),
+            .addTransaction(mockDownstream.address, updateNoArgEncoded.data),
         ).to.not.be.reverted
       })
 
@@ -406,11 +369,7 @@ describe('Orchestrator', function () {
         await expect(
           orchestrator
             .connect(user)
-            .addTransaction(
-              true,
-              mockDownstream.address,
-              updateNoArgEncoded.data,
-            ),
+            .addTransaction(mockDownstream.address, updateNoArgEncoded.data),
         ).to.be.reverted
       })
     })
