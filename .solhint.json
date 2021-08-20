@@ -4,6 +4,6 @@
   "rules": {
     "prettier/prettier": "error",
     "not-rely-on-time": "off",
-    "max-line-length": ["error", 100]
+    "max-line-length": ["error", 105]
   }
 }
