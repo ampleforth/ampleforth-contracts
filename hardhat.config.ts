@@ -1,4 +1,5 @@
 import { HardhatUserConfig } from 'hardhat/config'
+import { Wallet } from 'ethers'
 
 import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-waffle'
@@ -19,12 +20,21 @@ export default {
     },
     rinkeby: {
       url: `https://rinkeby.infura.io/v3/${process.env.INFURA_SECRET}`,
+      accounts: {
+        mnemonic: process.env.DEV_MNEMONIC || Wallet.createRandom().mnemonic.phrase,
+      },
     },
     kovan: {
       url: `https://kovan.infura.io/v3/${process.env.INFURA_SECRET}`,
+      accounts: {
+        mnemonic: process.env.DEV_MNEMONIC || Wallet.createRandom().mnemonic.phrase,
+      },
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_SECRET}`,
+      accounts: {
+        mnemonic: process.env.PROD_MNEMONIC || Wallet.createRandom().mnemonic.phrase,
+      },
     },
   },
   solidity: {

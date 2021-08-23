@@ -14,22 +14,22 @@ const parseEvents = (
     .map((log) => contractInterface.parseLog(log))
     .filter((log) => log.name === eventName)
 
-task('ampl:deploy', 'Deploy ampleforth contracts').setAction(
-  async (args, bre) => {
+task('deploy:ampl', 'Deploy ampleforth contracts').setAction(
+  async (args, hre) => {
     console.log(args)
 
     // get signers
-    const deployer = (await bre.ethers.getSigners())[0]
+    const deployer = (await hre.ethers.getSigners())[0]
     console.log('Deployer', await deployer.getAddress())
 
     // set init params
     const owner = await deployer.getAddress()
-    const BASE_CPI = bre.ethers.utils.parseUnits('1', 20)
+    const BASE_CPI = hre.ethers.utils.parseUnits('1', 20)
 
     // deploy UFragments
     const uFragments = await (
-      await bre.upgrades.deployProxy(
-        (await bre.ethers.getContractFactory('UFragments')).connect(deployer),
+      await hre.upgrades.deployProxy(
+        (await hre.ethers.getContractFactory('UFragments')).connect(deployer),
         [owner],
         {
           initializer: 'initialize(address)',
@@ -40,8 +40,8 @@ task('ampl:deploy', 'Deploy ampleforth contracts').setAction(
 
     // deploy Policy
     const uFragmentsPolicy = await (
-      await bre.upgrades.deployProxy(
-        (await bre.ethers.getContractFactory('UFragmentsPolicy')).connect(
+      await hre.upgrades.deployProxy(
+        (await hre.ethers.getContractFactory('UFragmentsPolicy')).connect(
           deployer,
         ),
         [owner, uFragments.address, BASE_CPI.toString()],
@@ -54,7 +54,7 @@ task('ampl:deploy', 'Deploy ampleforth contracts').setAction(
 
     // deploy Orchestrator
     const orchestrator = await (
-      await bre.ethers.getContractFactory('Orchestrator')
+      await hre.ethers.getContractFactory('Orchestrator')
     )
       .connect(deployer)
       .deploy(uFragmentsPolicy.address)
@@ -62,13 +62,13 @@ task('ampl:deploy', 'Deploy ampleforth contracts').setAction(
   },
 )
 
-task('ampl:upgrade', 'Upgrade ampleforth contracts')
+task('upgrade:ampl', 'Upgrade ampleforth contracts')
   .addParam('contract', 'which implementation contract to use')
   .addParam('address', 'which proxy address to upgrade')
   .addOptionalParam('multisig', 'which multisig address to use for upgrade')
-  .setAction(async (args, bre) => {
+  .setAction(async (args, hre) => {
     console.log(args)
-    const upgrades = bre.upgrades as any
+    const upgrades = hre.upgrades as any
 
     // can only upgrade token or policy
     const supported = ['UFragments', 'UFragmentsPolicy']
@@ -79,14 +79,14 @@ task('ampl:upgrade', 'Upgrade ampleforth contracts')
     }
 
     // get signers
-    const deployer = (await bre.ethers.getSigners())[0]
+    const deployer = (await hre.ethers.getSigners())[0]
     console.log('Deployer', await deployer.getAddress())
 
     if (args.multisig) {
       // deploy new implementation
       const implementation = await upgrades.prepareUpgrade(
         args.address,
-        await bre.ethers.getContractFactory(args.contract),
+        await hre.ethers.getContractFactory(args.contract),
       )
       console.log(
         `New implementation for ${args.contract} deployed to`,
@@ -94,8 +94,8 @@ task('ampl:upgrade', 'Upgrade ampleforth contracts')
       )
 
       // prepare upgrade transaction
-      const admin = new bre.ethers.Contract(
-        await getAdminAddress(bre.ethers.provider, args.address),
+      const admin = new hre.ethers.Contract(
+        await getAdminAddress(hre.ethers.provider, args.address),
         ProxyAdmin.abi,
         deployer,
       )
@@ -106,7 +106,7 @@ task('ampl:upgrade', 'Upgrade ampleforth contracts')
       console.log(`Upgrade transaction`, upgradeTx)
 
       // send upgrade transaction to multisig
-      const multisig = new bre.ethers.Contract(
+      const multisig = new hre.ethers.Contract(
         args.multisig,
         MultiSigWallet,
         deployer,
@@ -126,8 +126,33 @@ task('ampl:upgrade', 'Upgrade ampleforth contracts')
     } else {
       await upgrades.upgradeProxy(
         args.address,
-        await bre.ethers.getContractFactory(args.contract),
+        await hre.ethers.getContractFactory(args.contract),
       )
       console.log(args.contract, 'upgraded')
     }
+  })
+
+task('deploy:wampl', 'Deploy wampl contract')
+  .addParam('ampl', 'The address to the AMPL token')
+  .addParam('name', 'The ERC-20 name of the wAMPL token')
+  .addParam('symbol', 'The ERC-20 symbol of the wAMPL token')
+  .setAction(async (args, hre) => {
+    console.log(args)
+
+    // get signers
+    const deployer = (await hre.ethers.getSigners())[0]
+    console.log('Deployer', await deployer.getAddress())
+
+    // deploy contract
+    const constructorArguments = [args.ampl, args.name, args.symbol]
+    const wampl = await (await hre.ethers.getContractFactory('WAMPL'))
+      .connect(deployer)
+      .deploy(...constructorArguments)
+    console.log('wAMPL deployed to:', wampl.address)
+    await wampl.deployTransaction.wait()
+
+    await hre.run('verify:verify', {
+      address: wampl.address,
+      constructorArguments,
+    })
   })
