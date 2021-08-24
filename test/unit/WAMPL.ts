@@ -132,7 +132,7 @@ describe('WAMPL:deposit', () => {
   })
 })
 
-describe('WAMPL:depositTo', () => {
+describe('WAMPL:depositFor', () => {
   beforeEach('setup WAMPL contract', setupContracts)
 
   let r: any, amplesDeposited: BigNumber, wamplesMinted: BigNumber
@@ -147,7 +147,7 @@ describe('WAMPL:depositTo', () => {
     )
 
     await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
-    r = wAMPL.connect(deployer).depositTo(userBAddress, amplesDeposited)
+    r = wAMPL.connect(deployer).depositFor(userBAddress, amplesDeposited)
     await r
   })
 

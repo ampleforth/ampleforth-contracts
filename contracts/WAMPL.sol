@@ -76,7 +76,7 @@ contract WAMPL is ERC20, ERC20Permit {
     /// @param to The beneficiary wallet.
     /// @param amples The amount of AMPLs to deposit.
     /// @return The number of wAMPLs minted.
-    function depositTo(address to, uint256 amples) external returns (uint256) {
+    function depositFor(address to, uint256 amples) external returns (uint256) {
         uint256 wamples = _ampleToWample(amples, _queryAMPLSupply());
 
         IERC20(_ampl).safeTransferFrom(_msgSender(), address(this), amples);
