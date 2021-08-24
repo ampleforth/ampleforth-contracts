@@ -32,7 +32,7 @@ contract WAMPL is ERC20, ERC20Permit {
     // Constants
 
     /// @dev The maximum wAMPL supply.
-    uint256 public constant MAX_WAMPL_SUPPLY = 10000000 * (10**18);
+    uint256 public constant MAX_WAMPL_SUPPLY = 10000000 * (10**18);  // 10 M
 
     //--------------------------------------------------------------------------
     // Attributes
