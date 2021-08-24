@@ -104,6 +104,9 @@ describe('WAMPL:deposit', () => {
     )
 
     await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
+    expect(await wAMPL.connect(deployer).callStatic.deposit(amplesDeposited))
+      .to.eq(wamplesMinted)
+
     r = wAMPL.connect(deployer).deposit(amplesDeposited)
     await r
   })
@@ -147,6 +150,9 @@ describe('WAMPL:depositFor', () => {
     )
 
     await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
+    expect(await wAMPL.connect(deployer).callStatic.depositFor(userBAddress, amplesDeposited))
+      .to.eq(wamplesMinted)
+
     r = wAMPL.connect(deployer).depositFor(userBAddress, amplesDeposited)
     await r
   })
@@ -205,7 +211,10 @@ describe('WAMPL:withdraw', () => {
     // 1.5% of MAX_WAMPL_SUPPLY
     wamplesRemaining = wamplesMinted.sub(wamplesBurnt)
 
-    expect(await wAMPL.wrapperToUnderlying(wamplesBurnt)).to.eq(amplesWithdrawn)
+    expect(await wAMPL.underlyingToWrapper(amplesWithdrawn)).to.eq(wamplesBurnt)
+    expect(await wAMPL.connect(deployer).callStatic.withdraw(amplesWithdrawn))
+      .to.eq(wamplesBurnt)
+
     r = wAMPL.connect(deployer).withdraw(amplesWithdrawn)
     await r
   })
@@ -264,7 +273,10 @@ describe('WAMPL:withdrawTo', () => {
     // 1.5% of MAX_WAMPL_SUPPLY
     wamplesRemaining = wamplesMinted.sub(wamplesBurnt)
 
-    expect(await wAMPL.wrapperToUnderlying(wamplesBurnt)).to.eq(amplesWithdrawn)
+    expect(await wAMPL.underlyingToWrapper(amplesWithdrawn)).to.eq(wamplesBurnt)
+    expect(await wAMPL.connect(deployer).callStatic.withdrawTo(userBAddress, amplesWithdrawn))
+      .to.eq(wamplesBurnt)
+
     r = wAMPL.connect(deployer).withdrawTo(userBAddress, amplesWithdrawn)
     await r
   })
@@ -309,6 +321,10 @@ describe('WAMPL:withdrawAll', () => {
     await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
     await wAMPL.connect(deployer).deposit(amplesDeposited)
 
+    expect(await wAMPL.wrapperToUnderlying(wamplesMinted)).to.eq(amplesDeposited)
+    expect(await wAMPL.connect(deployer).callStatic.withdrawAll())
+      .to.eq(wamplesMinted)
+
     r = wAMPL.connect(deployer).withdrawAll()
     await r
   })
@@ -349,6 +365,10 @@ describe('WAMPL:withdrawAllTo', () => {
     await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
     await wAMPL.connect(deployer).deposit(amplesDeposited)
 
+    expect(await wAMPL.wrapperToUnderlying(wamplesMinted)).to.eq(amplesDeposited)
+    expect(await wAMPL.connect(deployer).callStatic.withdrawAllTo(userBAddress))
+      .to.eq(wamplesMinted)
+
     r = wAMPL.connect(deployer).withdrawAllTo(userBAddress)
     await r
   })
@@ -374,6 +394,224 @@ describe('WAMPL:withdrawAllTo', () => {
     await expect(r)
       .to.emit(wAMPL, 'Transfer')
       .withArgs(deployerAddress, ethers.constants.AddressZero, wamplesMinted)
+  })
+})
+
+describe('WAMPL:mint', () => {
+  beforeEach('setup WAMPL contract', setupContracts)
+
+  let r: any, amplesDeposited: BigNumber, wamplesMinted: BigNumber
+  beforeEach(async function () {
+    // 1% of AMPL total supply
+    amplesDeposited = toAMPLFixedPt('500000')
+
+    // 1% of MAX_WAMPL_SUPPLY
+    wamplesMinted = toWAMPLFixedPt('100000')
+    expect(await wAMPL.wrapperToUnderlying(wamplesMinted)).to.eq(
+      amplesDeposited,
+    )
+
+    await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
+    expect(await wAMPL.connect(deployer).callStatic.mint(wamplesMinted))
+      .to.eq(amplesDeposited)
+
+    r = wAMPL.connect(deployer).mint(wamplesMinted)
+    await r
+  })
+
+  it('should mint wamples', async function () {
+    expect(await ampl.balanceOf(wAMPL.address)).to.eq(amplesDeposited)
+    expect(await wAMPL.totalUnderlying()).to.eq(amplesDeposited)
+    expect(await wAMPL.balanceOfUnderlying(deployerAddress)).to.eq(
+      amplesDeposited,
+    )
+
+    expect(await wAMPL.totalSupply()).to.eq(wamplesMinted)
+    expect(await wAMPL.balanceOf(deployerAddress)).to.eq(wamplesMinted)
+  })
+
+  it('should log transfer', async function () {
+    await expect(r)
+      .to.emit(ampl, 'Transfer')
+      .withArgs(deployerAddress, wAMPL.address, amplesDeposited)
+  })
+
+  it('should log mint', async function () {
+    await expect(r)
+      .to.emit(wAMPL, 'Transfer')
+      .withArgs(ethers.constants.AddressZero, deployerAddress, wamplesMinted)
+  })
+})
+
+describe('WAMPL:mintTo', () => {
+  beforeEach('setup WAMPL contract', setupContracts)
+
+  let r: any, amplesDeposited: BigNumber, wamplesMinted: BigNumber
+  beforeEach(async function () {
+    // 1% of AMPL total supply
+    amplesDeposited = toAMPLFixedPt('500000')
+
+    // 1% of MAX_WAMPL_SUPPLY
+    wamplesMinted = toWAMPLFixedPt('100000')
+    expect(await wAMPL.wrapperToUnderlying(wamplesMinted)).to.eq(
+      amplesDeposited,
+    )
+
+    await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
+    expect(await wAMPL.connect(deployer).callStatic.mintTo(userBAddress, wamplesMinted))
+      .to.eq(amplesDeposited)
+
+    r = wAMPL.connect(deployer).mintTo(userBAddress, wamplesMinted)
+    await r
+  })
+
+  it('should mint wamples', async function () {
+    expect(await ampl.balanceOf(wAMPL.address)).to.eq(amplesDeposited)
+    expect(await wAMPL.totalUnderlying()).to.eq(amplesDeposited)
+    expect(await wAMPL.balanceOfUnderlying(userBAddress)).to.eq(amplesDeposited)
+    expect(await wAMPL.balanceOfUnderlying(deployerAddress)).to.eq('0')
+
+    expect(await wAMPL.totalSupply()).to.eq(wamplesMinted)
+    expect(await wAMPL.balanceOf(userBAddress)).to.eq(wamplesMinted)
+    expect(await wAMPL.balanceOf(deployerAddress)).to.eq('0')
+  })
+
+  it('should log transfer', async function () {
+    await expect(r)
+      .to.emit(ampl, 'Transfer')
+      .withArgs(deployerAddress, wAMPL.address, amplesDeposited)
+  })
+
+  it('should log mint', async function () {
+    await expect(r)
+      .to.emit(wAMPL, 'Transfer')
+      .withArgs(ethers.constants.AddressZero, userBAddress, wamplesMinted)
+  })
+})
+
+describe('WAMPL:burn', () => {
+  beforeEach('setup WAMPL contract', setupContracts)
+
+  let r: any,
+    amplesWithdrawn: BigNumber,
+    amplesRemaining: BigNumber,
+    wamplesBurnt: BigNumber,
+    wamplesRemaining: BigNumber
+  beforeEach(async function () {
+    // 2% of AMPL total supply
+    const amplesDeposited = toAMPLFixedPt('1000000')
+
+    // 2 % of MAX_WAMPL_SUPPLY
+    const wamplesMinted = await wAMPL.underlyingToWrapper(amplesDeposited)
+
+    await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
+    await wAMPL.connect(deployer).deposit(amplesDeposited)
+
+    // 0.5% of AMPL total supply
+    amplesWithdrawn = toAMPLFixedPt('250000')
+
+    // 1.5% of AMPL total supply
+    amplesRemaining = amplesDeposited.sub(amplesWithdrawn)
+
+    // 0.5% of MAX_WAMPL_SUPPLY
+    wamplesBurnt = toWAMPLFixedPt('50000')
+
+    // 1.5% of MAX_WAMPL_SUPPLY
+    wamplesRemaining = wamplesMinted.sub(wamplesBurnt)
+
+    expect(await wAMPL.wrapperToUnderlying(wamplesBurnt)).to.eq(amplesWithdrawn)
+    expect(await wAMPL.connect(deployer).callStatic.burn(wamplesBurnt))
+      .to.eq(amplesWithdrawn)
+
+    r = wAMPL.connect(deployer).burn(wamplesBurnt)
+    await r
+  })
+
+  it('should burn wamples', async function () {
+    expect(await ampl.balanceOf(wAMPL.address)).to.eq(amplesRemaining)
+    expect(await wAMPL.totalUnderlying()).to.eq(amplesRemaining)
+    expect(await wAMPL.balanceOfUnderlying(deployerAddress)).to.eq(
+      amplesRemaining,
+    )
+
+    expect(await wAMPL.totalSupply()).to.eq(wamplesRemaining)
+    expect(await wAMPL.balanceOf(deployerAddress)).to.eq(wamplesRemaining)
+  })
+
+  it('should log transfer', async function () {
+    await expect(r)
+      .to.emit(ampl, 'Transfer')
+      .withArgs(wAMPL.address, deployerAddress, amplesWithdrawn)
+  })
+
+  it('should log burn', async function () {
+    await expect(r)
+      .to.emit(wAMPL, 'Transfer')
+      .withArgs(deployerAddress, ethers.constants.AddressZero, wamplesBurnt)
+  })
+})
+
+describe('WAMPL:burnTo', () => {
+  beforeEach('setup WAMPL contract', setupContracts)
+
+  let r: any,
+    amplesWithdrawn: BigNumber,
+    amplesRemaining: BigNumber,
+    wamplesBurnt: BigNumber,
+    wamplesRemaining: BigNumber
+  beforeEach(async function () {
+    // 2% of AMPL total supply
+    const amplesDeposited = toAMPLFixedPt('1000000')
+
+    // 2 % of MAX_WAMPL_SUPPLY
+    const wamplesMinted = await wAMPL.underlyingToWrapper(amplesDeposited)
+
+    await ampl.connect(deployer).approve(wAMPL.address, amplesDeposited)
+    await wAMPL.connect(deployer).deposit(amplesDeposited)
+
+    // 0.5% of AMPL total supply
+    amplesWithdrawn = toAMPLFixedPt('250000')
+
+    // 1.5% of AMPL total supply
+    amplesRemaining = amplesDeposited.sub(amplesWithdrawn)
+
+    // 0.5% of MAX_WAMPL_SUPPLY
+    wamplesBurnt = toWAMPLFixedPt('50000')
+
+    // 1.5% of MAX_WAMPL_SUPPLY
+    wamplesRemaining = wamplesMinted.sub(wamplesBurnt)
+
+    expect(await wAMPL.wrapperToUnderlying(wamplesBurnt)).to.eq(amplesWithdrawn)
+    expect(await wAMPL.connect(deployer).callStatic.burnTo(userBAddress, wamplesBurnt))
+      .to.eq(amplesWithdrawn)
+
+    r = wAMPL.connect(deployer).burnTo(userBAddress, wamplesBurnt)
+    await r
+  })
+
+  it('should burn wamples', async function () {
+    expect(await ampl.balanceOf(wAMPL.address)).to.eq(amplesRemaining)
+    expect(await wAMPL.totalUnderlying()).to.eq(amplesRemaining)
+    expect(await wAMPL.balanceOfUnderlying(userBAddress)).to.eq('0')
+    expect(await wAMPL.balanceOfUnderlying(deployerAddress)).to.eq(
+      amplesRemaining,
+    )
+
+    expect(await wAMPL.totalSupply()).to.eq(wamplesRemaining)
+    expect(await wAMPL.balanceOf(userBAddress)).to.eq('0')
+    expect(await wAMPL.balanceOf(deployerAddress)).to.eq(wamplesRemaining)
+  })
+
+  it('should log transfer', async function () {
+    await expect(r)
+      .to.emit(ampl, 'Transfer')
+      .withArgs(wAMPL.address, userBAddress, amplesWithdrawn)
+  })
+
+  it('should log burn', async function () {
+    await expect(r)
+      .to.emit(wAMPL, 'Transfer')
+      .withArgs(deployerAddress, ethers.constants.AddressZero, wamplesBurnt)
   })
 })
 

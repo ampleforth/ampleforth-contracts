@@ -59,7 +59,7 @@ contract WAMPL is ERC20, ERC20Permit {
     /// @notice Transfers AMPLs from {msg.sender} and mints wAMPLs.
     ///
     /// @param amples The amount of AMPLs to deposit.
-    /// @return The number of wAMPLs minted.
+    /// @return The amount of wAMPLs minted.
     function deposit(uint256 amples) external returns (uint256) {
         uint256 wamples = _ampleToWample(amples, _queryAMPLSupply());
 
@@ -75,7 +75,7 @@ contract WAMPL is ERC20, ERC20Permit {
     ///
     /// @param to The beneficiary wallet.
     /// @param amples The amount of AMPLs to deposit.
-    /// @return The number of wAMPLs minted.
+    /// @return The amount of wAMPLs minted.
     function depositFor(address to, uint256 amples) external returns (uint256) {
         uint256 wamples = _ampleToWample(amples, _queryAMPLSupply());
 
@@ -89,7 +89,7 @@ contract WAMPL is ERC20, ERC20Permit {
     /// @notice Burns wAMPLs from {msg.sender} and transfers AMPLs back.
     ///
     /// @param amples The amount of AMPLs to withdraw.
-    /// @return The number of burnt wAMPLs.
+    /// @return The amount of burnt wAMPLs.
     function withdraw(uint256 amples) external returns (uint256) {
         uint256 wamples = _ampleToWample(amples, _queryAMPLSupply());
 
@@ -105,7 +105,7 @@ contract WAMPL is ERC20, ERC20Permit {
     ///
     /// @param to The beneficiary wallet.
     /// @param amples The amount of AMPLs to withdraw.
-    /// @return The number of burnt wAMPLs.
+    /// @return The amount of burnt wAMPLs.
     function withdrawTo(address to, uint256 amples) external returns (uint256) {
         uint256 wamples = _ampleToWample(amples, _queryAMPLSupply());
 
@@ -118,7 +118,7 @@ contract WAMPL is ERC20, ERC20Permit {
 
     /// @notice Burns all wAMPLs from {msg.sender} and transfers AMPLs back.
     ///
-    /// @return The number of burnt wAMPLs.
+    /// @return The amount of burnt wAMPLs.
     function withdrawAll() external returns (uint256) {
         uint256 wamples = balanceOf(_msgSender());
 
@@ -135,7 +135,7 @@ contract WAMPL is ERC20, ERC20Permit {
     ///         to the specified beneficiary.
     ///
     /// @param to The beneficiary wallet.
-    /// @return The number of burnt wAMPLs.
+    /// @return The amount of burnt wAMPLs.
     function withdrawAllTo(address to) external returns (uint256) {
         uint256 wamples = balanceOf(_msgSender());
 
@@ -146,6 +146,66 @@ contract WAMPL is ERC20, ERC20Permit {
         IERC20(_ampl).safeTransfer(to, amples);
 
         return wamples;
+    }
+
+    /// @notice Transfers AMPLs from {msg.sender} and mints wAMPLs.
+    ///
+    /// @param wamples The amount of wAMPLs to mint.
+    /// @return The amount of AMPLs deposited.
+    function mint(uint256 wamples) external returns (uint256) {
+        uint256 amples = _wampleToAmple(wamples, _queryAMPLSupply());
+
+        IERC20(_ampl).safeTransferFrom(_msgSender(), address(this), amples);
+
+        _mint(_msgSender(), wamples);
+
+        return amples;
+    }
+
+    /// @notice Transfers AMPLs from {msg.sender} and mints wAMPLs,
+    ///         to the specified beneficiary.
+    ///
+    /// @param to The beneficiary wallet.
+    /// @param wamples The amount of wAMPLs to mint.
+    /// @return The amount of AMPLs deposited.
+    function mintTo(address to, uint256 wamples) external returns (uint256) {
+        uint256 amples = _wampleToAmple(wamples, _queryAMPLSupply());
+
+        IERC20(_ampl).safeTransferFrom(_msgSender(), address(this), amples);
+
+        _mint(to, wamples);
+
+        return amples;
+    }
+
+    /// @notice Burns wAMPLs from {msg.sender} and transfers AMPLs back.
+    ///
+    /// @param wamples The amount of wAMPLs to burn.
+    /// @return The amount of AMPLs withdrawn.
+    function burn(uint256 wamples) external returns (uint256) {
+        uint256 amples = _wampleToAmple(wamples, _queryAMPLSupply());
+
+        _burn(_msgSender(), wamples);
+
+        IERC20(_ampl).safeTransfer(_msgSender(), amples);
+
+        return amples;
+    }
+
+    /// @notice Burns wAMPLs from {msg.sender} and transfers AMPLs back,
+    ///         to the specified beneficiary.
+    ///
+    /// @param to The beneficiary wallet.
+    /// @param wamples The amount of wAMPLs to burn.
+    /// @return The amount of AMPLs withdrawn.
+    function burnTo(address to, uint256 wamples) external returns (uint256) {
+        uint256 amples = _wampleToAmple(wamples, _queryAMPLSupply());
+
+        _burn(_msgSender(), wamples);
+
+        IERC20(_ampl).safeTransfer(to, amples);
+
+        return amples;
     }
 
     //--------------------------------------------------------------------------
