@@ -32,7 +32,7 @@ contract WAMPL is ERC20, ERC20Permit {
     // Constants
 
     /// @dev The maximum wAMPL supply.
-    uint256 public constant MAX_WAMPL_SUPPLY = 10000000 * (10**18);  // 10 M
+    uint256 public constant MAX_WAMPL_SUPPLY = 10000000 * (10**18); // 10 M
 
     //--------------------------------------------------------------------------
     // Attributes
@@ -158,7 +158,7 @@ contract WAMPL is ERC20, ERC20Permit {
 
     /// @return The total AMPLs held by this contract.
     function totalUnderlying() external view returns (uint256) {
-        return _queryUnderlyingBalance();
+        return _wampleToAmple(totalSupply(), _queryAMPLSupply());
     }
 
     /// @param owner The account address.
@@ -185,11 +185,6 @@ contract WAMPL is ERC20, ERC20Permit {
     /// @dev Queries the current total supply of AMPL.
     function _queryAMPLSupply() private view returns (uint256) {
         return IERC20(_ampl).totalSupply();
-    }
-
-    /// @dev Queries the AMPL balance of this contract.
-    function _queryUnderlyingBalance() private view returns (uint256) {
-        return IERC20(_ampl).balanceOf(address(this));
     }
 
     //--------------------------------------------------------------------------
