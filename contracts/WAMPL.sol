@@ -100,6 +100,28 @@ contract WAMPL is ERC20, ERC20Permit {
         return amples;
     }
 
+    /// @notice Burns all wAMPLs from {msg.sender} and transfers AMPLs back.
+    ///
+    /// @return The amount of AMPLs withdrawn.
+    function burnAll() external returns (uint256) {
+        uint256 wamples = balanceOf(_msgSender());
+        uint256 amples = _wampleToAmple(wamples, _queryAMPLSupply());
+        _withdraw(_msgSender(), _msgSender(), amples, wamples);
+        return amples;
+    }
+
+    /// @notice Burns all wAMPLs from {msg.sender} and transfers AMPLs back,
+    ///         to the specified beneficiary.
+    ///
+    /// @param to The beneficiary wallet.
+    /// @return The amount of AMPLs withdrawn.
+    function burnAllTo(address to) external returns (uint256) {
+        uint256 wamples = balanceOf(_msgSender());
+        uint256 amples = _wampleToAmple(wamples, _queryAMPLSupply());
+        _withdraw(_msgSender(), to, amples, wamples);
+        return amples;
+    }
+
     /// @notice Transfers AMPLs from {msg.sender} and mints wAMPLs.
     ///
     /// @param amples The amount of AMPLs to deposit.
