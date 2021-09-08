@@ -23,7 +23,9 @@ let accounts: Signer[],
   userC: Signer,
   userCAddress: string,
   ampl: Contract,
-  wAMPL: Contract
+  wAMPL: Contract,
+  balanceBefore: BigNumber,
+  balanceAfter: BigNumber
 
 async function setupContracts() {
   accounts = await ethers.getSigners()
@@ -108,8 +110,10 @@ describe('WAMPL:deposit', () => {
       await wAMPL.connect(deployer).callStatic.deposit(amplesDeposited),
     ).to.eq(wamplesMinted)
 
+    balanceBefore = await ampl.balanceOf(deployerAddress)
     r = wAMPL.connect(deployer).deposit(amplesDeposited)
     await r
+    balanceAfter = await ampl.balanceOf(deployerAddress)
   })
 
   it('should mint wamples', async function () {
@@ -127,6 +131,7 @@ describe('WAMPL:deposit', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(deployerAddress, wAMPL.address, amplesDeposited)
+    expect(balanceBefore.sub(balanceAfter)).to.eq(amplesDeposited)
   })
 
   it('should log mint', async function () {
@@ -157,8 +162,10 @@ describe('WAMPL:depositFor', () => {
         .callStatic.depositFor(userBAddress, amplesDeposited),
     ).to.eq(wamplesMinted)
 
+    balanceBefore = await ampl.balanceOf(deployerAddress)
     r = wAMPL.connect(deployer).depositFor(userBAddress, amplesDeposited)
     await r
+    balanceAfter = await ampl.balanceOf(deployerAddress)
   })
 
   it('should mint wamples', async function () {
@@ -176,6 +183,7 @@ describe('WAMPL:depositFor', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(deployerAddress, wAMPL.address, amplesDeposited)
+    expect(balanceBefore.sub(balanceAfter)).to.eq(amplesDeposited)
   })
 
   it('should log mint', async function () {
@@ -220,8 +228,10 @@ describe('WAMPL:withdraw', () => {
       await wAMPL.connect(deployer).callStatic.withdraw(amplesWithdrawn),
     ).to.eq(wamplesBurnt)
 
+    balanceBefore = await ampl.balanceOf(deployerAddress)
     r = wAMPL.connect(deployer).withdraw(amplesWithdrawn)
     await r
+    balanceAfter = await ampl.balanceOf(deployerAddress)
   })
 
   it('should burn wamples', async function () {
@@ -239,6 +249,7 @@ describe('WAMPL:withdraw', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(wAMPL.address, deployerAddress, amplesWithdrawn)
+    expect(balanceAfter.sub(balanceBefore)).to.eq(amplesWithdrawn)
   })
 
   it('should log burn', async function () {
@@ -285,8 +296,10 @@ describe('WAMPL:withdrawTo', () => {
         .callStatic.withdrawTo(userBAddress, amplesWithdrawn),
     ).to.eq(wamplesBurnt)
 
+    balanceBefore = await ampl.balanceOf(userBAddress)
     r = wAMPL.connect(deployer).withdrawTo(userBAddress, amplesWithdrawn)
     await r
+    balanceAfter = await ampl.balanceOf(userBAddress)
   })
 
   it('should burn wamples', async function () {
@@ -306,6 +319,7 @@ describe('WAMPL:withdrawTo', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(wAMPL.address, userBAddress, amplesWithdrawn)
+    expect(balanceAfter.sub(balanceBefore)).to.eq(amplesWithdrawn)
   })
 
   it('should log burn', async function () {
@@ -336,8 +350,10 @@ describe('WAMPL:withdrawAll', () => {
       wamplesMinted,
     )
 
+    balanceBefore = await ampl.balanceOf(deployerAddress)
     r = wAMPL.connect(deployer).withdrawAll()
     await r
+    balanceAfter = await ampl.balanceOf(deployerAddress)
   })
 
   it('should burn wamples', async function () {
@@ -353,6 +369,7 @@ describe('WAMPL:withdrawAll', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(wAMPL.address, deployerAddress, amplesDeposited)
+    expect(balanceAfter.sub(balanceBefore)).to.eq(amplesDeposited)
   })
 
   it('should log burn', async function () {
@@ -383,8 +400,10 @@ describe('WAMPL:withdrawAllTo', () => {
       await wAMPL.connect(deployer).callStatic.withdrawAllTo(userBAddress),
     ).to.eq(wamplesMinted)
 
+    balanceBefore = await ampl.balanceOf(userBAddress)
     r = wAMPL.connect(deployer).withdrawAllTo(userBAddress)
     await r
+    balanceAfter = await ampl.balanceOf(userBAddress)
   })
 
   it('should burn wamples', async function () {
@@ -402,6 +421,7 @@ describe('WAMPL:withdrawAllTo', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(wAMPL.address, userBAddress, amplesDeposited)
+    expect(balanceAfter.sub(balanceBefore)).to.eq(amplesDeposited)
   })
 
   it('should log burn', async function () {
@@ -430,8 +450,10 @@ describe('WAMPL:mint', () => {
       amplesDeposited,
     )
 
+    balanceBefore = await ampl.balanceOf(deployerAddress)
     r = wAMPL.connect(deployer).mint(wamplesMinted)
     await r
+    balanceAfter = await ampl.balanceOf(deployerAddress)
   })
 
   it('should mint wamples', async function () {
@@ -449,6 +471,7 @@ describe('WAMPL:mint', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(deployerAddress, wAMPL.address, amplesDeposited)
+    expect(balanceBefore.sub(balanceAfter)).to.eq(amplesDeposited)
   })
 
   it('should log mint', async function () {
@@ -479,8 +502,10 @@ describe('WAMPL:mintFor', () => {
         .callStatic.mintFor(userBAddress, wamplesMinted),
     ).to.eq(amplesDeposited)
 
+    balanceBefore = await ampl.balanceOf(deployerAddress)
     r = wAMPL.connect(deployer).mintFor(userBAddress, wamplesMinted)
     await r
+    balanceAfter = await ampl.balanceOf(deployerAddress)
   })
 
   it('should mint wamples', async function () {
@@ -498,6 +523,7 @@ describe('WAMPL:mintFor', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(deployerAddress, wAMPL.address, amplesDeposited)
+    expect(balanceBefore.sub(balanceAfter)).to.eq(amplesDeposited)
   })
 
   it('should log mint', async function () {
@@ -542,8 +568,10 @@ describe('WAMPL:burn', () => {
       amplesWithdrawn,
     )
 
+    balanceBefore = await ampl.balanceOf(deployerAddress)
     r = wAMPL.connect(deployer).burn(wamplesBurnt)
     await r
+    balanceAfter = await ampl.balanceOf(deployerAddress)
   })
 
   it('should burn wamples', async function () {
@@ -561,6 +589,7 @@ describe('WAMPL:burn', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(wAMPL.address, deployerAddress, amplesWithdrawn)
+    expect(balanceAfter.sub(balanceBefore)).to.eq(amplesWithdrawn)
   })
 
   it('should log burn', async function () {
@@ -607,8 +636,10 @@ describe('WAMPL:burnTo', () => {
         .callStatic.burnTo(userBAddress, wamplesBurnt),
     ).to.eq(amplesWithdrawn)
 
+    balanceBefore = await ampl.balanceOf(userBAddress)
     r = wAMPL.connect(deployer).burnTo(userBAddress, wamplesBurnt)
     await r
+    balanceAfter = await ampl.balanceOf(userBAddress)
   })
 
   it('should burn wamples', async function () {
@@ -628,6 +659,7 @@ describe('WAMPL:burnTo', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(wAMPL.address, userBAddress, amplesWithdrawn)
+    expect(balanceAfter.sub(balanceBefore)).to.eq(amplesWithdrawn)
   })
 
   it('should log burn', async function () {
@@ -658,8 +690,10 @@ describe('WAMPL:burnAll', () => {
       amplesDeposited,
     )
 
+    balanceBefore = await ampl.balanceOf(deployerAddress)
     r = wAMPL.connect(deployer).burnAll()
     await r
+    balanceAfter = await ampl.balanceOf(deployerAddress)
   })
 
   it('should burn wamples', async function () {
@@ -681,6 +715,7 @@ describe('WAMPL:burnAll', () => {
     await expect(r)
       .to.emit(wAMPL, 'Transfer')
       .withArgs(deployerAddress, ethers.constants.AddressZero, wamplesMinted)
+    expect(balanceAfter.sub(balanceBefore)).to.eq(amplesDeposited)
   })
 })
 
@@ -705,8 +740,10 @@ describe('WAMPL:burnAllTo', () => {
       await wAMPL.connect(deployer).callStatic.burnAllTo(userBAddress),
     ).to.eq(amplesDeposited)
 
+    balanceBefore = await ampl.balanceOf(userBAddress)
     r = wAMPL.connect(deployer).withdrawAllTo(userBAddress)
     await r
+    balanceAfter = await ampl.balanceOf(userBAddress)
   })
 
   it('should burn wamples', async function () {
@@ -724,6 +761,7 @@ describe('WAMPL:burnAllTo', () => {
     await expect(r)
       .to.emit(ampl, 'Transfer')
       .withArgs(wAMPL.address, userBAddress, amplesDeposited)
+    expect(balanceAfter.sub(balanceBefore)).to.eq(amplesDeposited)
   })
 
   it('should log burn', async function () {
@@ -846,6 +884,67 @@ describe('Underlying Rebase:Contraction', async function () {
     )
     expect(await wAMPL.balanceOfUnderlying(userCAddress)).to.eq(
       toAMPLFixedPt('150000'),
+    )
+
+    expect(await wAMPL.totalSupply()).to.eq(toWAMPLFixedPt('120000'))
+    expect(await wAMPL.balanceOf(userAAddress)).to.eq(toWAMPLFixedPt('20000'))
+    expect(await wAMPL.balanceOf(userBAddress)).to.eq(toWAMPLFixedPt('40000'))
+    expect(await wAMPL.balanceOf(userCAddress)).to.eq(toWAMPLFixedPt('60000'))
+  })
+})
+
+
+describe('user sends funds to the contract incorrectly', async function () {
+  beforeEach('setup WAMPL contract', setupContracts)
+
+  beforeEach(async function () {
+    await ampl
+      .connect(deployer)
+      .transfer(userAAddress, toAMPLFixedPt('1000000'))
+    await ampl
+      .connect(deployer)
+      .transfer(userBAddress, toAMPLFixedPt('1000000'))
+    await ampl
+      .connect(deployer)
+      .transfer(userCAddress, toAMPLFixedPt('1000000'))
+
+    await ampl.connect(userA).approve(wAMPL.address, toAMPLFixedPt('100000'))
+    await ampl.connect(userB).approve(wAMPL.address, toAMPLFixedPt('200000'))
+    await ampl.connect(userC).approve(wAMPL.address, toAMPLFixedPt('300000'))
+
+    await wAMPL.connect(userA).deposit(toAMPLFixedPt('100000'))
+    await wAMPL.connect(userB).deposit(toAMPLFixedPt('200000'))
+    await wAMPL.connect(userC).deposit(toAMPLFixedPt('300000'))
+  })
+
+  it('should not affect balances', async function () {
+    expect(await wAMPL.totalUnderlying()).to.eq(toAMPLFixedPt('600000'))
+    expect(await wAMPL.balanceOfUnderlying(userAAddress)).to.eq(
+      toAMPLFixedPt('100000'),
+    )
+    expect(await wAMPL.balanceOfUnderlying(userBAddress)).to.eq(
+      toAMPLFixedPt('200000'),
+    )
+    expect(await wAMPL.balanceOfUnderlying(userCAddress)).to.eq(
+      toAMPLFixedPt('300000'),
+    )
+
+    expect(await wAMPL.totalSupply()).to.eq(toWAMPLFixedPt('120000'))
+    expect(await wAMPL.balanceOf(userAAddress)).to.eq(toWAMPLFixedPt('20000'))
+    expect(await wAMPL.balanceOf(userBAddress)).to.eq(toWAMPLFixedPt('40000'))
+    expect(await wAMPL.balanceOf(userCAddress)).to.eq(toWAMPLFixedPt('60000'))
+
+    await ampl.transfer(wAMPL.address, toAMPLFixedPt('300000'))
+
+    expect(await wAMPL.totalUnderlying()).to.eq(toAMPLFixedPt('600000'))
+    expect(await wAMPL.balanceOfUnderlying(userAAddress)).to.eq(
+      toAMPLFixedPt('100000'),
+    )
+    expect(await wAMPL.balanceOfUnderlying(userBAddress)).to.eq(
+      toAMPLFixedPt('200000'),
+    )
+    expect(await wAMPL.balanceOfUnderlying(userCAddress)).to.eq(
+      toAMPLFixedPt('300000'),
     )
 
     expect(await wAMPL.totalSupply()).to.eq(toWAMPLFixedPt('120000'))

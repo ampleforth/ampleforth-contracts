@@ -149,7 +149,7 @@ task('deploy:wampl', 'Deploy wampl contract')
       .connect(deployer)
       .deploy(...constructorArguments)
     console.log('wAMPL deployed to:', wampl.address)
-    await wampl.deployTransaction.wait()
+    await wampl.deployTransaction.wait(5)
 
     await hre.run('verify:verify', {
       address: wampl.address,
