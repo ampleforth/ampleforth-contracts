@@ -1,6 +1,6 @@
 # Ampleforth
 
-[![Build Status](https://travis-ci.com/ampleforth/uFragments.svg?token=xxNsLhLrTiyG3pc78i5v&branch=master)](https://travis-ci.com/ampleforth/uFragments)&nbsp;&nbsp;[![Coverage Status](https://coveralls.io/repos/github/frgprotocol/uFragments/badge.svg?branch=master&t=GiWi8p)](https://coveralls.io/github/frgprotocol/uFragments?branch=master)
+[![Build Status](https://travis-ci.com/ampleforth/ampleforth-contracts.svg?token=xxNsLhLrTiyG3pc78i5v&branch=master)](https://travis-ci.com/ampleforth/ampleforth-contracts)&nbsp;&nbsp;[![Coverage Status](https://coveralls.io/repos/github/frgprotocol/uFragments/badge.svg?branch=master&t=GiWi8p)](https://coveralls.io/github/frgprotocol/uFragments?branch=master)
 
 Ampleforth (code name uFragments) is a decentralized elastic supply protocol. It maintains a stable unit price by adjusting supply directly to and from wallet holders. You can read the [whitepaper](https://www.ampleforth.org/paper/) for the motivation and a complete description of the protocol.
 
@@ -13,6 +13,7 @@ The official mainnet addresses are:
 - Orchestrator: [0x6fb00a180781e75f87e2b690af0196baa77c7e7c](https://etherscan.io/address/0x6fb00a180781e75f87e2b690af0196baa77c7e7c)
 - Market Oracle: [0x99c9775e076fdf99388c029550155032ba2d8914](https://etherscan.io/address/0x99c9775e076fdf99388c029550155032ba2d8914)
 - CPI Oracle: [0xa759f960dd59a1ad32c995ecabe802a0c35f244f](https://etherscan.io/address/0xa759f960dd59a1ad32c995ecabe802a0c35f244f)
+- WAMPL: [0xEDB171C18cE90B633DB442f2A6F72874093b49Ef](https://etherscan.io/address/0xEDB171C18cE90B633DB442f2A6F72874093b49Ef)
 
 ## Table of Contents
 
@@ -38,13 +39,14 @@ yarn test
 
 ## Testnets
 
-There is a testnet deployment on Rinkeby. It rebases hourly using real market data.
+There is a testnet deployment on Kovan. It rebases hourly using real market data.
 
-- ERC-20 Token: [0x027dbcA046ca156De9622cD1e2D907d375e53aa7](https://rinkeby.etherscan.io/token/0x027dbcA046ca156De9622cD1e2D907d375e53aa7)
-- Supply Policy: [0x1D2771AFC894107c4edc072e3bd15Cb7F1BCC007](https://rinkeby.etherscan.io/address/0x1D2771AFC894107c4edc072e3bd15Cb7F1BCC007)
-- Orchestrator: [0xF473604Be74A69a6bB4ebED33A91a291f6C5b5DE](https://rinkeby.etherscan.io/address/0xF473604Be74A69a6bB4ebED33A91a291f6C5b5DE)
-- Market Oracle: [0x47fB203e1d75FB2c518Cd56f3a8094D22A46aF83](https://rinkeby.etherscan.io/address/0x47fB203e1d75FB2c518Cd56f3a8094D22A46aF83)
-- CPI Oracle: [0xDB021b1B247fe2F1fa57e0A87C748Cc1E321F07F](https://rinkeby.etherscan.io/address/0xDB021b1B247fe2F1fa57e0A87C748Cc1E321F07F)
+- ERC-20 Token: [0x3E0437898a5667a4769B1Ca5A34aAB1ae7E81377](https://kovan.etherscan.io/token/0x3E0437898a5667a4769B1Ca5A34aAB1ae7E81377)
+- Supply Policy: [0xBB4617d26E704Ac0568E1cbf5232990a8b7846A4](https://kovan.etherscan.io/address/0xBB4617d26E704Ac0568E1cbf5232990a8b7846A4)
+- Orchestrator: [0xdAcA62767840febA20Ae103d8B5BF923517FA3b9](https://kovan.etherscan.io/address/0xdAcA62767840febA20Ae103d8B5BF923517FA3b9)
+- Market Oracle: [0xFC344AF21d647f4244B5F098203A178BF26c51Dc](https://kovan.etherscan.io/address/0xFC344AF21d647f4244B5F098203A178BF26c51Dc)
+- CPI Oracle: [0xCedc17B394051d0E222797588f3e5ECe5023FB4A](https://kovan.etherscan.io/address/0xCedc17B394051d0E222797588f3e5ECe5023FB4A)
+- WAMPL: [0x33e24a1902620BeFB88D40714EF980Cd8653234e](https://kovan.etherscan.io/address/0x33e24a1902620BeFB88D40714EF980Cd8653234e)
 
 ## Contribute
 

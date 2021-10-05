@@ -79,3 +79,6 @@ node_modules
 cache
 artifacts
 .openzeppelin
+
+# env
+.env
