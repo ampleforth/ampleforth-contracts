@@ -46,7 +46,7 @@ There is a testnet deployment on Kovan. It rebases hourly using real market data
 - Orchestrator: [0xdAcA62767840febA20Ae103d8B5BF923517FA3b9](https://kovan.etherscan.io/address/0xdAcA62767840febA20Ae103d8B5BF923517FA3b9)
 - Market Oracle: [0xFC344AF21d647f4244B5F098203A178BF26c51Dc](https://kovan.etherscan.io/address/0xFC344AF21d647f4244B5F098203A178BF26c51Dc)
 - CPI Oracle: [0xCedc17B394051d0E222797588f3e5ECe5023FB4A](https://kovan.etherscan.io/address/0xCedc17B394051d0E222797588f3e5ECe5023FB4A)
-- WAMPL: [0xAa30D1A8BD2c7c964e6D6dC2bbE6618f603A045d](https://kovan.etherscan.io/address/0xAa30D1A8BD2c7c964e6D6dC2bbE6618f603A045d)
+- WAMPL: [0xd012092d13e5a4aa7a9032335b380c62fc707232](https://kovan.etherscan.io/address/0xd012092d13e5a4aa7a9032335b380c62fc707232)
 
 ## Contribute
 
