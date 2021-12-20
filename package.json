@@ -19,16 +19,19 @@
   "author": "dev-support@ampleforth.org",
   "scripts": {
     "compile": "yarn hardhat compile",
-    "test": "yarn hardhat test",
-    "profile": "REPORT_GAS=true yarn hardhat test test/unit/*.ts",
     "coverage": "yarn hardhat coverage --testfiles 'test/unit/*.ts'",
     "format": "yarn prettier --config .prettierrc --write '**/*.ts' 'contracts/**/*.sol'",
-    "lint": "yarn format && yarn solhint 'contracts/**/*.sol'"
+    "lint": "yarn format && yarn solhint 'contracts/**/*.sol'",
+    "profile": "REPORT_GAS=true yarn hardhat test test/unit/*.ts",
+    "test": "yarn hardhat test"
   },
   "pre-commit": [
     "format",
     "lint"
   ],
+  "dependencies": {
+    "openzeppelin-contracts-4.4.1": "https://github.com/OpenZeppelin/openzeppelin-contracts.git#4.4.1"
+  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-etherscan": "^2.1.1",
@@ -54,8 +57,5 @@
     "stochasm": "^0.5.0",
     "ts-node": "^9.0.0",
     "typescript": "^4.0.2"
-  },
-  "dependencies": {
-    "openzeppelin-contracts-4.4.1": "https://github.com/OpenZeppelin/openzeppelin-contracts.git#4.4.1"
   }
 }
