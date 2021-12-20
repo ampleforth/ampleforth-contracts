@@ -39,10 +39,11 @@
     "@types/node": "^14.6.1",
     "bignumber.js": "^9.0.0",
     "chai": "^4.2.0",
-    "ethereum-waffle": "^3.2.1",
+    "ethereum-waffle": "^3.4.0",
     "ethereumjs-util": "^7.0.7",
-    "ethers": "5.0.18",
-    "hardhat": "^2.6.1",
+    "ethers": "^5.5.0",
+    "hardhat": "^2.7.1",
+    "hardhat-gas-reporter": "^1.0.4",
     "pre-commit": "^1.2.2",
     "prettier": "^2.1.1",
     "prettier-plugin-solidity": "^1.0.0-alpha.57",
@@ -52,10 +53,9 @@
     "solidity-coverage": "^0.7.13",
     "stochasm": "^0.5.0",
     "ts-node": "^9.0.0",
-    "typescript": "^4.0.2",
-    "hardhat-gas-reporter": "^1.0.4"
+    "typescript": "^4.0.2"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.3.0"
+    "@openzeppelin/contracts": "^4.4.1"
   }
 }
