@@ -56,6 +56,6 @@
     "typescript": "^4.0.2"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.4.1"
+    "openzeppelin-contracts-4.4.1": "https://github.com/OpenZeppelin/openzeppelin-contracts.git#4.4.1"
   }
 }

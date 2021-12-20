@@ -578,11 +578,6 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
-"@openzeppelin/contracts@^4.4.1":
-  version "4.4.1"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.4.1.tgz#3382db2cd83ab565ed9626765e7da92944b45de8"
-  integrity sha512-o+pHCf/yMLSlV5MkDQEzEQL402i6SoRnktru+0rdSxVEFZcTzzGhZCAtZjUFyKGazMSv1TilzMg+RbED1N8XHQ==
-
 "@openzeppelin/hardhat-upgrades@^1.4.3":
   version "1.12.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/hardhat-upgrades/-/hardhat-upgrades-1.12.0.tgz#35b4dd9bdefb203e7e0ba4b1c38df133bf721ddf"
@@ -6574,6 +6569,10 @@ open@^7.4.2:
   dependencies:
     is-docker "^2.0.0"
     is-wsl "^2.1.1"
+
+"openzeppelin-contracts-4.4.1@https://github.com/OpenZeppelin/openzeppelin-contracts.git#4.4.1":
+  version "4.4.1"
+  resolved "https://github.com/OpenZeppelin/openzeppelin-contracts.git#6bd6b76d1156e20e45d1016f355d154141c7e5b9"
 
 optionator@^0.8.1, optionator@^0.8.2:
   version "0.8.3"

@@ -2,11 +2,11 @@
 
 pragma solidity 0.8.4;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/IERC20.sol";
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import {SafeERC20} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/ERC20.sol";
+import {ERC20Permit} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
 /**
  * @title WAMPL (Wrapped AMPL).
