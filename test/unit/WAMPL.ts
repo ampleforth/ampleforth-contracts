@@ -893,7 +893,6 @@ describe('Underlying Rebase:Contraction', async function () {
   })
 })
 
-
 describe('user sends funds to the contract incorrectly', async function () {
   beforeEach('setup WAMPL contract', setupContracts)
 
