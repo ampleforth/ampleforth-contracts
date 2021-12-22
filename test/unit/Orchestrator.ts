@@ -37,13 +37,8 @@ async function mockedOrchestrator() {
 
 describe('Orchestrator', function () {
   before('setup Orchestrator contract', async () => {
-    ;({
-      deployer,
-      user,
-      orchestrator,
-      mockPolicy,
-      mockDownstream,
-    } = await waffle.loadFixture(mockedOrchestrator))
+    ;({ deployer, user, orchestrator, mockPolicy, mockDownstream } =
+      await waffle.loadFixture(mockedOrchestrator))
   })
 
   describe('when sent ether', async function () {
@@ -97,9 +92,8 @@ describe('Orchestrator', function () {
 
   describe('when there is a single transaction', async function () {
     before('adding a transaction', async function () {
-      const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
-        12345,
-      )
+      const updateOneArgEncoded =
+        await mockDownstream.populateTransaction.updateOneArg(12345)
       await orchestrator
         .connect(deployer)
         .addTransaction(mockDownstream.address, updateOneArgEncoded.data)
@@ -133,10 +127,8 @@ describe('Orchestrator', function () {
 
   describe('when there are two transactions', async function () {
     before('adding a transaction', async function () {
-      const updateTwoArgsEncoded = await mockDownstream.populateTransaction.updateTwoArgs(
-        12345,
-        23456,
-      )
+      const updateTwoArgsEncoded =
+        await mockDownstream.populateTransaction.updateTwoArgs(12345, 23456)
       await orchestrator
         .connect(deployer)
         .addTransaction(mockDownstream.address, updateTwoArgsEncoded.data)
@@ -263,9 +255,8 @@ describe('Orchestrator', function () {
 
   describe('when a transaction reverts', async function () {
     before('adding 3 transactions', async function () {
-      const updateOneArgEncoded = await mockDownstream.populateTransaction.updateOneArg(
-        123,
-      )
+      const updateOneArgEncoded =
+        await mockDownstream.populateTransaction.updateOneArg(123)
       await orchestrator
         .connect(deployer)
         .addTransaction(mockDownstream.address, updateOneArgEncoded.data)
@@ -275,10 +266,8 @@ describe('Orchestrator', function () {
         .connect(deployer)
         .addTransaction(mockDownstream.address, revertsEncoded.data)
 
-      const updateTwoArgsEncoded = await mockDownstream.populateTransaction.updateTwoArgs(
-        12345,
-        23456,
-      )
+      const updateTwoArgsEncoded =
+        await mockDownstream.populateTransaction.updateTwoArgs(12345, 23456)
       await orchestrator
         .connect(deployer)
         .addTransaction(mockDownstream.address, updateTwoArgsEncoded.data)
@@ -293,7 +282,8 @@ describe('Orchestrator', function () {
   describe('Access Control', function () {
     describe('addTransaction', async function () {
       it('should be callable by owner', async function () {
-        const updateNoArgEncoded = await mockDownstream.populateTransaction.updateNoArg()
+        const updateNoArgEncoded =
+          await mockDownstream.populateTransaction.updateNoArg()
         await expect(
           orchestrator
             .connect(deployer)
@@ -302,7 +292,8 @@ describe('Orchestrator', function () {
       })
 
       it('should not be callable by others', async function () {
-        const updateNoArgEncoded = await mockDownstream.populateTransaction.updateNoArg()
+        const updateNoArgEncoded =
+          await mockDownstream.populateTransaction.updateNoArg()
         await expect(
           orchestrator
             .connect(user)

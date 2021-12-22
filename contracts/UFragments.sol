@@ -372,10 +372,12 @@ contract UFragments is ERC20Detailed, Ownable {
         require(block.timestamp <= deadline);
 
         uint256 ownerNonce = _nonces[owner];
-        bytes32 permitDataDigest =
-            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, ownerNonce, deadline));
-        bytes32 digest =
-            keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), permitDataDigest));
+        bytes32 permitDataDigest = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner, spender, value, ownerNonce, deadline)
+        );
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), permitDataDigest)
+        );
 
         require(owner == ecrecover(digest, v, r, s));
 

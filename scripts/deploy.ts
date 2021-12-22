@@ -41,9 +41,9 @@ task('deploy:ampl', 'Deploy ampleforth contracts').setAction(
     // deploy Policy
     const uFragmentsPolicy = await (
       await hre.upgrades.deployProxy(
-        (await hre.ethers.getContractFactory('UFragmentsPolicy')).connect(
-          deployer,
-        ),
+        (
+          await hre.ethers.getContractFactory('UFragmentsPolicy')
+        ).connect(deployer),
         [owner, uFragments.address, BASE_CPI.toString()],
         {
           initializer: 'initialize(address,address,uint256)',
