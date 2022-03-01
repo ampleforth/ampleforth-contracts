@@ -85,7 +85,7 @@ library SafeMathInt {
     /**
      * @dev Computes 2^exp with limited precision where -100 <= exp <= 100 * one
      * @param one 1.0 represented in the same fixed point number format as exp
-     * @param exp The power to raise 2 to 0 <= exp <= 100 * one
+     * @param exp The power to raise 2 to -100 <= exp <= 100 * one
      * @return 2^exp represented with same number of decimals after the point as one
      */
     function twoPower(int256 exp, int256 one) internal pure returns (int256) {
