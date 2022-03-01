@@ -30,7 +30,8 @@
     "lint"
   ],
   "dependencies": {
-    "openzeppelin-contracts-4.4.1": "https://github.com/OpenZeppelin/openzeppelin-contracts.git#4.4.1"
+    "openzeppelin-contracts-4.4.1": "https://github.com/OpenZeppelin/openzeppelin-contracts.git#4.4.1",
+    "openzeppelin-solidity": "2.0.0"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
