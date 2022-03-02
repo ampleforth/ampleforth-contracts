@@ -91,11 +91,54 @@ describe('MedianOracle:pushReport', async function () {
   it('should only push from authorized source', async function () {
     await expect(oracle.connect(A).pushReport(payload)).to.be.reverted
   })
-  it('should fail if reportDelaySec did not pass since the previous push', async function () {
+
+  it('should pass if reportDelaySec did not pass since the previous push, but previous report non-existent', async function () {
     await oracle.addProvider(await A.getAddress())
+    await oracle.connect(A).pushReport(payload)
+    await oracle.connect(A).pushReport(payload)
+  })
+
+  it('should pass if reportDelaySec did pass since the previous push, and previous report non-existent', async function () {
+    await oracle.addProvider(await A.getAddress())
+    await oracle.connect(A).pushReport(payload)
+    await increaseTime(20)
+    await oracle.connect(A).pushReport(payload)
+  })
+
+  it('should pass if reportDelaySec did pass since the previous push, but previous report expired', async function () {
+    await oracle.addProvider(await A.getAddress())
+    await oracle.connect(A).pushReport(payload)
+    await increaseTime(70)
+    await oracle.connect(A).pushReport(payload)
+    await oracle.connect(A).pushReport(payload)
+  })
+
+  it('should pass if reportDelaySec did pass since the previous push, and previous report expired', async function () {
+    await oracle.addProvider(await A.getAddress())
+    await oracle.connect(A).pushReport(payload)
+    await increaseTime(70)
+    await oracle.connect(A).pushReport(payload)
+    await increaseTime(20)
+    await oracle.connect(A).pushReport(payload)
+  })
+
+  it('should fail if reportDelaySec did not pass since the previous push, and previous report not expired', async function () {
+    await oracle.addProvider(await A.getAddress())
+    await oracle.connect(A).pushReport(payload)
+    await increaseTime(20)
     await oracle.connect(A).pushReport(payload)
     await expect(oracle.connect(A).pushReport(payload)).to.be.reverted
   })
+
+  it('should pass if reportDelaySec did pass since the previous push, and previous report not expired', async function () {
+    await oracle.addProvider(await A.getAddress())
+    await oracle.connect(A).pushReport(payload)
+    await increaseTime(20)
+    await oracle.connect(A).pushReport(payload)
+    await increaseTime(20)
+    await oracle.connect(A).pushReport(payload)
+  })
+
   it('should emit ProviderReportPushed message', async function () {
     oracle.addProvider(await A.getAddress())
     const tx = await oracle.connect(A).pushReport(payload)
