@@ -154,6 +154,9 @@ describe('UFragmentsPolicy:initialize', async function () {
         ethers.utils.parseUnits('5', 16),
       )
     })
+    it('rebaseLag', async function () {
+      expect(await uFragmentsPolicy.rebaseLag()).to.eq(1)
+    })
     it('minRebaseTimeIntervalSec', async function () {
       expect(await uFragmentsPolicy.minRebaseTimeIntervalSec()).to.eq(
         24 * 60 * 60,

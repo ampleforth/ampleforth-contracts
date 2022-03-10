@@ -74,8 +74,6 @@ contract UFragmentsPolicy is Ownable {
 
     uint256 private constant DECIMALS = 18;
 
-    int256 private constant ONE = int256(10**DECIMALS);
-
     // Due to the expression in computeSupplyDelta(), MAX_RATE * MAX_SUPPLY must fit into an int256.
     // Both are 18 decimals fixed point numbers.
     uint256 private constant MAX_RATE = 10**6 * 10**DECIMALS;
@@ -90,6 +88,8 @@ contract UFragmentsPolicy is Ownable {
     int256 public rebaseFunctionLowerPercentage;
     int256 public rebaseFunctionUpperPercentage;
     int256 public rebaseFunctionGrowth;
+
+    int256 private constant ONE = int256(10**DECIMALS);
 
     modifier onlyOrchestrator() {
         require(msg.sender == orchestrator);
@@ -285,7 +285,7 @@ contract UFragmentsPolicy is Ownable {
         int256 lower,
         int256 upper,
         int256 growth
-    ) private pure returns (int256) {
+    ) public pure returns (int256) {
         int256 delta;
 
         delta = (normalizedRate.sub(ONE));
@@ -351,4 +351,8 @@ contract UFragmentsPolicy is Ownable {
             (rate >= targetRate && rate.sub(targetRate) < absoluteDeviationThreshold) ||
             (rate < targetRate && targetRate.sub(rate) < absoluteDeviationThreshold);
     }
+    function rebaseLag() public view returns (uint256) {
+        return 1;
+    }
+
 }
