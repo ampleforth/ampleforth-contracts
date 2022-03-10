@@ -351,8 +351,8 @@ contract UFragmentsPolicy is Ownable {
             (rate >= targetRate && rate.sub(targetRate) < absoluteDeviationThreshold) ||
             (rate < targetRate && targetRate.sub(rate) < absoluteDeviationThreshold);
     }
+
     function rebaseLag() public view returns (uint256) {
         return 1;
     }
-
 }

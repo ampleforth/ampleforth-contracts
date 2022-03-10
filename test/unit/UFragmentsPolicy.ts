@@ -1003,14 +1003,16 @@ describe('UFragmentsPolicy:Rebase', async function () {
   describe('max positive rebase', function () {
     before(async function () {
       await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, 1000)
-      await uFragmentsPolicy.connect(deployer).setRebaseFunctionGrowth("100"+"000000000000000000")
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseFunctionGrowth('100' + '000000000000000000')
       await increaseTime(60)
     })
 
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
       expect(
-          (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-              .requestedSupplyAdjustment,
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
       ).to.eq(100)
     })
   })
@@ -1018,14 +1020,16 @@ describe('UFragmentsPolicy:Rebase', async function () {
   describe('max negative rebase', function () {
     before(async function () {
       await mockExternalData(0, INITIAL_CPI, 1000)
-      await uFragmentsPolicy.connect(deployer).setRebaseFunctionGrowth("75"+"000000000000000000")
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseFunctionGrowth('75' + '000000000000000000')
       await increaseTime(60)
     })
 
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       expect(
-          (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-              .requestedSupplyAdjustment,
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
       ).to.eq(-100)
     })
   })
@@ -1033,18 +1037,19 @@ describe('UFragmentsPolicy:Rebase', async function () {
   describe('exponent less than -100', function () {
     before(async function () {
       await mockExternalData(0, INITIAL_CPI, 1000)
-      await uFragmentsPolicy.connect(deployer).setRebaseFunctionGrowth("150"+"000000000000000000")
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseFunctionGrowth('150' + '000000000000000000')
       await increaseTime(60)
     })
 
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       expect(
-          (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-              .requestedSupplyAdjustment,
+        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
       ).to.eq(-100)
     })
   })
-
 })
 
 describe('UFragmentsPolicy:Rebase', async function () {
