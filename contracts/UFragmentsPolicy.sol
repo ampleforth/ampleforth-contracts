@@ -251,12 +251,13 @@ contract UFragmentsPolicy is Ownable {
         deviationThreshold = 5 * 10**(DECIMALS - 2);
 
         rebaseFunctionGrowth = int256(3 * (10**DECIMALS));
-        rebaseFunctionUpperPercentage = int256(10 * (10**(DECIMALS - 2))); // 0.11
-        rebaseFunctionLowerPercentage = int256((-10) * int256(10**(DECIMALS - 2))); // -0.11
+        rebaseFunctionUpperPercentage = int256(10 * (10**(DECIMALS - 2))); // 0.1
+        rebaseFunctionLowerPercentage = int256((-10) * int256(10**(DECIMALS - 2))); // -0.1
 
         minRebaseTimeIntervalSec = 1 days;
-        rebaseWindowOffsetSec = 72000; // 8PM UTC
-        rebaseWindowLengthSec = 15 minutes;
+        rebaseWindowOffsetSec = 7200; // 2AM UTC
+        rebaseWindowLengthSec = 20 minutes;
+
         lastRebaseTimestampSec = 0;
         epoch = 0;
 
