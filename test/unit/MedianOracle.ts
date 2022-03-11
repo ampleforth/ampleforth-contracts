@@ -137,6 +137,7 @@ describe('MedianOracle:pushReport', async function () {
     await oracle.connect(A).pushReport(payload)
     await increaseTime(20)
     await oracle.connect(A).pushReport(payload)
+    await expect(oracle.connect(A).pushReport(payload)).to.be.reverted
   })
 
   it('should emit ProviderReportPushed message', async function () {
