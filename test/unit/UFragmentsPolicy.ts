@@ -171,10 +171,10 @@ describe('UFragmentsPolicy:initialize', async function () {
       expect(r[1]).to.eq(0)
     })
     it('rebaseWindowOffsetSec', async function () {
-      expect(await uFragmentsPolicy.rebaseWindowOffsetSec()).to.eq(72000)
+      expect(await uFragmentsPolicy.rebaseWindowOffsetSec()).to.eq(7200)
     })
     it('rebaseWindowLengthSec', async function () {
-      expect(await uFragmentsPolicy.rebaseWindowLengthSec()).to.eq(900)
+      expect(await uFragmentsPolicy.rebaseWindowLengthSec()).to.eq(1200)
     })
     it('should set owner', async function () {
       expect(await uFragmentsPolicy.owner()).to.eq(await deployer.getAddress())
