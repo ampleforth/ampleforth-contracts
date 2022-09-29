@@ -8,7 +8,13 @@ import '@nomiclabs/hardhat-etherscan'
 import 'solidity-coverage'
 import 'hardhat-gas-reporter'
 
+// Loads env variables from .env file
+import * as dotenv from 'dotenv'
+dotenv.config()
+
+// load custom tasks
 require('./scripts/deploy')
+require('./scripts/upgrade')
 
 export default {
   etherscan: {
@@ -17,20 +23,20 @@ export default {
   networks: {
     hardhat: {
       initialBaseFeePerGas: 0,
-    },
-    rinkeby: {
-      url: `https://rinkeby.infura.io/v3/${process.env.INFURA_SECRET}`,
       accounts: {
-        mnemonic:
-          process.env.DEV_MNEMONIC || Wallet.createRandom().mnemonic.phrase,
+        mnemonic: Wallet.createRandom().mnemonic.phrase,
       },
     },
-    kovan: {
-      url: `https://kovan.infura.io/v3/${process.env.INFURA_SECRET}`,
+    ganache: {
+      url: 'http://127.0.0.1:8545',
+    },
+    goerli: {
+      url: `https://goerli.infura.io/v3/${process.env.INFURA_SECRET}`,
       accounts: {
         mnemonic:
-          process.env.DEV_MNEMONIC || Wallet.createRandom().mnemonic.phrase,
+          process.env.PROD_MNEMONIC || Wallet.createRandom().mnemonic.phrase,
       },
+      gasMultiplier: 1.1,
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_SECRET}`,
@@ -38,6 +44,7 @@ export default {
         mnemonic:
           process.env.PROD_MNEMONIC || Wallet.createRandom().mnemonic.phrase,
       },
+      gasMultiplier: 1.05,
     },
   },
   solidity: {
@@ -51,22 +58,11 @@ export default {
           },
         },
       },
-      {
-        version: '0.7.6',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
-      {
-        version: '0.4.24',
-      },
     ],
   },
   mocha: {
     timeout: 100000,
+    bail: true,
   },
   gasReporter: {
     currency: 'USD',

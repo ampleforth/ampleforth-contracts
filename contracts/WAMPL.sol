@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-
 pragma solidity 0.8.4;
 
-import {IERC20} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/IERC20.sol";
-
-import {SafeERC20} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC20} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/ERC20.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 // solhint-disable-next-line max-line-length
-import {ERC20Permit} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+
+// solhint-disable-next-line max-line-length
+import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol";
 
 /**
  * @title WAMPL (Wrapped AMPL).
@@ -26,8 +26,8 @@ import {ERC20Permit} from "openzeppelin-contracts-4.4.1/contracts/token/ERC20/ex
  *
  *      We call wAMPL the "wrapper" token and AMPL the "underlying" or "wrapped" token.
  */
-contract WAMPL is ERC20, ERC20Permit {
-    using SafeERC20 for IERC20;
+contract WAMPL is ERC20Upgradeable, ERC20PermitUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     //--------------------------------------------------------------------------
     // Constants
@@ -43,15 +43,18 @@ contract WAMPL is ERC20, ERC20Permit {
 
     //--------------------------------------------------------------------------
 
+    /// @notice Contract constructor.
     /// @param ampl The AMPL ERC20 token address.
+    constructor(address ampl) {
+        _ampl = ampl;
+    }
+
+    /// @notice Contract state initialization.
     /// @param name_ The wAMPL ERC20 name.
     /// @param symbol_ The wAMPL ERC20 symbol.
-    constructor(
-        address ampl,
-        string memory name_,
-        string memory symbol_
-    ) ERC20(name_, symbol_) ERC20Permit(name_) {
-        _ampl = ampl;
+    function init(string memory name_, string memory symbol_) public initializer {
+        __ERC20_init(name_, symbol_);
+        __ERC20Permit_init(name_);
     }
 
     //--------------------------------------------------------------------------
@@ -234,7 +237,7 @@ contract WAMPL is ERC20, ERC20Permit {
         uint256 amples,
         uint256 wamples
     ) private {
-        IERC20(_ampl).safeTransferFrom(from, address(this), amples);
+        IERC20Upgradeable(_ampl).safeTransferFrom(from, address(this), amples);
 
         _mint(to, wamples);
     }
@@ -252,13 +255,13 @@ contract WAMPL is ERC20, ERC20Permit {
     ) private {
         _burn(from, wamples);
 
-        IERC20(_ampl).safeTransfer(to, amples);
+        IERC20Upgradeable(_ampl).safeTransfer(to, amples);
     }
 
     /// @dev Queries the current total supply of AMPL.
     /// @return The current AMPL supply.
     function _queryAMPLSupply() private view returns (uint256) {
-        return IERC20(_ampl).totalSupply();
+        return IERC20Upgradeable(_ampl).totalSupply();
     }
 
     //--------------------------------------------------------------------------
