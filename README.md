@@ -39,14 +39,15 @@ yarn test
 
 ## Testnets
 
-There is a testnet deployment on Kovan. It rebases hourly using real market data.
+There is a testnet deployment on Goerli. It rebases hourly using real market data.
 
-- ERC-20 Token: [0x3E0437898a5667a4769B1Ca5A34aAB1ae7E81377](https://kovan.etherscan.io/token/0x3E0437898a5667a4769B1Ca5A34aAB1ae7E81377)
-- Supply Policy: [0xBB4617d26E704Ac0568E1cbf5232990a8b7846A4](https://kovan.etherscan.io/address/0xBB4617d26E704Ac0568E1cbf5232990a8b7846A4)
-- Orchestrator: [0xdAcA62767840febA20Ae103d8B5BF923517FA3b9](https://kovan.etherscan.io/address/0xdAcA62767840febA20Ae103d8B5BF923517FA3b9)
-- Market Oracle: [0xFC344AF21d647f4244B5F098203A178BF26c51Dc](https://kovan.etherscan.io/address/0xFC344AF21d647f4244B5F098203A178BF26c51Dc)
-- CPI Oracle: [0xCedc17B394051d0E222797588f3e5ECe5023FB4A](https://kovan.etherscan.io/address/0xCedc17B394051d0E222797588f3e5ECe5023FB4A)
-- WAMPL: [0xd012092d13e5a4aa7a9032335b380c62fc707232](https://kovan.etherscan.io/address/0xd012092d13e5a4aa7a9032335b380c62fc707232)
+- ERC-20 Token: [0x08c5b39F000705ebeC8427C1d64D6262392944EE](https://goerli.etherscan.io/token/0x08c5b39F000705ebeC8427C1d64D6262392944EE)
+- Supply Policy: [0x047b82a5D79d9DF62dE4f34CbaBa83F71848a6BF](https://goerli.etherscan.io/address/0x047b82a5D79d9DF62dE4f34CbaBa83F71848a6BF)
+- Orchestrator: [0x0ec93391752ef1A06AA2b83D15c3a5814651C891](https://goerli.etherscan.io/address/0x0ec93391752ef1A06AA2b83D15c3a5814651C891)
+- Market Oracle: [0xd4F96E4aC4B4f4E2359734a89b5484196298B69D](https://goerli.etherscan.io/address/0xd4F96E4aC4B4f4E2359734a89b5484196298B69D)
+- CPI Oracle: [0x53c75D13a07AA02615Cb43e942829862C963D9bf](https://goerli.etherscan.io/address/0x53c75D13a07AA02615Cb43e942829862C963D9bf)
+- Admin: [0x02C32fB5498e89a8750cc9Bd66382a681665c3a3](https://goerli.etherscan.io/address/0x02C32fB5498e89a8750cc9Bd66382a681665c3a3)
+- WAMPL: [0x3b624861a14979537DE1B88F9565F41a7fc45FBf](https://goerli.etherscan.io/address/0x3b624861a14979537DE1B88F9565F41a7fc45FBf)
 
 ## Contribute
 
