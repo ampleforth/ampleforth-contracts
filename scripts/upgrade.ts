@@ -15,6 +15,12 @@ const parseEvents = (
     .map((log) => contractInterface.parseLog(log))
     .filter((log) => log.name === eventName)
 
+task('check:admin', 'Upgrade ampleforth contracts')
+  .addParam('address', 'proxy address')
+  .setAction(async (args, hre) => {
+    console.log(await getAdminAddress(hre.ethers.provider, args.address))
+  })
+
 task('upgrade:ampl', 'Upgrade ampleforth contracts')
   .addParam('contract', 'which implementation contract to use')
   .addParam('address', 'which proxy address to upgrade')
