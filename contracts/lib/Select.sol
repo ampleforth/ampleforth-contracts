@@ -12,7 +12,7 @@ library Select {
      * @param size Number of elements in array to compute the median for.
      * @return Median of array.
      */
-    function computeMedian(uint256[] calldata array, uint256 size) internal pure returns (uint256) {
+    function computeMedian(uint256[] memory array, uint256 size) internal pure returns (uint256) {
         require(size > 0 && array.length >= size);
         for (uint256 i = 1; i < size; i++) {
             for (uint256 j = i; j > 0 && array[j - 1] > array[j]; j--) {
