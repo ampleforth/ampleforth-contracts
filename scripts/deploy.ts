@@ -33,8 +33,8 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
 
     // Policy
     const DEVIATION_TRESHOLD = utils.parseUnits('0.002', 18) // 0.002% (ie) 0.05/24)
-    const LOWER = utils.parseUnits('-0.041', 18)
-    const UPPER = utils.parseUnits('0.041', 18)
+    const LOWER = utils.parseUnits('-0.005', 18)
+    const UPPER = utils.parseUnits('0.005', 18)
     const GROWTH = utils.parseUnits('3', 18)
     const MIN_REBASE_INTERVAL = 1200 // 20 mins
     const REBASE_WINDOW_OFFSET = 0
