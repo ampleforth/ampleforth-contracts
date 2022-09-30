@@ -1,8 +1,11 @@
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity 0.8.4;
 
 import "./_external/Ownable.sol";
 
-import "./UFragmentsPolicy.sol";
+interface IUFragmentsPolicy {
+    function rebase() external;
+}
 
 /**
  * @title Orchestrator
@@ -19,14 +22,14 @@ contract Orchestrator is Ownable {
     // Stable ordering is not guaranteed.
     Transaction[] public transactions;
 
-    UFragmentsPolicy public policy;
+    IUFragmentsPolicy public policy;
 
     /**
      * @param policy_ Address of the UFragments policy.
      */
     constructor(address policy_) public {
         Ownable.initialize(msg.sender);
-        policy = UFragmentsPolicy(policy_);
+        policy = IUFragmentsPolicy(policy_);
     }
 
     /**

@@ -1,8 +1,7 @@
-pragma solidity 0.4.24;
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity 0.8.4;
 
-import {SafeMath} from "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import {Ownable} from "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./lib/Select.sol";
 
 interface IOracle {
@@ -15,9 +14,7 @@ interface IOracle {
  * @notice Provides a value onchain that's aggregated from a whitelisted set of
  *         providers.
  */
-contract MedianOracle is Ownable, IOracle {
-    using SafeMath for uint256;
-
+contract MedianOracle is OwnableUpgradeable, IOracle {
     struct Report {
         uint256 timestamp;
         uint256 payload;
@@ -51,6 +48,8 @@ contract MedianOracle is Ownable, IOracle {
     uint256 private constant MAX_REPORT_EXPIRATION_TIME = 520 weeks;
 
     /**
+     * @notice Contract state initialization.
+     *
      * @param reportExpirationTimeSec_ The number of seconds after which the
      *                                 report is deemed expired.
      * @param reportDelaySec_ The number of seconds since reporting that has to
@@ -58,16 +57,17 @@ contract MedianOracle is Ownable, IOracle {
      * @param minimumProviders_ The minimum number of providers with valid
      *                          reports to consider the aggregate report valid.
      */
-    constructor(
+    function init(
         uint256 reportExpirationTimeSec_,
         uint256 reportDelaySec_,
         uint256 minimumProviders_
-    ) public {
+    ) public initializer {
         require(reportExpirationTimeSec_ <= MAX_REPORT_EXPIRATION_TIME);
         require(minimumProviders_ > 0);
         reportExpirationTimeSec = reportExpirationTimeSec_;
         reportDelaySec = reportDelaySec_;
         minimumProviders = minimumProviders_;
+        __Ownable_init();
     }
 
     /**
@@ -114,12 +114,12 @@ contract MedianOracle is Ownable, IOracle {
         uint8 index_past = 1 - index_recent;
 
         // Check that the push is not too soon after the last one.
-        require(timestamps[index_recent].add(reportDelaySec) <= now);
+        require(timestamps[index_recent] + reportDelaySec <= block.timestamp);
 
-        reports[index_past].timestamp = now;
+        reports[index_past].timestamp = block.timestamp;
         reports[index_past].payload = payload;
 
-        emit ProviderReportPushed(providerAddress, payload, now);
+        emit ProviderReportPushed(providerAddress, payload, block.timestamp);
     }
 
     /**
@@ -138,12 +138,12 @@ contract MedianOracle is Ownable, IOracle {
      * @return AggregatedValue: Median of providers reported values.
      *         valid: Boolean indicating an aggregated value was computed successfully.
      */
-    function getData() external returns (uint256, bool) {
+    function getData() external override returns (uint256, bool) {
         uint256 reportsCount = providers.length;
         uint256[] memory validReports = new uint256[](reportsCount);
         uint256 size = 0;
-        uint256 minValidTimestamp = now.sub(reportExpirationTimeSec);
-        uint256 maxValidTimestamp = now.sub(reportDelaySec);
+        uint256 minValidTimestamp = block.timestamp - reportExpirationTimeSec;
+        uint256 maxValidTimestamp = block.timestamp - reportDelaySec;
 
         for (uint256 i = 0; i < reportsCount; i++) {
             address providerAddress = providers[i];
@@ -207,7 +207,7 @@ contract MedianOracle is Ownable, IOracle {
                 if (i + 1 != providers.length) {
                     providers[i] = providers[providers.length - 1];
                 }
-                providers.length--;
+                providers.pop();
                 emit ProviderRemoved(provider);
                 break;
             }

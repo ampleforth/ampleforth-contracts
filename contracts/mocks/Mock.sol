@@ -1,4 +1,4 @@
-pragma solidity 0.7.6;
+pragma solidity 0.8.4;
 
 contract Mock {
     event FunctionCalled(string instanceName, string functionName, address caller);

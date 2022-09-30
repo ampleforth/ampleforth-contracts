@@ -1,5 +1,3 @@
-// pragma solidity ^0.4.24;
-
 // Public interface definition for the AMPL - ERC20 token on Ethereum (the base-chain)
 interface IAMPL {
     // ERC20
