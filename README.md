@@ -2,7 +2,7 @@
 
 [![Nightly](https://github.com/ampleforth/ampleforth-contracts/actions/workflows/nightly.yml/badge.svg)](https://github.com/ampleforth/ampleforth-contracts/actions/workflows/nightly.yml)&nbsp;&nbsp;[![Coverage Status](https://coveralls.io/repos/github/ampleforth/ampleforth-contracts/badge.svg?branch=master)](https://coveralls.io/github/ampleforth/ampleforth-contracts?branch=master)
 
-Ampleforth (code name uFragments) is a decentralized elastic supply protocol. It maintains a stable unit price by adjusting supply directly to and from wallet holders. You can read the [whitepaper](https://www.ampleforth.org/paper/) for the motivation and a complete description of the protocol.
+Ampleforth (code name uFragments) is a decentralized elastic supply protocol. It maintains a stable unit price by adjusting supply directly to and from wallet holders. You can read the [whitepaper](https://drive.google.com/file/d/1I-NmSnQ6E7wY1nyouuf-GuDdJWNCnJWl/view) for the motivation and a complete description of the protocol.
 
 This repository is a collection of [smart contracts](http://ampleforth.org/docs) that implement the Ampleforth protocol on the Ethereum blockchain.
 
