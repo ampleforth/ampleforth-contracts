@@ -30,7 +30,7 @@
     "lint"
   ],
   "dependencies": {
-    "@openzeppelin/contracts-upgradeable": "^4.7.3"
+    "@openzeppelin/contracts-upgradeable": "^4.8.3"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.6.4",
