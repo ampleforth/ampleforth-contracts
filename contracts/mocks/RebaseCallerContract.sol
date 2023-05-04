@@ -10,4 +10,9 @@ contract RebaseCallerContract {
         // pay back flash loan.
         return true;
     }
+
+	function callRebaseFromContract(address orchestrator) public returns (bool) {
+		Orchestrator(orchestrator).rebaseFromContract();
+		return true;
+	}
 }

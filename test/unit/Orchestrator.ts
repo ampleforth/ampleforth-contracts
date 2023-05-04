@@ -7,6 +7,7 @@ import { TransactionResponse } from '@ethersproject/providers'
 let orchestrator: Contract, mockPolicy: Contract, mockDownstream: Contract
 let r: Promise<TransactionResponse>
 let deployer: Signer, user: Signer
+let rebaseCallerContracts: Contract[]
 
 async function mockedOrchestrator() {
   await increaseTime(86400)
@@ -26,14 +27,27 @@ async function mockedOrchestrator() {
   )
     .connect(deployer)
     .deploy()
+
+  const rebaseCallerContracts = []
+  for (let i = 0; i < 3; i++) {
+    const _rebaseCallerContract = await (
+      await ethers.getContractFactory('RebaseCallerContract')
+    )
+      .connect(deployer)
+      .deploy()
+    rebaseCallerContracts.push(_rebaseCallerContract)
+  }
+
   return {
     deployer,
     user,
     orchestrator,
     mockPolicy,
     mockDownstream,
+    rebaseCallerContracts
   }
 }
+
 
 describe('Orchestrator', function () {
   before('setup Orchestrator contract', async () => {
@@ -354,4 +368,83 @@ describe('Orchestrator', function () {
       })
     })
   })
+
+  describe('whitelist functionality', async function() {
+    before('setup rebase caller contracts', async () => {
+      ;({ rebaseCallerContracts }  =
+        await waffle.loadFixture(mockedOrchestrator))
+    })
+
+    it('should return an empty list', async function () {
+      expect((await orchestrator.getWhitelist()).length).to.eq(0)
+    })
+
+    describe('adding to whitelist', async function() {
+
+      it('should add contract address to whitelist', async function () {
+        await orchestrator.connect(deployer).whitelistAccount(rebaseCallerContracts[0].address)
+        const whitelist = await orchestrator.getWhitelist()
+        expect(whitelist.length).to.eq(1)
+        expect(whitelist[0]).to.eq(rebaseCallerContracts[0].address)
+      })
+
+      it('should disallow non-owner from adding contract address to whitelist', async function () {
+        await expect(orchestrator.connect(user).whitelistAccount(rebaseCallerContracts[1].address)).to.be.reverted
+        const whitelist = await orchestrator.getWhitelist()
+        expect(whitelist.length).to.eq(1)
+        expect(whitelist[0]).to.eq(rebaseCallerContracts[0].address)
+      })
+    })
+
+    describe('rebasing from whitelist', async function () {
+
+      it('should allow whitelisted contract entry to rebaseFromContract', async function () {
+        await expect(rebaseCallerContracts[0].callRebaseFromContract(orchestrator.address)).to.not.be.reverted
+      })
+
+      it('should disallow whitelisted contract entry to eoa rebase entrypoint', async function () {
+        await expect(rebaseCallerContracts[0].callRebase(orchestrator.address)).to.be.reverted
+      })
+
+      it('should rebase....', async function () {
+        console.log('todo')
+      })
+    })
+
+    describe('removing from whitelist', async function () {
+
+      it('should disallow non-owner from removing contract address from whitelist', async function () {
+        await expect(orchestrator.connect(user).unlistAccount(rebaseCallerContracts[0].address)).to.be.reverted
+        const whitelist = await orchestrator.getWhitelist()
+        expect(whitelist.length).to.eq(1)
+        expect(whitelist[0]).to.eq(rebaseCallerContracts[0].address)
+      })
+
+      it('should remove address from whitelist', async function () {
+        await orchestrator.connect(deployer).unlistAccount(rebaseCallerContracts[0].address)
+        const whitelist = await orchestrator.getWhitelist()
+        expect(whitelist.length).to.eq(0)
+      })
+
+      it('should disallow unlisted contract entry to rebaseFromContract', async function () {
+        await expect(rebaseCallerContracts[0].callRebaseFromContract(orchestrator.address)).to.be.reverted
+      })
+    })
+
+    describe('handling longer whitelist', async function () {
+
+      it ('should add and allow multiple whitelisted contracts entry to rebaseFromContract', async function () {
+        for (let i = 0; i < rebaseCallerContracts.length; i++) {
+          await orchestrator.connect(deployer).whitelistAccount(rebaseCallerContracts[i].address)
+        }
+        const whitelist = await orchestrator.getWhitelist()
+        expect(whitelist.length).to.eq(3)
+        for (let i = 0; i < rebaseCallerContracts.length; i++) {
+          expect(whitelist[i]).to.eq(rebaseCallerContracts[i].address)
+          await expect(rebaseCallerContracts[i].callRebaseFromContract(orchestrator.address)).to.not.be.reverted
+        }
+      })
+    })
+  })
+
 })
