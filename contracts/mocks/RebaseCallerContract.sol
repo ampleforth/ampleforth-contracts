@@ -11,8 +11,8 @@ contract RebaseCallerContract {
         return true;
     }
 
-	function callRebaseFromContract(address orchestrator) public returns (bool) {
-		Orchestrator(orchestrator).rebaseFromContract();
-		return true;
-	}
+    function callRebaseFromContract(address orchestrator) public returns (bool) {
+        Orchestrator(orchestrator).rebaseFromContract();
+        return true;
+    }
 }
