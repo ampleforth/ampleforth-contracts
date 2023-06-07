@@ -36,7 +36,7 @@ jobs:
         run: yarn coverage
 
       - name: spot-contracts report coverage
-        uses: coverallsapp/github-action@v2.1.2
+        uses: coverallsapp/github-action@v2.2.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: "./coverage/lcov.info"
