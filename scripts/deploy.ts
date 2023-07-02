@@ -64,11 +64,7 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
     console.log('Implementation:', amplImpl)
 
     // deploy market oracle
-    const marketOracle = await deployContract(
-      hre,
-      'MedianOracle',
-      deployer,
-    )
+    const marketOracle = await deployContract(hre, 'MedianOracle', deployer)
     await marketOracle.init(
       RATE_REPORT_EXPIRATION_SEC,
       RATE_REPORT_DELAY_SEC,
@@ -77,11 +73,7 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
     console.log('Market oracle to:', marketOracle.address)
 
     // deploy cpi oracle
-    const cpiOracle = await deployContract(
-      hre,
-      'MedianOracle',
-      deployer,
-    )
+    const cpiOracle = await deployContract(hre, 'MedianOracle', deployer)
     await cpiOracle.init(
       CPI_REPORT_EXPIRATION_SEC,
       CPI_REPORT_DELAY_SEC,
