@@ -581,7 +581,7 @@ describe('MedianOracle:getData', async function () {
     it('should scale the median', async function () {
       await expect(callerContract.getData())
         .to.emit(callerContract, 'ReturnValueUInt256Bool')
-        .withArgs(BigNumber.from('1163444444444444444'), true)
+        .withArgs(BigNumber.from('942390000000000000'), true)
     })
   })
 })

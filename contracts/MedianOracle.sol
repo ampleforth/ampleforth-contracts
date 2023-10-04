@@ -50,7 +50,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
     // This is needed so that timestamp of 1 is always considered expired.
     uint256 private constant MAX_REPORT_EXPIRATION_TIME = 520 weeks;
 
-    // The final mediam value is scaled by dividing by this factor.
+    // The final mediam value is scaled by multiplying by this factor.
     uint256 public scalar;
 
     /**
@@ -207,7 +207,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
         }
 
         uint256 result = Select.computeMedian(validReports, size);
-        result = result.mulDiv(10**18, scalar);
+        result = result.mulDiv(scalar, 10**18);
         return (result, true);
     }
 
