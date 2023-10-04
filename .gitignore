@@ -81,7 +81,6 @@ node_modules
 #Buidler files
 cache
 artifacts
-.openzeppelin
 
 # env
 .env
