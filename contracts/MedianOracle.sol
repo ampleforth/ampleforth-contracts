@@ -18,6 +18,8 @@ interface IOracle {
 contract MedianOracle is OwnableUpgradeable, IOracle {
     using MathUpgradeable for uint256;
 
+    uint8 public constant DECIMALS = 18;
+
     struct Report {
         uint256 timestamp;
         uint256 payload;
@@ -73,7 +75,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
         reportExpirationTimeSec = reportExpirationTimeSec_;
         reportDelaySec = reportDelaySec_;
         minimumProviders = minimumProviders_;
-        scalar = 10**18;
+        scalar = 10**DECIMALS;
         __Ownable_init();
     }
 
@@ -116,7 +118,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
 
     /**
      * @notice Pushes a report for the calling provider.
-     * @param payload is expected to be 18 decimal fixed point number.
+     * @param payload is expected to be a fixed point number with 18 decimals.
      */
     function pushReport(uint256 payload) external {
         address providerAddress = msg.sender;
@@ -207,7 +209,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
         }
 
         uint256 result = Select.computeMedian(validReports, size);
-        result = result.mulDiv(scalar, 10**18);
+        result = result.mulDiv(scalar, 10**DECIMALS);
         return (result, true);
     }
 
