@@ -262,6 +262,21 @@ describe('MedianOracle:removeProvider:accessControl', async function () {
   })
 })
 
+describe('MedianOracle:setScalar:accessControl', async function () {
+  beforeEach(async function () {
+    await setupContractsAndAccounts()
+  })
+
+  it('should be callable by owner', async function () {
+    await oracle.setScalar(ethers.utils.parseUnits('1', 18))
+  })
+
+  it('should NOT be callable by non-owner', async function () {
+    await expect(oracle.connect(A).setScalar(ethers.utils.parseUnits('1', 18)))
+      .to.be.reverted
+  })
+})
+
 describe('MedianOracle:getData', async function () {
   before(async function () {
     await setupContractsAndAccounts()
@@ -538,6 +553,35 @@ describe('MedianOracle:getData', async function () {
       await expect(callerContract.getData())
         .to.emit(callerContract, 'ReturnValueUInt256Bool')
         .withArgs(BigNumber.from(0), false)
+    })
+  })
+})
+
+describe('MedianOracle:getData', async function () {
+  before(async function () {
+    await setupContractsAndAccounts()
+    await setupCallerContract()
+
+    await oracle.setScalar(BigNumber.from('900000000000000000'))
+
+    await oracle.addProvider(await A.getAddress())
+    await oracle.addProvider(await B.getAddress())
+    await oracle.addProvider(await C.getAddress())
+    await oracle.addProvider(await D.getAddress())
+
+    await oracle.connect(D).pushReport(BigNumber.from('1000000000000000000'))
+    await oracle.connect(B).pushReport(BigNumber.from('1041000000000000000'))
+    await oracle.connect(A).pushReport(BigNumber.from('1053200000000000000'))
+    await oracle.connect(C).pushReport(BigNumber.from('2041000000000000000'))
+
+    await increaseTime(40)
+  })
+
+  describe('when a scalar is set', function () {
+    it('should scale the median', async function () {
+      await expect(callerContract.getData())
+        .to.emit(callerContract, 'ReturnValueUInt256Bool')
+        .withArgs(BigNumber.from('1163444444444444444'), true)
     })
   })
 })

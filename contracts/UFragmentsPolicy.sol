@@ -29,6 +29,7 @@ contract UFragmentsPolicy is Ownable {
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
 
+    /// @notice DEPRECATED.
     event LogRebase(
         uint256 indexed epoch,
         uint256 exchangeRate,
@@ -37,16 +38,27 @@ contract UFragmentsPolicy is Ownable {
         uint256 timestampSec
     );
 
+    event Rebase(
+        uint256 indexed epoch,
+        uint256 currentRate,
+        uint256 targetRate,
+        int256 requestedSupplyAdjustment,
+        uint256 timestampSec
+    );
+
     IUFragments public uFrags;
 
-    // Provides the current CPI, as an 18 decimal fixed point number.
+    // Provides the cpi adjusted price target, as an 18 decimal fixed point number.
     IOracle public cpiOracle;
 
     // Market oracle provides the token/USD exchange rate as an 18 decimal fixed point number.
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
 
-    // CPI value at the time of launch, as an 18 decimal fixed point number.
+    // @notice DEPRECATED.
+    // @dev This variable is NOT being used anymore.
+    //      This used to store the CPI value at the time of launch to scale the incoming target
+    //      and infer the price target. However, now the update CPI oracle returns the price target.
     uint256 private baseCpi;
 
     // If the current exchange rate is within this fractional distance from the target, no supply
@@ -116,23 +128,21 @@ contract UFragmentsPolicy is Ownable {
 
         epoch = epoch.add(1);
 
-        uint256 cpi;
-        bool cpiValid;
-        (cpi, cpiValid) = cpiOracle.getData();
-        require(cpiValid);
+        uint256 targetRate;
+        bool targetRateValid;
+        (targetRate, targetRateValid) = cpiOracle.getData();
+        require(targetRateValid);
 
-        uint256 targetRate = cpi.mul(10**DECIMALS).div(baseCpi);
+        uint256 currentRate;
+        bool currentRateValid;
+        (currentRate, currentRateValid) = marketOracle.getData();
+        require(currentRateValid);
 
-        uint256 exchangeRate;
-        bool rateValid;
-        (exchangeRate, rateValid) = marketOracle.getData();
-        require(rateValid);
-
-        if (exchangeRate > MAX_RATE) {
-            exchangeRate = MAX_RATE;
+        if (currentRate > MAX_RATE) {
+            currentRate = MAX_RATE;
         }
 
-        int256 supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
+        int256 supplyDelta = computeSupplyDelta(currentRate, targetRate);
 
         if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
             supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
@@ -140,7 +150,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, block.timestamp);
+        emit Rebase(epoch, currentRate, targetRate, supplyDelta, block.timestamp);
     }
 
     /**
@@ -241,11 +251,7 @@ contract UFragmentsPolicy is Ownable {
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    function initialize(
-        address owner_,
-        IUFragments uFrags_,
-        uint256 baseCpi_
-    ) public initializer {
+    function initialize(address owner_, IUFragments uFrags_) public initializer {
         Ownable.initialize(owner_);
 
         // deviationThreshold = 0.05e18 = 5e16
@@ -263,7 +269,6 @@ contract UFragmentsPolicy is Ownable {
         epoch = 0;
 
         uFrags = uFrags_;
-        baseCpi = baseCpi_;
     }
 
     /**

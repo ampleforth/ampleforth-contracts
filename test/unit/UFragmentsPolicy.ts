@@ -14,12 +14,10 @@ let deployer: Signer, user: Signer, orchestrator: Signer
 
 const MAX_RATE = ethers.utils.parseUnits('1', 24)
 const MAX_SUPPLY = ethers.BigNumber.from(2).pow(255).sub(1).div(MAX_RATE)
-const BASE_CPI = ethers.utils.parseUnits('1', 20)
-const INITIAL_CPI = ethers.utils.parseUnits('251.712', 18)
-
-const INITIAL_CPI_25P_MORE = imul(INITIAL_CPI, '1.25', 1)
-const INITIAL_CPI_25P_LESS = imul(INITIAL_CPI, '0.75', 1)
-const INITIAL_RATE = imul(INITIAL_CPI, 1e18, BASE_CPI)
+const INITIAL_TARGET_RATE = ethers.utils.parseUnits('1.05', 18)
+const INITIAL_TARGET_RATE_25P_MORE = imul(INITIAL_TARGET_RATE, '1.25', 1)
+const INITIAL_TARGET_RATE_25P_LESS = imul(INITIAL_TARGET_RATE, '0.75', 1)
+const INITIAL_RATE = ethers.utils.parseUnits('1.05', 18)
 const INITIAL_RATE_30P_MORE = imul(INITIAL_RATE, '1.3', 1)
 const INITIAL_RATE_30P_LESS = imul(INITIAL_RATE, '0.7', 1)
 const INITIAL_RATE_5P_MORE = imul(INITIAL_RATE, '1.05', 1)
@@ -46,9 +44,9 @@ async function mockedUpgradablePolicy() {
   // deploy upgradable contract
   const uFragmentsPolicy = await upgrades.deployProxy(
     (await ethers.getContractFactory('UFragmentsPolicy')).connect(deployer),
-    [await deployer.getAddress(), mockUFragments.address, BASE_CPI.toString()],
+    [await deployer.getAddress(), mockUFragments.address],
     {
-      initializer: 'initialize(address,address,uint256)',
+      initializer: 'initialize(address,address)',
     },
   )
   // setup oracles
@@ -94,24 +92,22 @@ async function mockedUpgradablePolicyWithOpenRebaseWindow() {
 }
 
 async function mockExternalData(
-  rate: BigNumberish,
-  cpi: BigNumberish,
+  currentRate: BigNumberish,
+  targetRate: BigNumberish,
   uFragSupply: BigNumberish,
-  rateValidity = true,
-  cpiValidity = true,
+  currentRateValidity = true,
+  targetRateValidity = true,
 ) {
-  await mockMarketOracle.connect(deployer).storeData(rate)
-  await mockMarketOracle.connect(deployer).storeValidity(rateValidity)
-  await mockCpiOracle.connect(deployer).storeData(cpi)
-  await mockCpiOracle.connect(deployer).storeValidity(cpiValidity)
+  await mockMarketOracle.connect(deployer).storeData(currentRate)
+  await mockMarketOracle.connect(deployer).storeValidity(currentRateValidity)
+  await mockCpiOracle.connect(deployer).storeData(targetRate)
+  await mockCpiOracle.connect(deployer).storeValidity(targetRateValidity)
   await mockUFragments.connect(deployer).storeSupply(uFragSupply)
 }
 
-async function parseRebaseLog(response: Promise<TransactionResponse>) {
+async function parseRebaseEvent(response: Promise<TransactionResponse>) {
   const receipt = (await (await response).wait()) as any
-  const logs = receipt.events.filter(
-    (event: Event) => event.event === 'LogRebase',
-  )
+  const logs = receipt.events.filter((event: Event) => event.event === 'Rebase')
   return logs[0].args
 }
 
@@ -610,7 +606,12 @@ describe('UFragmentsPolicy:Rebase:accessControl', async function () {
       uFragmentsPolicy,
     } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
     // await setupContractsWithOpenRebaseWindow()
-    await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true)
+    await mockExternalData(
+      INITIAL_RATE_30P_MORE,
+      INITIAL_TARGET_RATE,
+      1000,
+      true,
+    )
     await increaseTime(60)
   })
 
@@ -643,7 +644,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
   describe('when minRebaseTimeIntervalSec has NOT passed since the previous rebase', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1010)
+      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_TARGET_RATE, 1010)
       await increaseTime(60)
       await uFragmentsPolicy.connect(orchestrator).rebase()
     })
@@ -677,32 +678,52 @@ describe('UFragmentsPolicy:Rebase', async function () {
     })
 
     it('should return 0', async function () {
-      await mockExternalData(INITIAL_RATE.sub(1), INITIAL_CPI, 1000)
+      await mockExternalData(INITIAL_RATE.sub(1), INITIAL_TARGET_RATE, 1000)
       await increaseTime(60)
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(0)
       await increaseTime(60)
 
-      await mockExternalData(INITIAL_RATE.add(1), INITIAL_CPI, 1000)
+      await mockExternalData(INITIAL_RATE.add(1), INITIAL_TARGET_RATE, 1000)
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(0)
       await increaseTime(60)
 
-      await mockExternalData(INITIAL_RATE_5P_MORE.sub(2), INITIAL_CPI, 1000)
+      await mockExternalData(
+        INITIAL_RATE_5P_MORE.sub(2),
+        INITIAL_TARGET_RATE,
+        1000,
+      )
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(0)
       await increaseTime(60)
 
-      await mockExternalData(INITIAL_RATE_5P_LESS.add(2), INITIAL_CPI, 1000)
+      await mockExternalData(
+        INITIAL_RATE_5P_LESS.add(2),
+        INITIAL_TARGET_RATE,
+        1000,
+      )
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(0)
       await increaseTime(60)
     })
@@ -725,31 +746,37 @@ describe('UFragmentsPolicy:Rebase', async function () {
   describe('when rate is more than MAX_RATE', function () {
     it('should return same supply delta as delta for MAX_RATE', async function () {
       // Any exchangeRate >= (MAX_RATE=100x) would result in the same supply increase
-      await mockExternalData(MAX_RATE, INITIAL_CPI, 1000)
+      await mockExternalData(MAX_RATE, INITIAL_TARGET_RATE, 1000)
       await increaseTime(60)
 
       const supplyChange = (
-        await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase())
+        await parseRebaseEvent(uFragmentsPolicy.connect(orchestrator).rebase())
       ).requestedSupplyAdjustment
 
       await increaseTime(60)
 
       await mockExternalData(
         MAX_RATE.add(ethers.utils.parseUnits('1', 17)),
-        INITIAL_CPI,
+        INITIAL_TARGET_RATE,
         1000,
       )
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(supplyChange)
 
       await increaseTime(60)
 
-      await mockExternalData(MAX_RATE.mul(2), INITIAL_CPI, 1000)
+      await mockExternalData(MAX_RATE.mul(2), INITIAL_TARGET_RATE, 1000)
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(supplyChange)
     })
   })
@@ -770,7 +797,11 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
   describe('when uFragments grows beyond MAX_SUPPLY', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY.sub(1))
+      await mockExternalData(
+        INITIAL_RATE_2X,
+        INITIAL_TARGET_RATE,
+        MAX_SUPPLY.sub(1),
+      )
       await increaseTime(60)
     })
 
@@ -778,8 +809,11 @@ describe('UFragmentsPolicy:Rebase', async function () {
       // Supply is MAX_SUPPLY-1, exchangeRate is 2x; resulting in a new supply more than MAX_SUPPLY
       // However, supply is ONLY increased by 1 to MAX_SUPPLY
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(1)
     })
   })
@@ -800,14 +834,17 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
   describe('when uFragments supply equals MAX_SUPPLY and rebase attempts to grow', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, MAX_SUPPLY)
+      await mockExternalData(INITIAL_RATE_2X, INITIAL_TARGET_RATE, MAX_SUPPLY)
       await increaseTime(60)
     })
 
     it('should not grow', async function () {
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(0)
     })
   })
@@ -828,7 +865,12 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
   describe('when the market oracle returns invalid data', function () {
     it('should fail', async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, false)
+      await mockExternalData(
+        INITIAL_RATE_30P_MORE,
+        INITIAL_TARGET_RATE,
+        1000,
+        false,
+      )
       await increaseTime(60)
       await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.be
         .reverted
@@ -837,7 +879,12 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
   describe('when the market oracle returns valid data', function () {
     it('should NOT fail', async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000, true)
+      await mockExternalData(
+        INITIAL_RATE_30P_MORE,
+        INITIAL_TARGET_RATE,
+        1000,
+        true,
+      )
       await increaseTime(60)
       await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.not.be
         .reverted
@@ -862,7 +909,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
     it('should fail', async function () {
       await mockExternalData(
         INITIAL_RATE_30P_MORE,
-        INITIAL_CPI,
+        INITIAL_TARGET_RATE,
         1000,
         true,
         false,
@@ -877,7 +924,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
     it('should NOT fail', async function () {
       await mockExternalData(
         INITIAL_RATE_30P_MORE,
-        INITIAL_CPI,
+        INITIAL_TARGET_RATE,
         1000,
         true,
         true,
@@ -902,9 +949,9 @@ describe('UFragmentsPolicy:Rebase', async function () {
     } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
   })
 
-  describe('positive rate and no change CPI', function () {
+  describe('positive rate and no change target', function () {
     beforeEach(async function () {
-      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_CPI, 1000)
+      await mockExternalData(INITIAL_RATE_30P_MORE, INITIAL_TARGET_RATE, 1000)
       await uFragmentsPolicy
         .connect(deployer)
         .setRebaseTimingParameters(60, 0, 60)
@@ -912,7 +959,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       await uFragmentsPolicy.connect(orchestrator).rebase()
       prevEpoch = await uFragmentsPolicy.epoch()
       prevTime = await uFragmentsPolicy.lastRebaseTimestampSec()
-      await mockExternalData(INITIAL_RATE_60P_MORE, INITIAL_CPI, 1010)
+      await mockExternalData(INITIAL_RATE_60P_MORE, INITIAL_TARGET_RATE, 1010)
       await increaseTime(60)
     })
 
@@ -937,14 +984,14 @@ describe('UFragmentsPolicy:Rebase', async function () {
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
       const r = uFragmentsPolicy.connect(orchestrator).rebase()
       await expect(r)
-        .to.emit(uFragmentsPolicy, 'LogRebase')
+        .to.emit(uFragmentsPolicy, 'Rebase')
         .withArgs(
           prevEpoch.add(1),
           INITIAL_RATE_60P_MORE,
-          INITIAL_CPI,
+          INITIAL_TARGET_RATE,
           55,
           (
-            await parseRebaseLog(r)
+            await parseRebaseEvent(r)
           ).timestampSec,
         )
     })
@@ -988,21 +1035,24 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
   describe('negative rate', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_30P_LESS, INITIAL_CPI, 1000)
+      await mockExternalData(INITIAL_RATE_30P_LESS, INITIAL_TARGET_RATE, 1000)
       await increaseTime(60)
     })
 
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(-29)
     })
   })
 
   describe('max positive rebase', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE_2X, INITIAL_CPI, 1000)
+      await mockExternalData(INITIAL_RATE_2X, INITIAL_TARGET_RATE, 1000)
       await uFragmentsPolicy
         .connect(deployer)
         .setRebaseFunctionGrowth('100' + '000000000000000000')
@@ -1011,15 +1061,18 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(100)
     })
   })
 
   describe('max negative rebase', function () {
     before(async function () {
-      await mockExternalData(0, INITIAL_CPI, 1000)
+      await mockExternalData(0, INITIAL_TARGET_RATE, 1000)
       await uFragmentsPolicy
         .connect(deployer)
         .setRebaseFunctionGrowth('75' + '000000000000000000')
@@ -1028,15 +1081,18 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(-100)
     })
   })
 
   describe('exponent less than -100', function () {
     before(async function () {
-      await mockExternalData(0, INITIAL_CPI, 1000)
+      await mockExternalData(0, INITIAL_TARGET_RATE, 1000)
       await uFragmentsPolicy
         .connect(deployer)
         .setRebaseFunctionGrowth('150' + '000000000000000000')
@@ -1045,8 +1101,11 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(-100)
     })
   })
@@ -1065,17 +1124,20 @@ describe('UFragmentsPolicy:Rebase', async function () {
     } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
   })
 
-  describe('when cpi increases', function () {
+  describe('when target increases', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI_25P_MORE, 1000)
+      await mockExternalData(INITIAL_RATE, INITIAL_TARGET_RATE_25P_MORE, 1000)
       await increaseTime(60)
       await uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)
     })
 
     it('should emit Rebase with negative requestedSupplyAdjustment', async function () {
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(-20)
     })
   })
@@ -1094,17 +1156,20 @@ describe('UFragmentsPolicy:Rebase', async function () {
     } = await waffle.loadFixture(mockedUpgradablePolicyWithOpenRebaseWindow))
   })
 
-  describe('when cpi decreases', function () {
+  describe('when target decreases', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI_25P_LESS, 1000)
+      await mockExternalData(INITIAL_RATE, INITIAL_TARGET_RATE_25P_LESS, 1000)
       await increaseTime(60)
       await uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)
     })
 
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(32)
     })
   })
@@ -1125,15 +1190,18 @@ describe('UFragmentsPolicy:Rebase', async function () {
 
   describe('rate=TARGET_RATE', function () {
     before(async function () {
-      await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000)
+      await mockExternalData(INITIAL_RATE, INITIAL_TARGET_RATE, 1000)
       await uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)
       await increaseTime(60)
     })
 
     it('should emit Rebase with 0 requestedSupplyAdjustment', async function () {
       expect(
-        (await parseRebaseLog(uFragmentsPolicy.connect(orchestrator).rebase()))
-          .requestedSupplyAdjustment,
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
       ).to.eq(0)
     })
   })
@@ -1161,7 +1229,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
     await uFragmentsPolicy
       .connect(deployer)
       .setRebaseTimingParameters(86400, 72000, 900)
-    await mockExternalData(INITIAL_RATE, INITIAL_CPI, 1000)
+    await mockExternalData(INITIAL_RATE, INITIAL_TARGET_RATE, 1000)
     rbTime = await uFragmentsPolicy.rebaseWindowOffsetSec()
     rbWindow = await uFragmentsPolicy.rebaseWindowLengthSec()
     minRebaseTimeIntervalSec = await uFragmentsPolicy.minRebaseTimeIntervalSec()

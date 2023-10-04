@@ -2,6 +2,7 @@
 pragma solidity 0.8.4;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./lib/Select.sol";
 
 interface IOracle {
@@ -15,6 +16,8 @@ interface IOracle {
  *         providers.
  */
 contract MedianOracle is OwnableUpgradeable, IOracle {
+    using MathUpgradeable for uint256;
+
     struct Report {
         uint256 timestamp;
         uint256 payload;
@@ -47,6 +50,9 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
     // This is needed so that timestamp of 1 is always considered expired.
     uint256 private constant MAX_REPORT_EXPIRATION_TIME = 520 weeks;
 
+    // The final mediam value is scaled by dividing by this factor.
+    uint256 public scalar;
+
     /**
      * @notice Contract state initialization.
      *
@@ -67,6 +73,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
         reportExpirationTimeSec = reportExpirationTimeSec_;
         reportDelaySec = reportDelaySec_;
         minimumProviders = minimumProviders_;
+        scalar = 10**18;
         __Ownable_init();
     }
 
@@ -97,6 +104,14 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
     function setMinimumProviders(uint256 minimumProviders_) external onlyOwner {
         require(minimumProviders_ > 0);
         minimumProviders = minimumProviders_;
+    }
+
+    /**
+     * @notice Sets the scaling factor.
+     * @param scalar_ The scaling factor.
+     */
+    function setScalar(uint256 scalar_) external onlyOwner {
+        scalar = scalar_;
     }
 
     /**
@@ -191,7 +206,9 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
             return (0, false);
         }
 
-        return (Select.computeMedian(validReports, size), true);
+        uint256 result = Select.computeMedian(validReports, size);
+        result = result.mulDiv(10**18, scalar);
+        return (result, true);
     }
 
     /**
