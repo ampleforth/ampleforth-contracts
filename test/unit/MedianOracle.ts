@@ -23,7 +23,7 @@ async function setupContractsAndAccounts() {
   D = accounts[4]
   factory = await ethers.getContractFactory('MedianOracle')
   oracle = await factory.deploy()
-  await oracle.init(60, 10, 1)
+  await oracle.init(60, 10, 1, ethers.utils.parseUnits('1', 18))
   await oracle.deployed()
 }
 
