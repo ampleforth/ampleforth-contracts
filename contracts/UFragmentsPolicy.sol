@@ -40,7 +40,7 @@ contract UFragmentsPolicy is Ownable {
 
     event Rebase(
         uint256 indexed epoch,
-        uint256 currentRate,
+        uint256 exchangeRate,
         uint256 targetRate,
         int256 requestedSupplyAdjustment,
         uint256 timestampSec
@@ -133,16 +133,16 @@ contract UFragmentsPolicy is Ownable {
         (targetRate, targetRateValid) = cpiOracle.getData();
         require(targetRateValid);
 
-        uint256 currentRate;
-        bool currentRateValid;
-        (currentRate, currentRateValid) = marketOracle.getData();
-        require(currentRateValid);
+        uint256 exchangeRate;
+        bool rateValid;
+        (exchangeRate, rateValid) = marketOracle.getData();
+        require(rateValid);
 
-        if (currentRate > MAX_RATE) {
-            currentRate = MAX_RATE;
+        if (exchangeRate > MAX_RATE) {
+            exchangeRate = MAX_RATE;
         }
 
-        int256 supplyDelta = computeSupplyDelta(currentRate, targetRate);
+        int256 supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
 
         if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
             supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
@@ -150,7 +150,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit Rebase(epoch, currentRate, targetRate, supplyDelta, block.timestamp);
+        emit Rebase(epoch, exchangeRate, targetRate, supplyDelta, block.timestamp);
     }
 
     /**
