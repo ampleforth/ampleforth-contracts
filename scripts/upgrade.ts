@@ -1,10 +1,13 @@
+import { readFileSync } from 'fs'
+import * as path from 'path'
+
 import { task } from 'hardhat/config'
 import { getAdminAddress } from '@openzeppelin/upgrades-core'
 import { Interface } from '@ethersproject/abi'
 import { TransactionReceipt } from '@ethersproject/providers'
 import ProxyAdmin from '@openzeppelin/upgrades-core/artifacts/ProxyAdmin.json'
 
-import { getContractFactoryFromExternalArtifacts } from './helpers'
+import { getContractFactoryFromExternalArtifacts, verify } from './helpers'
 
 const parseEvents = (
   receipt: TransactionReceipt,
@@ -92,4 +95,42 @@ task('upgrade:ampl', 'Upgrade ampleforth contracts')
       )
       console.log(args.contract, 'upgraded')
     }
+  })
+
+task('prep:upgrade:policy')
+  .addParam('address', 'which proxy address to upgrade')
+  .addParam('prevVersion', 'the version tag of the previous implementation')
+  .setAction(async function (args: TaskArguments, hre) {
+    console.log(args)
+    const upgrades = hre.upgrades as any
+
+    const signer = (await hre.ethers.getSigners())[0]
+    const signerAddress = await signer.getAddress()
+    console.log('Signer', signerAddress)
+
+    const prevFactory = await ethers.getContractFactoryFromArtifact(
+      JSON.parse(
+        readFileSync(
+          path.join(
+            __dirname,
+            `/../external-artifacts/UFragmentsPolicy_${args.prevVersion}.json`,
+          ),
+        ).toString(),
+      ),
+    )
+    const newFactory = await hre.ethers.getContractFactory('UFragmentsPolicy')
+
+    // await upgrades.forceImport(args.address, prevFactory)
+    await upgrades.validateUpgrade(args.address, newFactory)
+    const newImpl = await upgrades.prepareUpgrade(args.address, newFactory)
+    console.log('New implementation at:', newImpl)
+
+    console.log('Update implementation by executing the following')
+    console.log(
+      'Proxy Admin',
+      await getAdminAddress(hre.ethers.provider, args.address),
+    )
+    console.log(`proxyAdmin.upgrade(${args.address}, ${newImpl})`)
+
+    await verify(hre, newImpl.address, [])
   })
