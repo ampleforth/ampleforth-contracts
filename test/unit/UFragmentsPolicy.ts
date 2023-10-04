@@ -107,7 +107,9 @@ async function mockExternalData(
 
 async function parseRebaseEvent(response: Promise<TransactionResponse>) {
   const receipt = (await (await response).wait()) as any
-  const logs = receipt.events.filter((event: Event) => event.event === 'Rebase')
+  const logs = receipt.events.filter(
+    (event: Event) => event.event === 'LogRebaseV2',
+  )
   return logs[0].args
 }
 
@@ -984,7 +986,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
     it('should emit Rebase with positive requestedSupplyAdjustment', async function () {
       const r = uFragmentsPolicy.connect(orchestrator).rebase()
       await expect(r)
-        .to.emit(uFragmentsPolicy, 'Rebase')
+        .to.emit(uFragmentsPolicy, 'LogRebaseV2')
         .withArgs(
           prevEpoch.add(1),
           INITIAL_RATE_60P_MORE,

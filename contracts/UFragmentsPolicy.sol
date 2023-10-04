@@ -38,7 +38,7 @@ contract UFragmentsPolicy is Ownable {
         uint256 timestampSec
     );
 
-    event Rebase(
+    event LogRebaseV2(
         uint256 indexed epoch,
         uint256 exchangeRate,
         uint256 targetRate,
@@ -150,7 +150,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit Rebase(epoch, exchangeRate, targetRate, supplyDelta, block.timestamp);
+        emit LogRebaseV2(epoch, exchangeRate, targetRate, supplyDelta, block.timestamp);
     }
 
     /**
