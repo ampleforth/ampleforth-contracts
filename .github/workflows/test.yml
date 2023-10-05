@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Setup Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Uses node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
