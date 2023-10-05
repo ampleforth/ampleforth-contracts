@@ -54,11 +54,7 @@ contract UFragmentsPolicy is Ownable {
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
 
-    /// @custom:oz-renamed-from
-    /// @notice DEPRECATED.
-    /// @dev This variable is NOT being used anymore.
-    ///      This used to store the CPI value at the time of launch to scale the incoming target
-    ///      and infer the price target. However, now the update CPI oracle returns the price target.
+    /// @custom:oz-renamed-from baseCpi
     uint256 private baseCpi_DEPRECATED;
 
     // If the current exchange rate is within this fractional distance from the target, no supply

@@ -120,7 +120,7 @@ task('prep:upgrade:policy')
     )
     const newFactory = await hre.ethers.getContractFactory('UFragmentsPolicy')
 
-    // await upgrades.forceImport(args.address, prevFactory)
+    // const prevImpl = await upgrades.forceImport(args.address, prevFactory)
     await upgrades.validateUpgrade(args.address, newFactory)
     const newImpl = await upgrades.prepareUpgrade(args.address, newFactory)
     console.log('New implementation at:', newImpl)
