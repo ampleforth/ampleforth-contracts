@@ -114,8 +114,8 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
         uint8 index_recent = timestamps[0] >= timestamps[1] ? 0 : 1;
         uint8 index_past = 1 - index_recent;
 
-        uint256 minValidTimestamp = block.timestamp.sub(reportExpirationTimeSec);
-        uint256 maxValidTimestamp = block.timestamp.sub(reportDelaySec);
+        uint256 minValidTimestamp = block.timestamp - reportExpirationTimeSec;
+        uint256 maxValidTimestamp = block.timestamp - reportDelaySec;
 
         // Check that the push is not too soon after the last one.
         // unless past one is already expired
