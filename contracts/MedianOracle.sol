@@ -120,7 +120,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
 
     /**
      * @notice Pushes a report for the calling provider.
-     * @param payload is expected to be a fixed point number with 18 decimals.
+     * @param payload is expected to be a fixed point number with `DECIMALS` decimals.
      */
     function pushReport(uint256 payload) external {
         address providerAddress = msg.sender;
