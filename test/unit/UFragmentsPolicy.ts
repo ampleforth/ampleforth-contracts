@@ -992,9 +992,6 @@ describe('UFragmentsPolicy:Rebase', async function () {
           INITIAL_RATE_60P_MORE,
           INITIAL_TARGET_RATE,
           55,
-          (
-            await parseRebaseEvent(r)
-          ).timestampSec,
         )
     })
 
