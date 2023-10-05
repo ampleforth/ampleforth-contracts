@@ -1,4 +1,5 @@
-pragma solidity 0.7.6;
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity 0.8.4;
 
 import "./_external/SafeMath.sol";
 import "./_external/Ownable.sol";
@@ -354,8 +355,8 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
-    * To maintain abi backward compatibility
-    */
+     * To maintain abi backward compatibility
+     */
     function rebaseLag() public pure returns (uint256) {
         return 1;
     }

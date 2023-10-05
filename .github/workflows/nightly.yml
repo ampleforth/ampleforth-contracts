@@ -1,0 +1,42 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [16.x]
+        os: [ubuntu-latest]
+
+    steps:
+      - name: Setup Repo
+        uses: actions/checkout@v3
+
+      - name: Uses node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install all workspaces
+        run: yarn install --immutable
+
+      - name: Seutp workspaces
+        run: yarn compile
+
+      - name: Lint
+        run: yarn format && yarn lint
+
+      - name: Test
+        run: yarn coverage
+
+      - name: spot-contracts report coverage
+        uses: coverallsapp/github-action@v2.2.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: "./coverage/lcov.info"

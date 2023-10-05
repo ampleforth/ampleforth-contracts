@@ -46,9 +46,8 @@ async function setupContracts() {
   await ampl.setMonetaryPolicy(deployerAddress)
 
   const wAMPLFactory = await ethers.getContractFactory('WAMPL')
-  wAMPL = await wAMPLFactory
-    .connect(deployer)
-    .deploy(ampl.address, NAME, SYMBOL)
+  wAMPL = await wAMPLFactory.connect(deployer).deploy(ampl.address)
+  await wAMPL.init(NAME, SYMBOL)
 }
 
 describe('WAMPL', () => {
