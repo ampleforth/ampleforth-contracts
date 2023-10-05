@@ -7,7 +7,7 @@ import { Interface } from '@ethersproject/abi'
 import { TransactionReceipt } from '@ethersproject/providers'
 import ProxyAdmin from '@openzeppelin/upgrades-core/artifacts/ProxyAdmin.json'
 
-import { getContractFactoryFromExternalArtifacts, verify } from './helpers'
+import { getContractFactoryFromExternalArtifacts, verify, sleep } from './helpers'
 
 const parseEvents = (
   receipt: TransactionReceipt,
@@ -132,5 +132,6 @@ task('prep:upgrade:policy')
     )
     console.log(`proxyAdmin.upgrade(${args.address}, ${newImpl})`)
 
-    await verify(hre, newImpl.address, [])
+    await sleep(15)
+    await verify(hre, newImpl, [])
   })
