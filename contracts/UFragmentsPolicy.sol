@@ -29,6 +29,7 @@ contract UFragmentsPolicy is Ownable {
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
 
+    /// @notice DEPRECATED.
     event LogRebase(
         uint256 indexed epoch,
         uint256 exchangeRate,
@@ -37,17 +38,24 @@ contract UFragmentsPolicy is Ownable {
         uint256 timestampSec
     );
 
+    event LogRebaseV2(
+        uint256 indexed epoch,
+        uint256 exchangeRate,
+        uint256 targetRate,
+        int256 requestedSupplyAdjustment
+    );
+
     IUFragments public uFrags;
 
-    // Provides the current CPI, as an 18 decimal fixed point number.
+    // Provides the cpi adjusted price target, as an 18 decimal fixed point number.
     IOracle public cpiOracle;
 
     // Market oracle provides the token/USD exchange rate as an 18 decimal fixed point number.
     // (eg) An oracle value of 1.5e18 it would mean 1 Ample is trading for $1.50.
     IOracle public marketOracle;
 
-    // CPI value at the time of launch, as an 18 decimal fixed point number.
-    uint256 private baseCpi;
+    /// @custom:oz-renamed-from baseCpi
+    uint256 private baseCpi_DEPRECATED;
 
     // If the current exchange rate is within this fractional distance from the target, no supply
     // update is performed. Fixed point number--same format as the rate.
@@ -116,12 +124,10 @@ contract UFragmentsPolicy is Ownable {
 
         epoch = epoch.add(1);
 
-        uint256 cpi;
-        bool cpiValid;
-        (cpi, cpiValid) = cpiOracle.getData();
-        require(cpiValid);
-
-        uint256 targetRate = cpi.mul(10**DECIMALS).div(baseCpi);
+        uint256 targetRate;
+        bool targetRateValid;
+        (targetRate, targetRateValid) = cpiOracle.getData();
+        require(targetRateValid);
 
         uint256 exchangeRate;
         bool rateValid;
@@ -140,7 +146,7 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
-        emit LogRebase(epoch, exchangeRate, cpi, supplyDelta, block.timestamp);
+        emit LogRebaseV2(epoch, exchangeRate, targetRate, supplyDelta);
     }
 
     /**
@@ -241,11 +247,7 @@ contract UFragmentsPolicy is Ownable {
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    function initialize(
-        address owner_,
-        IUFragments uFrags_,
-        uint256 baseCpi_
-    ) public initializer {
+    function initialize(address owner_, IUFragments uFrags_) public initializer {
         Ownable.initialize(owner_);
 
         // deviationThreshold = 0.05e18 = 5e16
@@ -263,7 +265,6 @@ contract UFragmentsPolicy is Ownable {
         epoch = 0;
 
         uFrags = uFrags_;
-        baseCpi = baseCpi_;
     }
 
     /**

@@ -16,6 +16,10 @@ export async function getContractFactoryFromExternalArtifacts(
   return hre.ethers.getContractFactoryFromArtifact(artifact)
 }
 
+export async function sleep(sleepSec: number) {
+  await new Promise((resolve) => setTimeout(resolve, sleepSec))
+}
+
 export async function waitFor(tx: TransactionResponse) {
   return (await tx).wait()
 }

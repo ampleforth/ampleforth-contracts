@@ -2,6 +2,7 @@
 pragma solidity 0.8.4;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./lib/Select.sol";
 
 interface IOracle {
@@ -15,6 +16,10 @@ interface IOracle {
  *         providers.
  */
 contract MedianOracle is OwnableUpgradeable, IOracle {
+    using MathUpgradeable for uint256;
+
+    uint8 public constant DECIMALS = 18;
+
     struct Report {
         uint256 timestamp;
         uint256 payload;
@@ -47,6 +52,9 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
     // This is needed so that timestamp of 1 is always considered expired.
     uint256 private constant MAX_REPORT_EXPIRATION_TIME = 520 weeks;
 
+    // The final median value is scaled by multiplying by this factor.
+    uint256 public scalar;
+
     /**
      * @notice Contract state initialization.
      *
@@ -56,17 +64,20 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
      *                        pass before a report is usable
      * @param minimumProviders_ The minimum number of providers with valid
      *                          reports to consider the aggregate report valid.
+     * @param scalar_ The scaling factor applied on the result.
      */
     function init(
         uint256 reportExpirationTimeSec_,
         uint256 reportDelaySec_,
-        uint256 minimumProviders_
+        uint256 minimumProviders_,
+        uint256 scalar_
     ) public initializer {
         require(reportExpirationTimeSec_ <= MAX_REPORT_EXPIRATION_TIME);
         require(minimumProviders_ > 0);
         reportExpirationTimeSec = reportExpirationTimeSec_;
         reportDelaySec = reportDelaySec_;
         minimumProviders = minimumProviders_;
+        scalar = scalar_;
         __Ownable_init();
     }
 
@@ -100,8 +111,16 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
     }
 
     /**
+     * @notice Sets the scaling factor.
+     * @param scalar_ The scaling factor.
+     */
+    function setScalar(uint256 scalar_) external onlyOwner {
+        scalar = scalar_;
+    }
+
+    /**
      * @notice Pushes a report for the calling provider.
-     * @param payload is expected to be 18 decimal fixed point number.
+     * @param payload is expected to be a fixed point number with `DECIMALS` decimals.
      */
     function pushReport(uint256 payload) external {
         address providerAddress = msg.sender;
@@ -191,7 +210,9 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
             return (0, false);
         }
 
-        return (Select.computeMedian(validReports, size), true);
+        uint256 result = Select.computeMedian(validReports, size);
+        result = result.mulDiv(scalar, 10**DECIMALS);
+        return (result, true);
     }
 
     /**
