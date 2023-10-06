@@ -12,7 +12,7 @@ The official mainnet addresses are:
 - Supply Policy: [0x1B228a749077b8e307C5856cE62Ef35d96Dca2ea](https://etherscan.io/address/0x1b228a749077b8e307c5856ce62ef35d96dca2ea)
 - Orchestrator: [0x6fb00a180781e75f87e2b690af0196baa77c7e7c](https://etherscan.io/address/0x6fb00a180781e75f87e2b690af0196baa77c7e7c)
 - Market Oracle: [0x99c9775e076fdf99388c029550155032ba2d8914](https://etherscan.io/address/0x99c9775e076fdf99388c029550155032ba2d8914)
-- CPI Oracle: [0xa759f960dd59a1ad32c995ecabe802a0c35f244f](https://etherscan.io/address/0xa759f960dd59a1ad32c995ecabe802a0c35f244f)
+- CPI Oracle: [0x2A18bfb505b49AED12F19F271cC1183F98ff4f71](https://etherscan.io/address/0x2A18bfb505b49AED12F19F271cC1183F98ff4f71)
 - WAMPL: [0xEDB171C18cE90B633DB442f2A6F72874093b49Ef](https://etherscan.io/address/0xEDB171C18cE90B633DB442f2A6F72874093b49Ef)
 
 ## Table of Contents
