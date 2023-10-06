@@ -17,7 +17,7 @@ export async function getContractFactoryFromExternalArtifacts(
 }
 
 export async function sleep(sleepSec: number) {
-  await new Promise(resolve => setTimeout(resolve, sleepSec));
+  await new Promise((resolve) => setTimeout(resolve, sleepSec))
 }
 
 export async function waitFor(tx: TransactionResponse) {

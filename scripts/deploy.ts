@@ -198,3 +198,30 @@ task('deploy:wampl', 'Deploy wampl contract')
     await wampl.deployTransaction.wait(5)
     await verify(hre, wampl.address, [args.ampl])
   })
+
+
+task('deploy:oracle', 'Deploy the median oracle contract')
+  .addParam('expiry', 'The report expiry')
+  .addParam('delay', 'The report delay')
+  .addParam('scalar', 'The scaling factor')
+  .setAction(async (args, hre) => {
+    console.log(args)
+
+    // get signers
+    const deployer = (await hre.ethers.getSigners())[0]
+    console.log('Deployer', await deployer.getAddress())
+
+    // deploy contract
+    const oracle = await deployContract(hre, 'MedianOracle', deployer, [])
+    await oracle.init(
+      args.expiry,
+      args.delay,
+      1,
+      args.scalar
+    )
+    console.log('Oracle deployed to:', oracle.address)
+
+    // wait and verify
+    await oracle.deployTransaction.wait(5)
+    await verify(hre, oracle.address, [])
+  })

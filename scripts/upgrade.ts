@@ -7,7 +7,11 @@ import { Interface } from '@ethersproject/abi'
 import { TransactionReceipt } from '@ethersproject/providers'
 import ProxyAdmin from '@openzeppelin/upgrades-core/artifacts/ProxyAdmin.json'
 
-import { getContractFactoryFromExternalArtifacts, verify, sleep } from './helpers'
+import {
+  getContractFactoryFromExternalArtifacts,
+  verify,
+  sleep,
+} from './helpers'
 
 const parseEvents = (
   receipt: TransactionReceipt,
