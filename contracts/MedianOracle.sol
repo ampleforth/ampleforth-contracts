@@ -108,13 +108,21 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
         Report[2] storage reports = providerReports[providerAddress];
         uint256[2] memory timestamps = [reports[0].timestamp, reports[1].timestamp];
 
+        // Checks that this providerAddress is already whitelisted
         require(timestamps[0] > 0);
 
         uint8 index_recent = timestamps[0] >= timestamps[1] ? 0 : 1;
         uint8 index_past = 1 - index_recent;
 
+        uint256 minValidTimestamp = block.timestamp - reportExpirationTimeSec;
+        uint256 maxValidTimestamp = block.timestamp - reportDelaySec;
+
         // Check that the push is not too soon after the last one.
-        require(timestamps[index_recent] + reportDelaySec <= block.timestamp);
+        // unless past one is already expired
+        require(
+            timestamps[index_past] < minValidTimestamp ||
+                timestamps[index_recent] <= maxValidTimestamp
+        );
 
         reports[index_past].timestamp = block.timestamp;
         reports[index_past].payload = payload;
@@ -127,6 +135,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
      */
     function purgeReports() external {
         address providerAddress = msg.sender;
+        // Check that this providerAddress is already whitelisted
         require(providerReports[providerAddress][0].timestamp > 0);
         providerReports[providerAddress][0].timestamp = 1;
         providerReports[providerAddress][1].timestamp = 1;
