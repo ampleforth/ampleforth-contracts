@@ -34,7 +34,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
 
     event ProviderAdded(address provider);
     event ProviderRemoved(address provider);
-    // Deprecated: event ReportTimestampOutOfRange(address provider);
+    event ReportTimestampOutOfRange(address provider);
     event ProviderReportPushed(address indexed provider, uint256 payload, uint256 timestamp);
 
     // The number of seconds after which the report is deemed expired.
