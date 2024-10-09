@@ -20,8 +20,8 @@ const INITIAL_TARGET_RATE_25P_LESS = imul(INITIAL_TARGET_RATE, '0.75', 1)
 const INITIAL_RATE = ethers.utils.parseUnits('1.05', 18)
 const INITIAL_RATE_30P_MORE = imul(INITIAL_RATE, '1.3', 1)
 const INITIAL_RATE_30P_LESS = imul(INITIAL_RATE, '0.7', 1)
-const INITIAL_RATE_5P_MORE = imul(INITIAL_RATE, '1.05', 1)
-const INITIAL_RATE_5P_LESS = imul(INITIAL_RATE, '0.95', 1)
+const INITIAL_RATE_2P_MORE = imul(INITIAL_RATE, '1.02', 1)
+const INITIAL_RATE_2P_LESS = imul(INITIAL_RATE, '0.98', 1)
 const INITIAL_RATE_60P_MORE = imul(INITIAL_RATE, '1.6', 1)
 const INITIAL_RATE_50P_LESS = imul(INITIAL_RATE, '0.5', 1)
 const INITIAL_RATE_2X = INITIAL_RATE.mul(2)
@@ -702,7 +702,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       await increaseTime(60)
 
       await mockExternalData(
-        INITIAL_RATE_5P_MORE.sub(2),
+        INITIAL_RATE_2P_MORE.sub(2),
         INITIAL_TARGET_RATE,
         1000,
       )
@@ -716,7 +716,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       await increaseTime(60)
 
       await mockExternalData(
-        INITIAL_RATE_5P_LESS.add(2),
+        INITIAL_RATE_2P_LESS.add(2),
         INITIAL_TARGET_RATE,
         1000,
       )

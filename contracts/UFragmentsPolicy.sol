@@ -124,14 +124,10 @@ contract UFragmentsPolicy is Ownable {
 
         epoch = epoch.add(1);
 
-        uint256 targetRate;
-        bool targetRateValid;
-        (targetRate, targetRateValid) = cpiOracle.getData();
+        (uint256 targetRate, bool targetRateValid) = getTargetRate();
         require(targetRateValid);
 
-        uint256 exchangeRate;
-        bool rateValid;
-        (exchangeRate, rateValid) = marketOracle.getData();
+        (uint256 exchangeRate, bool rateValid) = getExchangeRate();
         require(rateValid);
 
         if (exchangeRate > MAX_RATE) {
@@ -139,7 +135,6 @@ contract UFragmentsPolicy is Ownable {
         }
 
         int256 supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
-
         if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
             supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
         }
@@ -268,6 +263,20 @@ contract UFragmentsPolicy is Ownable {
     }
 
     /**
+     * @return The current price target and validity from the cpi oracle.
+     */
+    function getTargetRate() public returns (uint256, bool) {
+        return cpiOracle.getData();
+    }
+
+    /**
+     * @return The current exchange rate and validity from the market oracle.
+     */
+    function getExchangeRate() public returns (uint256, bool) {
+        return marketOracle.getData();
+    }
+
+    /**
      * @return If the latest block timestamp is within the rebase time window it, returns true.
      *         Otherwise, returns false.
      */
@@ -333,7 +342,6 @@ contract UFragmentsPolicy is Ownable {
             rebaseFunctionUpperPercentage,
             rebaseFunctionGrowth
         );
-
         return uFrags.totalSupply().toInt256Safe().mul(rebasePercentage).div(ONE);
     }
 
