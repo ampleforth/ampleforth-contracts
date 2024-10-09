@@ -250,12 +250,12 @@ contract UFragmentsPolicy is Ownable {
     function initialize(address owner_, IUFragments uFrags_) public initializer {
         Ownable.initialize(owner_);
 
-        // deviationThreshold = 0.05e18 = 5e16
-        deviationThreshold = 5 * 10**(DECIMALS - 2);
+        // deviationThreshold = 0.025e18 = 2.5e16
+        deviationThreshold = 25 * 10**(DECIMALS - 3);
 
-        rebaseFunctionGrowth = int256(3 * (10**DECIMALS));
-        rebaseFunctionUpperPercentage = int256(10 * (10**(DECIMALS - 2))); // 0.1
-        rebaseFunctionLowerPercentage = int256((-10) * int256(10**(DECIMALS - 2))); // -0.1
+        rebaseFunctionGrowth = int256(45 * (10**DECIMALS));
+        rebaseFunctionUpperPercentage = int256(5 * (10**(DECIMALS - 2))); // 0.05
+        rebaseFunctionLowerPercentage = int256((-77) * int256(10**(DECIMALS - 3))); // -0.77
 
         minRebaseTimeIntervalSec = 1 days;
         rebaseWindowOffsetSec = 7200; // 2AM UTC
