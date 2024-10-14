@@ -7,4 +7,6 @@ interface IAmpleforth {
     function inRebaseWindow() external view returns (bool);
 
     function globalAmpleforthEpochAndAMPLSupply() external view returns (uint256, uint256);
+
+    function getTargetRate() external returns (uint256, bool);
 }
