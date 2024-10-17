@@ -125,16 +125,14 @@ contract UFragmentsPolicy is Ownable {
         epoch = epoch.add(1);
 
         (uint256 targetRate, bool targetRateValid) = getTargetRate();
-        require(targetRateValid);
-
         (uint256 exchangeRate, bool rateValid) = getExchangeRate();
-        require(rateValid);
-
         if (exchangeRate > MAX_RATE) {
             exchangeRate = MAX_RATE;
         }
 
-        int256 supplyDelta = computeSupplyDelta(exchangeRate, targetRate);
+        int256 supplyDelta = (targetRateValid && rateValid)
+            ? computeSupplyDelta(exchangeRate, targetRate)
+            : int256(0);
         if (supplyDelta > 0 && uFrags.totalSupply().add(uint256(supplyDelta)) > MAX_SUPPLY) {
             supplyDelta = (MAX_SUPPLY.sub(uFrags.totalSupply())).toInt256Safe();
         }

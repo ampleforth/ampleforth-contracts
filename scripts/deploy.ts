@@ -199,7 +199,6 @@ task('deploy:wampl', 'Deploy wampl contract')
     await verify(hre, wampl.address, [args.ampl])
   })
 
-
 task('deploy:oracle', 'Deploy the median oracle contract')
   .addParam('expiry', 'The report expiry')
   .addParam('delay', 'The report delay')
@@ -213,12 +212,7 @@ task('deploy:oracle', 'Deploy the median oracle contract')
 
     // deploy contract
     const oracle = await deployContract(hre, 'MedianOracle', deployer, [])
-    await oracle.init(
-      args.expiry,
-      args.delay,
-      1,
-      args.scalar
-    )
+    await oracle.init(args.expiry, args.delay, 1, args.scalar)
     console.log('Oracle deployed to:', oracle.address)
 
     // wait and verify

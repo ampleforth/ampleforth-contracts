@@ -866,7 +866,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
   })
 
   describe('when the market oracle returns invalid data', function () {
-    it('should fail', async function () {
+    it('should NOT fail', async function () {
       await mockExternalData(
         INITIAL_RATE_30P_MORE,
         INITIAL_TARGET_RATE,
@@ -874,7 +874,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
         false,
       )
       await increaseTime(60)
-      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.be
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.not.be
         .reverted
     })
   })
@@ -908,7 +908,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
   })
 
   describe('when the cpi oracle returns invalid data', function () {
-    it('should fail', async function () {
+    it('should NOT fail', async function () {
       await mockExternalData(
         INITIAL_RATE_30P_MORE,
         INITIAL_TARGET_RATE,
@@ -917,7 +917,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
         false,
       )
       await increaseTime(60)
-      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.be
+      await expect(uFragmentsPolicy.connect(orchestrator).rebase()).to.not.be
         .reverted
     })
   })
@@ -1201,6 +1201,50 @@ describe('UFragmentsPolicy:Rebase', async function () {
             uFragmentsPolicy.connect(orchestrator).rebase(),
           )
         ).requestedSupplyAdjustment,
+      ).to.eq(0)
+    })
+  })
+
+  describe('rate is invalid', function () {
+    before(async function () {
+      await mockExternalData(
+        INITIAL_RATE_30P_MORE,
+        INITIAL_TARGET_RATE,
+        1000,
+        false,
+      )
+      await uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)
+      await increaseTime(60)
+    })
+
+    it('should emit Rebase with 0 requestedSupplyAdjustment', async function () {
+      expect(
+        (
+          await parseRebaseEvent(
+            uFragmentsPolicy.connect(orchestrator).rebase(),
+          )
+        ).requestedSupplyAdjustment,
+      ).to.eq(0)
+    })
+  })
+
+  describe('target rate is invalid', function () {
+    before(async function () {
+      await mockExternalData(
+        INITIAL_RATE,
+        INITIAL_TARGET_RATE_25P_MORE,
+        1000,
+        true,
+        false,
+      )
+      await uFragmentsPolicy.connect(deployer).setDeviationThreshold(0)
+      await increaseTime(60)
+    })
+
+    it('should emit Rebase with 0 requestedSupplyAdjustment', async function () {
+      expect(
+        (await parseRebaseEvent(uFragmentsPolicy.connect(orchestrator).rebase()))
+          .requestedSupplyAdjustment,
       ).to.eq(0)
     })
   })
