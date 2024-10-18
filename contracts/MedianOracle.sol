@@ -186,10 +186,10 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
                     .timestamp;
                 if (reportTimestampPast < minValidTimestamp) {
                     // Past report is too old.
-                    emit ReportTimestampOutOfRange(providerAddress);
+                    // Deprecated: emit ReportTimestampOutOfRange(providerAddress);
                 } else if (reportTimestampPast > maxValidTimestamp) {
                     // Past report is too recent.
-                    emit ReportTimestampOutOfRange(providerAddress);
+                    // Deprecated: emit ReportTimestampOutOfRange(providerAddress);
                 } else {
                     // Using past report.
                     validReports[size++] = providerReports[providerAddress][index_past].payload;
@@ -198,7 +198,7 @@ contract MedianOracle is OwnableUpgradeable, IOracle {
                 // Recent report is not too recent.
                 if (reportTimestampRecent < minValidTimestamp) {
                     // Recent report is too old.
-                    emit ReportTimestampOutOfRange(providerAddress);
+                    // Deprecated: emit ReportTimestampOutOfRange(providerAddress);
                 } else {
                     // Using recent report.
                     validReports[size++] = providerReports[providerAddress][index_recent].payload;
