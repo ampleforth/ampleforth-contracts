@@ -103,7 +103,6 @@ task('upgrade:ampl', 'Upgrade ampleforth contracts')
 
 task('prep:upgrade:policy')
   .addParam('address', 'which proxy address to upgrade')
-  .addParam('prevVersion', 'the version tag of the previous implementation')
   .setAction(async function (args: TaskArguments, hre) {
     console.log(args)
     const upgrades = hre.upgrades as any
@@ -112,19 +111,7 @@ task('prep:upgrade:policy')
     const signerAddress = await signer.getAddress()
     console.log('Signer', signerAddress)
 
-    const prevFactory = await ethers.getContractFactoryFromArtifact(
-      JSON.parse(
-        readFileSync(
-          path.join(
-            __dirname,
-            `/../external-artifacts/UFragmentsPolicy_${args.prevVersion}.json`,
-          ),
-        ).toString(),
-      ),
-    )
     const newFactory = await hre.ethers.getContractFactory('UFragmentsPolicy')
-
-    // const prevImpl = await upgrades.forceImport(args.address, prevFactory)
     await upgrades.validateUpgrade(args.address, newFactory)
     const newImpl = await upgrades.prepareUpgrade(args.address, newFactory)
     console.log('New implementation at:', newImpl)

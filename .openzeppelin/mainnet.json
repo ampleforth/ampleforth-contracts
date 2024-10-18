@@ -258,7 +258,7 @@
             "label": "uFrags",
             "offset": 0,
             "slot": "102",
-            "type": "t_contract(IUFragments)2591",
+            "type": "t_contract(IUFragments)20",
             "contract": "UFragmentsPolicy",
             "src": "contracts/UFragmentsPolicy.sol:48"
           },
@@ -266,7 +266,7 @@
             "label": "cpiOracle",
             "offset": 0,
             "slot": "103",
-            "type": "t_contract(IOracle)2599",
+            "type": "t_contract(IOracle)28",
             "contract": "UFragmentsPolicy",
             "src": "contracts/UFragmentsPolicy.sol:51"
           },
@@ -274,7 +274,7 @@
             "label": "marketOracle",
             "offset": 0,
             "slot": "104",
-            "type": "t_contract(IOracle)2599",
+            "type": "t_contract(IOracle)28",
             "contract": "UFragmentsPolicy",
             "src": "contracts/UFragmentsPolicy.sol:55"
           },
@@ -389,11 +389,211 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IOracle)2599": {
+          "t_contract(IOracle)28": {
             "label": "contract IOracle",
             "numberOfBytes": "20"
           },
-          "t_contract(IUFragments)2591": {
+          "t_contract(IUFragments)20": {
+            "label": "contract IUFragments",
+            "numberOfBytes": "20"
+          },
+          "t_int256": {
+            "label": "int256",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    },
+    "c7369a7d61d189dc4ac496f58ed60273c5ce42a3d8df698d7398067ab9e28815": {
+      "address": "0x671f768157f6C8A33aDA9b864C8DfaF5b13f1e9F",
+      "txHash": "0x867d84cd156cf4afee08a44ed6c96cbddbd3c75269e50f8c015edda7628c713f",
+      "layout": {
+        "solcVersion": "0.8.4",
+        "storage": [
+          {
+            "label": "initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "contracts/_external/Initializable.sol:19"
+          },
+          {
+            "label": "initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "contracts/_external/Initializable.sol:24"
+          },
+          {
+            "label": "______gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "Initializable",
+            "src": "contracts/_external/Initializable.sol:69"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "Ownable",
+            "src": "contracts/_external/Ownable.sol:11"
+          },
+          {
+            "label": "______gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "Ownable",
+            "src": "contracts/_external/Ownable.sol:75"
+          },
+          {
+            "label": "uFrags",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_contract(IUFragments)20",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:48"
+          },
+          {
+            "label": "cpiOracle",
+            "offset": 0,
+            "slot": "103",
+            "type": "t_contract(IOracle)28",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:51"
+          },
+          {
+            "label": "marketOracle",
+            "offset": 0,
+            "slot": "104",
+            "type": "t_contract(IOracle)28",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:55"
+          },
+          {
+            "label": "baseCpi_DEPRECATED",
+            "offset": 0,
+            "slot": "105",
+            "type": "t_uint256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:58",
+            "renamedFrom": "baseCpi"
+          },
+          {
+            "label": "deviationThreshold",
+            "offset": 0,
+            "slot": "106",
+            "type": "t_uint256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:64"
+          },
+          {
+            "label": "rebaseLagDeprecated",
+            "offset": 0,
+            "slot": "107",
+            "type": "t_uint256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:66"
+          },
+          {
+            "label": "minRebaseTimeIntervalSec",
+            "offset": 0,
+            "slot": "108",
+            "type": "t_uint256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:69"
+          },
+          {
+            "label": "lastRebaseTimestampSec",
+            "offset": 0,
+            "slot": "109",
+            "type": "t_uint256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:72"
+          },
+          {
+            "label": "rebaseWindowOffsetSec",
+            "offset": 0,
+            "slot": "110",
+            "type": "t_uint256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:76"
+          },
+          {
+            "label": "rebaseWindowLengthSec",
+            "offset": 0,
+            "slot": "111",
+            "type": "t_uint256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:79"
+          },
+          {
+            "label": "epoch",
+            "offset": 0,
+            "slot": "112",
+            "type": "t_uint256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:82"
+          },
+          {
+            "label": "orchestrator",
+            "offset": 0,
+            "slot": "113",
+            "type": "t_address",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:93"
+          },
+          {
+            "label": "rebaseFunctionLowerPercentage",
+            "offset": 0,
+            "slot": "114",
+            "type": "t_int256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:97"
+          },
+          {
+            "label": "rebaseFunctionUpperPercentage",
+            "offset": 0,
+            "slot": "115",
+            "type": "t_int256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:98"
+          },
+          {
+            "label": "rebaseFunctionGrowth",
+            "offset": 0,
+            "slot": "116",
+            "type": "t_int256",
+            "contract": "UFragmentsPolicy",
+            "src": "contracts/UFragmentsPolicy.sol:99"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IOracle)28": {
+            "label": "contract IOracle",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IUFragments)20": {
             "label": "contract IUFragments",
             "numberOfBytes": "20"
           },
