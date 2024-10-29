@@ -18,7 +18,8 @@ contract MockUFragments is Mock {
         int256[] memory intVals = new int256[](1);
         intVals[0] = supplyDelta;
         emit FunctionArguments(uintVals, intVals);
-        return uint256(int256(_supply) + int256(supplyDelta));
+        _supply = uint256(int256(_supply) + int256(supplyDelta));
+        return _supply;
     }
 
     function totalSupply() public view returns (uint256) {

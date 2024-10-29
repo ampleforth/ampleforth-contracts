@@ -167,6 +167,7 @@ describe('SafeMathInt', () => {
       await expect(safeMathInt.abs(MIN_INT256)).to.be.reverted
     })
   })
+
   describe('twoPower', function () {
     const decimals18 = ethers.BigNumber.from('1000000000000000000')
     const decimals10 = ethers.BigNumber.from('10000000000')

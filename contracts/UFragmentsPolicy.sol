@@ -98,6 +98,15 @@ contract UFragmentsPolicy is Ownable {
     int256 public rebaseFunctionUpperPercentage;
     int256 public rebaseFunctionGrowth;
 
+    // NOTE: This was added with v1.5 release, on-chain state will not
+    // have the history going back to epoch(0).
+    // Mapping between epoch and the supply at that epoch.
+    mapping(uint256 => uint256) public supplyHistory;
+
+    // Circuit breaker parameters which limit supply decline within the defined look back period.
+    uint8 public epochLookback;
+    int256 public tolerableDeclinePercentage;
+
     int256 private constant ONE = int256(10**DECIMALS);
 
     modifier onlyOrchestrator() {
@@ -139,6 +148,8 @@ contract UFragmentsPolicy is Ownable {
 
         uint256 supplyAfterRebase = uFrags.rebase(epoch, supplyDelta);
         assert(supplyAfterRebase <= MAX_SUPPLY);
+
+        supplyHistory[epoch] = supplyAfterRebase;
         emit LogRebaseV2(epoch, exchangeRate, targetRate, supplyDelta);
     }
 
@@ -206,7 +217,7 @@ contract UFragmentsPolicy is Ownable {
      * @param minRebaseTimeIntervalSec_ More than this much time must pass between rebase
      *        operations, in seconds.
      * @param rebaseWindowOffsetSec_ The number of seconds from the beginning of
-              the rebase interval, where the rebase window begins.
+     *        the rebase interval, where the rebase window begins.
      * @param rebaseWindowLengthSec_ The length of the rebase window in seconds.
      */
     function setRebaseTimingParameters(
@@ -220,6 +231,22 @@ contract UFragmentsPolicy is Ownable {
         minRebaseTimeIntervalSec = minRebaseTimeIntervalSec_;
         rebaseWindowOffsetSec = rebaseWindowOffsetSec_;
         rebaseWindowLengthSec = rebaseWindowLengthSec_;
+    }
+
+    /**
+     * @notice Sets the parameters which control rebase circuit breaker.
+     * @param epochLookback_ The number of rebase epochs to look back.
+     * @param tolerableDeclinePercentage_ The maximum supply decline percentage which is allowed
+     *        within the defined look back period.
+     */
+    function setRebaseCircuitBreakerParameters(
+        uint8 epochLookback_,
+        int256 tolerableDeclinePercentage_
+    ) external onlyOwner {
+        require(tolerableDeclinePercentage_ > 0 && tolerableDeclinePercentage_ <= ONE);
+
+        epochLookback = epochLookback_;
+        tolerableDeclinePercentage = tolerableDeclinePercentage_;
     }
 
     /**
@@ -256,6 +283,9 @@ contract UFragmentsPolicy is Ownable {
 
         lastRebaseTimestampSec = 0;
         epoch = 0;
+
+        epochLookback = 0;
+        tolerableDeclinePercentage = ONE;
 
         uFrags = uFrags_;
     }
@@ -328,7 +358,8 @@ contract UFragmentsPolicy is Ownable {
      * @return Computes the total supply adjustment in response to the exchange rate
      *         and the targetRate.
      */
-    function computeSupplyDelta(uint256 rate, uint256 targetRate) internal view returns (int256) {
+    function computeSupplyDelta(uint256 rate, uint256 targetRate) public view returns (int256) {
+        // No supply change if rate is within deviation threshold
         if (withinDeviationThreshold(rate, targetRate)) {
             return 0;
         }
@@ -340,7 +371,28 @@ contract UFragmentsPolicy is Ownable {
             rebaseFunctionUpperPercentage,
             rebaseFunctionGrowth
         );
-        return uFrags.totalSupply().toInt256Safe().mul(rebasePercentage).div(ONE);
+
+        int256 currentSupply = uFrags.totalSupply().toInt256Safe(); // (or) supplyHistory[epoch]
+        int256 newSupply = ONE.add(rebasePercentage).mul(currentSupply).div(ONE);
+
+        // When supply is decreasing:
+        // We limit the supply delta, based on recent supply history.
+        if (rebasePercentage < 0) {
+            int256 maxSupplyInHistory = currentSupply;
+            for (uint8 i = 1; i < epochLookback && epoch > i; i++) {
+                int256 epochSupply = supplyHistory[epoch - i].toInt256Safe();
+                if (epochSupply > maxSupplyInHistory) {
+                    maxSupplyInHistory = epochSupply;
+                }
+            }
+            int256 allowedSupplyMinimum = maxSupplyInHistory
+                .mul(ONE.sub(tolerableDeclinePercentage))
+                .div(ONE);
+            newSupply = (newSupply > allowedSupplyMinimum) ? newSupply : allowedSupplyMinimum;
+            require(newSupply <= currentSupply);
+        }
+
+        return newSupply.sub(currentSupply);
     }
 
     /**
@@ -349,11 +401,7 @@ contract UFragmentsPolicy is Ownable {
      * @return If the rate is within the deviation threshold from the target rate, returns true.
      *         Otherwise, returns false.
      */
-    function withinDeviationThreshold(uint256 rate, uint256 targetRate)
-        internal
-        view
-        returns (bool)
-    {
+    function withinDeviationThreshold(uint256 rate, uint256 targetRate) public view returns (bool) {
         uint256 absoluteDeviationThreshold = targetRate.mul(deviationThreshold).div(10**DECIMALS);
 
         return
