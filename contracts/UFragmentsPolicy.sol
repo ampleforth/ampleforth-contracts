@@ -378,18 +378,21 @@ contract UFragmentsPolicy is Ownable {
         // When supply is decreasing:
         // We limit the supply delta, based on recent supply history.
         if (rebasePercentage < 0) {
-            int256 maxSupplyInHistory = currentSupply;
-            for (uint8 i = 1; i < epochLookback && epoch > i; i++) {
-                int256 epochSupply = supplyHistory[epoch - i].toInt256Safe();
-                if (epochSupply > maxSupplyInHistory) {
-                    maxSupplyInHistory = epochSupply;
+            int256 maxSupply = currentSupply;
+            for (
+                uint256 e = ((epoch > epochLookback) ? (epoch - epochLookback) : 0);
+                e < epoch;
+                e++
+            ) {
+                int256 epochSupply = supplyHistory[e].toInt256Safe();
+                if (epochSupply > maxSupply) {
+                    maxSupply = epochSupply;
                 }
             }
-            int256 allowedSupplyMinimum = maxSupplyInHistory
-                .mul(ONE.sub(tolerableDeclinePercentage))
-                .div(ONE);
-            newSupply = (newSupply > allowedSupplyMinimum) ? newSupply : allowedSupplyMinimum;
-            require(newSupply <= currentSupply);
+            int256 allowedMin = maxSupply.mul(ONE.sub(tolerableDeclinePercentage)).div(ONE);
+            if (newSupply < allowedMin) {
+                newSupply = allowedMin;
+            }
         }
 
         return newSupply.sub(currentSupply);
