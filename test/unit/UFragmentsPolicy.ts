@@ -1409,7 +1409,21 @@ describe('UFragmentsPolicy', function () {
         expect(
           (await parseRebaseEvent(uFragmentsPolicy.rebase()))
             .requestedSupplyAdjustment,
-        ).to.eq(-49)
+        ).to.eq(-51)
+
+        await mockExternalData(INITIAL_RATE_50P_LESS, INITIAL_TARGET_RATE)
+        await increaseTime(60)
+        expect(
+          (await parseRebaseEvent(uFragmentsPolicy.rebase()))
+            .requestedSupplyAdjustment,
+        ).to.eq(-48)
+
+        await mockExternalData(INITIAL_RATE_50P_LESS, INITIAL_TARGET_RATE)
+        await increaseTime(60)
+        expect(
+          (await parseRebaseEvent(uFragmentsPolicy.rebase()))
+            .requestedSupplyAdjustment,
+        ).to.eq(-46)
 
         await mockExternalData(INITIAL_RATE_50P_LESS, INITIAL_TARGET_RATE)
         await increaseTime(60)

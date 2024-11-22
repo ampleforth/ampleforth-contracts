@@ -236,7 +236,7 @@ contract UFragmentsPolicy is Ownable {
     /**
      * @notice Sets the parameters which control rebase circuit breaker.
      * @param epochLookback_ The number of rebase epochs to look back.
-     * @param tolerableDeclinePercentage_ The maximum supply decline percentage which is allowed
+     * @param tolerableDeclinePercentage_ The supply decline percentage which is allowed
      *        within the defined look back period.
      */
     function setRebaseCircuitBreakerParameters(
@@ -377,19 +377,15 @@ contract UFragmentsPolicy is Ownable {
 
         // When supply is decreasing:
         // We limit the supply delta, based on recent supply history.
-        if (rebasePercentage < 0) {
-            int256 maxSupply = currentSupply;
-            for (
-                uint256 e = ((epoch > epochLookback) ? (epoch - epochLookback) : 0);
-                e < epoch;
-                e++
-            ) {
-                int256 epochSupply = supplyHistory[e].toInt256Safe();
-                if (epochSupply > maxSupply) {
-                    maxSupply = epochSupply;
-                }
+        if (rebasePercentage < 0 && epoch > epochLookback) {
+            int256 allowedMin = supplyHistory[epoch - epochLookback]
+                .toInt256Safe()
+                .mul(ONE.sub(tolerableDeclinePercentage))
+                .div(ONE);
+            if (allowedMin > currentSupply) {
+                // NOTE: Allowed minimum supply can only be at most the current supply.
+                allowedMin = currentSupply;
             }
-            int256 allowedMin = maxSupply.mul(ONE.sub(tolerableDeclinePercentage)).div(ONE);
             if (newSupply < allowedMin) {
                 newSupply = allowedMin;
             }
