@@ -1036,7 +1036,10 @@ describe('UFragmentsPolicy:Rebase', async function () {
       )
       await uFragmentsPolicy
         .connect(deployer)
-        .setRebaseFunctionPositiveGrowth('50' + '000000000000000000') // Positive growth
+        .setRebaseFunctionPositiveGrowth('25' + '000000000000000000') // Positive growth
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseFunctionUpperPercentage('10' + '0000000000000000')
       await increaseTime(60)
     })
 
@@ -1044,7 +1047,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       const rebaseEvent = await parseRebaseEvent(
         uFragmentsPolicy.connect(orchestrator).rebase(),
       )
-      expect(rebaseEvent.requestedSupplyAdjustment).to.eq(0)
+      expect(rebaseEvent.requestedSupplyAdjustment).to.eq(98)
     })
   })
 
@@ -1065,7 +1068,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       const rebaseEvent = await parseRebaseEvent(
         uFragmentsPolicy.connect(orchestrator).rebase(),
       )
-      expect(rebaseEvent.requestedSupplyAdjustment).to.eq(0)
+      expect(rebaseEvent.requestedSupplyAdjustment).to.eq(-76);
     })
   })
 
