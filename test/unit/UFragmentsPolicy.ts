@@ -2,7 +2,6 @@ import { ethers, upgrades, waffle } from 'hardhat'
 import { Contract, Signer, BigNumber, BigNumberish, Event } from 'ethers'
 import { TransactionResponse } from '@ethersproject/providers'
 import { expect } from 'chai'
-import { Result } from 'ethers/lib/utils'
 import { imul, increaseTime } from '../utils/utils'
 
 let uFragmentsPolicy: Contract,
@@ -20,8 +19,8 @@ const INITIAL_TARGET_RATE_25P_LESS = imul(INITIAL_TARGET_RATE, '0.75', 1)
 const INITIAL_RATE = ethers.utils.parseUnits('1.05', 18)
 const INITIAL_RATE_30P_MORE = imul(INITIAL_RATE, '1.3', 1)
 const INITIAL_RATE_30P_LESS = imul(INITIAL_RATE, '0.7', 1)
-const INITIAL_RATE_2P_MORE = imul(INITIAL_RATE, '1.02', 1)
-const INITIAL_RATE_2P_LESS = imul(INITIAL_RATE, '0.98', 1)
+const INITIAL_RATE_2_5_P_MORE = imul(INITIAL_RATE, '1.025', 1)
+const INITIAL_RATE_2_5_P_LESS = imul(INITIAL_RATE, '0.975', 1)
 const INITIAL_RATE_60P_MORE = imul(INITIAL_RATE, '1.6', 1)
 const INITIAL_RATE_50P_LESS = imul(INITIAL_RATE, '0.5', 1)
 const INITIAL_RATE_2X = INITIAL_RATE.mul(2)
@@ -149,7 +148,7 @@ describe('UFragmentsPolicy:initialize', async function () {
 
     it('deviationThreshold', async function () {
       expect(await uFragmentsPolicy.deviationThreshold()).to.eq(
-        ethers.utils.parseUnits('5', 16),
+        ethers.utils.parseUnits('25', 15),
       )
     })
     it('rebaseLag', async function () {
@@ -399,8 +398,8 @@ describe('UFragmentsPolicy:CurveParameters', async function () {
 
   describe('when rebaseFunctionGrowth is more than 0', async function () {
     it('should setRebaseFunctionGrowth', async function () {
-      await uFragmentsPolicy.connect(deployer).setRebaseFunctionGrowth(1000)
-      expect(await uFragmentsPolicy.rebaseFunctionGrowth()).to.eq(1000)
+      await uFragmentsPolicy.connect(deployer).setRebaseFunctionGrowth('42000000000000000000')
+      expect(await uFragmentsPolicy.rebaseFunctionGrowth()).to.eq('42000000000000000000')
     })
   })
 
@@ -702,7 +701,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       await increaseTime(60)
 
       await mockExternalData(
-        INITIAL_RATE_2P_MORE.sub(2),
+        INITIAL_RATE_2_5_P_MORE.sub(2),
         INITIAL_TARGET_RATE,
         1000,
       )
@@ -716,7 +715,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       await increaseTime(60)
 
       await mockExternalData(
-        INITIAL_RATE_2P_LESS.add(2),
+        INITIAL_RATE_2_5_P_LESS.add(2),
         INITIAL_TARGET_RATE,
         1000,
       )
@@ -991,7 +990,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
           prevEpoch.add(1),
           INITIAL_RATE_60P_MORE,
           INITIAL_TARGET_RATE,
-          55,
+          50,
         )
     })
 
@@ -1014,7 +1013,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
         .withArgs('UFragments', 'rebase', uFragmentsPolicy.address)
       await expect(r)
         .to.emit(mockUFragments, 'FunctionArguments')
-        .withArgs([prevEpoch.add(1)], [55])
+        .withArgs([prevEpoch.add(1)], [50])
     })
   })
 })
@@ -1045,7 +1044,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
             uFragmentsPolicy.connect(orchestrator).rebase(),
           )
         ).requestedSupplyAdjustment,
-      ).to.eq(-29)
+      ).to.eq(-76)
     })
   })
 
@@ -1065,7 +1064,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
             uFragmentsPolicy.connect(orchestrator).rebase(),
           )
         ).requestedSupplyAdjustment,
-      ).to.eq(100)
+      ).to.eq(50)
     })
   })
 
@@ -1085,7 +1084,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
             uFragmentsPolicy.connect(orchestrator).rebase(),
           )
         ).requestedSupplyAdjustment,
-      ).to.eq(-100)
+      ).to.eq(-77)
     })
   })
 
@@ -1105,7 +1104,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
             uFragmentsPolicy.connect(orchestrator).rebase(),
           )
         ).requestedSupplyAdjustment,
-      ).to.eq(-100)
+      ).to.eq(-77)
     })
   })
 })
@@ -1137,7 +1136,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
             uFragmentsPolicy.connect(orchestrator).rebase(),
           )
         ).requestedSupplyAdjustment,
-      ).to.eq(-20)
+      ).to.eq(-76)
     })
   })
 })
@@ -1169,7 +1168,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
             uFragmentsPolicy.connect(orchestrator).rebase(),
           )
         ).requestedSupplyAdjustment,
-      ).to.eq(32)
+      ).to.eq(49)
     })
   })
 })
