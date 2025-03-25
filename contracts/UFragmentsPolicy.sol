@@ -248,7 +248,7 @@ contract UFragmentsPolicy is Ownable {
 
         rebaseFunctionGrowth = int256(45 * (10**DECIMALS));
         rebaseFunctionUpperPercentage = int256(5 * (10**(DECIMALS - 2))); // 0.05
-        rebaseFunctionLowerPercentage = int256((-77) * int256(10**(DECIMALS - 3))); // -0.77
+        rebaseFunctionLowerPercentage = int256((-77) * int256(10**(DECIMALS - 3))); // -0.077
 
         minRebaseTimeIntervalSec = 1 days;
         rebaseWindowOffsetSec = 7200; // 2AM UTC
