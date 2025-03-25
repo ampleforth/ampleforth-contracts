@@ -396,17 +396,32 @@ describe('UFragmentsPolicy:CurveParameters', async function () {
     } = await waffle.loadFixture(mockedUpgradablePolicy))
   })
 
-  describe('when rebaseFunctionGrowth is more than 0', async function () {
+  describe('when rebaseFunctionRebasePositiveGrowth is more than 0', async function () {
     it('should setRebaseFunctionGrowth', async function () {
-      await uFragmentsPolicy.connect(deployer).setRebaseFunctionGrowth('42000000000000000000')
-      expect(await uFragmentsPolicy.rebaseFunctionGrowth()).to.eq('42000000000000000000')
+      await uFragmentsPolicy.connect(deployer).setRebaseFunctionPositiveGrowth('42000000000000000000')
+      expect(await uFragmentsPolicy.rebaseFunctionPositiveGrowth()).to.eq('42000000000000000000')
     })
   })
 
-  describe('when rebaseFunctionGrowth is less than 0', async function () {
+  describe('when rebaseFunctionRebasePositiveGrowth is less than 0', async function () {
     it('should fail', async function () {
       await expect(
-        uFragmentsPolicy.connect(deployer).setRebaseFunctionGrowth(-1),
+        uFragmentsPolicy.connect(deployer).setRebaseFunctionPositiveGrowth(-1),
+      ).to.be.reverted
+    })
+  })
+
+  describe('when rebaseFunctionRebaseNegativeGrowth is more than 0', async function () {
+    it('should setRebaseFunctionGrowth', async function () {
+      await uFragmentsPolicy.connect(deployer).setRebaseFunctionNegativeGrowth('42000000000000000000')
+      expect(await uFragmentsPolicy.rebaseFunctionNegativeGrowth()).to.eq('42000000000000000000')
+    })
+  })
+
+  describe('when rebaseFunctionRebaseNegativeGrowth is less than 0', async function () {
+    it('should fail', async function () {
+      await expect(
+        uFragmentsPolicy.connect(deployer).setRebaseFunctionNegativeGrowth(-1),
       ).to.be.reverted
     })
   })
@@ -445,82 +460,6 @@ describe('UFragmentsPolicy:CurveParameters', async function () {
         .setRebaseFunctionUpperPercentage(1000)
       expect(await uFragmentsPolicy.rebaseFunctionUpperPercentage()).to.eq(1000)
     })
-  })
-})
-
-describe('UFragments:setRebaseFunctionGrowth:accessControl', function () {
-  before('setup UFragmentsPolicy contract', async () => {
-    ;({
-      deployer,
-      user,
-      orchestrator,
-      mockUFragments,
-      mockMarketOracle,
-      mockCpiOracle,
-      uFragmentsPolicy,
-    } = await waffle.loadFixture(mockedUpgradablePolicy))
-  })
-
-  it('should be callable by owner', async function () {
-    await expect(uFragmentsPolicy.connect(deployer).setRebaseFunctionGrowth(1))
-      .to.not.be.reverted
-  })
-
-  it('should NOT be callable by non-owner', async function () {
-    await expect(uFragmentsPolicy.connect(user).setRebaseFunctionGrowth(1)).to
-      .be.reverted
-  })
-})
-
-describe('UFragments:setRebaseFunctionLowerPercentage:accessControl', function () {
-  before('setup UFragmentsPolicy contract', async () => {
-    ;({
-      deployer,
-      user,
-      orchestrator,
-      mockUFragments,
-      mockMarketOracle,
-      mockCpiOracle,
-      uFragmentsPolicy,
-    } = await waffle.loadFixture(mockedUpgradablePolicy))
-  })
-
-  it('should be callable by owner', async function () {
-    await expect(
-      uFragmentsPolicy.connect(deployer).setRebaseFunctionLowerPercentage(-1),
-    ).to.not.be.reverted
-  })
-
-  it('should NOT be callable by non-owner', async function () {
-    await expect(
-      uFragmentsPolicy.connect(user).setRebaseFunctionLowerPercentage(-1),
-    ).to.be.reverted
-  })
-})
-
-describe('UFragments:setRebaseFunctionUpperPercentage:accessControl', function () {
-  before('setup UFragmentsPolicy contract', async () => {
-    ;({
-      deployer,
-      user,
-      orchestrator,
-      mockUFragments,
-      mockMarketOracle,
-      mockCpiOracle,
-      uFragmentsPolicy,
-    } = await waffle.loadFixture(mockedUpgradablePolicy))
-  })
-
-  it('should be callable by owner', async function () {
-    await expect(
-      uFragmentsPolicy.connect(deployer).setRebaseFunctionUpperPercentage(1),
-    ).to.not.be.reverted
-  })
-
-  it('should NOT be callable by non-owner', async function () {
-    await expect(
-      uFragmentsPolicy.connect(user).setRebaseFunctionUpperPercentage(1),
-    ).to.be.reverted
   })
 })
 
@@ -1053,7 +992,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       await mockExternalData(INITIAL_RATE_2X, INITIAL_TARGET_RATE, 1000)
       await uFragmentsPolicy
         .connect(deployer)
-        .setRebaseFunctionGrowth('100' + '000000000000000000')
+        .setRebaseFunctionPositiveGrowth('100' + '000000000000000000')
       await increaseTime(60)
     })
 
@@ -1073,7 +1012,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
       await mockExternalData(0, INITIAL_TARGET_RATE, 1000)
       await uFragmentsPolicy
         .connect(deployer)
-        .setRebaseFunctionGrowth('75' + '000000000000000000')
+        .setRebaseFunctionNegativeGrowth('75' + '000000000000000000')
       await increaseTime(60)
     })
 
@@ -1088,12 +1027,54 @@ describe('UFragmentsPolicy:Rebase', async function () {
     })
   })
 
+  describe('when normalizedRate is greater than ONE (positive rebase)', function () {
+    beforeEach(async function () {
+      await mockExternalData(
+        INITIAL_RATE_30P_MORE,
+        INITIAL_TARGET_RATE,
+        1000,
+      )
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseFunctionPositiveGrowth('50' + '000000000000000000') // Positive growth
+      await increaseTime(60)
+    })
+
+    it('should compute positive rebase percentage correctly', async function () {
+      const rebaseEvent = await parseRebaseEvent(
+        uFragmentsPolicy.connect(orchestrator).rebase(),
+      )
+      expect(rebaseEvent.requestedSupplyAdjustment).to.eq(0)
+    })
+  })
+
+  describe('when normalizedRate is less than ONE (negative rebase)', function () {
+    beforeEach(async function () {
+      await mockExternalData(
+        INITIAL_RATE_30P_LESS,
+        INITIAL_TARGET_RATE,
+        1000,
+      )
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseFunctionNegativeGrowth('30' + '000000000000000000') // Negative growth
+      await increaseTime(60)
+    })
+
+    it('should compute negative rebase percentage correctly', async function () {
+      const rebaseEvent = await parseRebaseEvent(
+        uFragmentsPolicy.connect(orchestrator).rebase(),
+      )
+      expect(rebaseEvent.requestedSupplyAdjustment).to.eq(0)
+    })
+  })
+
   describe('exponent less than -100', function () {
     before(async function () {
       await mockExternalData(0, INITIAL_TARGET_RATE, 1000)
       await uFragmentsPolicy
         .connect(deployer)
-        .setRebaseFunctionGrowth('150' + '000000000000000000')
+        .setRebaseFunctionNegativeGrowth('150' + '000000000000000000')
       await increaseTime(60)
     })
 
@@ -1326,5 +1307,101 @@ describe('UFragmentsPolicy:Rebase', async function () {
       lastRebaseTimestamp = await uFragmentsPolicy.lastRebaseTimestampSec.call()
       expect(lastRebaseTimestamp).to.eq(nextRebaseWindowOpenTime)
     })
+  })
+})
+
+describe('UFragmentsPolicy:CurveParameters', async function () {
+  before('setup UFragmentsPolicy contract', async function () {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
+
+  describe('when rebaseFunctionPositiveGrowth is more than 0', async function () {
+    it('should setRebaseFunctionPositiveGrowth', async function () {
+      await uFragmentsPolicy.connect(deployer).setRebaseFunctionPositiveGrowth('42000000000000000000')
+      expect(await uFragmentsPolicy.rebaseFunctionPositiveGrowth()).to.eq('42000000000000000000')
+    })
+  })
+
+  describe('when rebaseFunctionNegativeGrowth is more than 0', async function () {
+    it('should setRebaseFunctionNegativeGrowth', async function () {
+      await uFragmentsPolicy.connect(deployer).setRebaseFunctionNegativeGrowth('42000000000000000000')
+      expect(await uFragmentsPolicy.rebaseFunctionNegativeGrowth()).to.eq('42000000000000000000')
+    })
+  })
+
+  describe('when rebaseFunctionPositiveGrowth is less than 0', async function () {
+    it('should fail', async function () {
+      await expect(
+        uFragmentsPolicy.connect(deployer).setRebaseFunctionPositiveGrowth(-1),
+      ).to.be.reverted
+    })
+  })
+
+  describe('when rebaseFunctionNegativeGrowth is less than 0', async function () {
+    it('should fail', async function () {
+      await expect(
+        uFragmentsPolicy.connect(deployer).setRebaseFunctionNegativeGrowth(-1),
+      ).to.be.reverted
+    })
+  })
+})
+
+describe('UFragments:setRebaseFunctionPositiveGrowth:accessControl', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
+
+  it('should be callable by owner', async function () {
+    await expect(
+      uFragmentsPolicy.connect(deployer).setRebaseFunctionPositiveGrowth(1),
+    ).to.not.be.reverted
+  })
+
+  it('should NOT be callable by non-owner', async function () {
+    await expect(
+      uFragmentsPolicy.connect(user).setRebaseFunctionPositiveGrowth(1),
+    ).to.be.reverted
+  })
+})
+
+describe('UFragments:setRebaseFunctionNegativeGrowth:accessControl', function () {
+  before('setup UFragmentsPolicy contract', async () => {
+    ;({
+      deployer,
+      user,
+      orchestrator,
+      mockUFragments,
+      mockMarketOracle,
+      mockCpiOracle,
+      uFragmentsPolicy,
+    } = await waffle.loadFixture(mockedUpgradablePolicy))
+  })
+
+  it('should be callable by owner', async function () {
+    await expect(
+      uFragmentsPolicy.connect(deployer).setRebaseFunctionNegativeGrowth(1),
+    ).to.not.be.reverted
+  })
+
+  it('should NOT be callable by non-owner', async function () {
+    await expect(
+      uFragmentsPolicy.connect(user).setRebaseFunctionNegativeGrowth(1),
+    ).to.be.reverted
   })
 })
