@@ -345,23 +345,12 @@ contract UFragmentsPolicy is Ownable {
 
         // Determine growth and bounds based on positive or negative rebase
         int256 rebasePercentage;
-
         if (normalizedRate >= ONE) {
             rebasePercentage = computeRebasePercentage(normalizedRate, -rebaseFunctionUpperPercentage, rebaseFunctionUpperPercentage, rebaseFunctionPositiveGrowth);
         } else {
             rebasePercentage = computeRebasePercentage(normalizedRate, rebaseFunctionLowerPercentage, -rebaseFunctionLowerPercentage, rebaseFunctionNegativeGrowth);
         }
-        // int256 growth = normalizedRate >= ONE
-        //     ? rebaseFunctionPositiveGrowth
-        //     : rebaseFunctionNegativeGrowth;
-        // int256 lower = normalizedRate >= ONE
-        //     ? -rebaseFunctionUpperPercentage
-        //     : rebaseFunctionLowerPercentage;
-        // int256 upper = normalizedRate >= ONE
-        //     ? rebaseFunctionUpperPercentage
-        //     : -rebaseFunctionLowerPercentage;
 
-        // int256 rebasePercentage = computeRebasePercentage(normalizedRate, lower, upper, growth);
         return uFrags.totalSupply().toInt256Safe().mul(rebasePercentage).div(ONE);
     }
 
