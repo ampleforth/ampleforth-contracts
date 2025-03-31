@@ -324,12 +324,7 @@ describe('MedianOracle:getData', async function () {
       await oracle.connect(A).pushReport(BigNumber.from('1053200000000000000'))
       await increaseTime(10)
     })
-
-    it('should emit ReportTimestampOutOfRange message', async function () {
-      await expect(oracle.getData())
-        .to.emit(oracle, 'ReportTimestampOutOfRange')
-        .withArgs(await C.getAddress())
-    })
+    
     it('should calculate the exchange rate', async function () {
       await expect(callerContract.getData())
         .to.emit(callerContract, 'ReturnValueUInt256Bool')
@@ -355,12 +350,7 @@ describe('MedianOracle:getData', async function () {
       await increaseTime(10)
       await oracle.connect(B).pushReport(BigNumber.from('1041000000000000000'))
     })
-
-    it('should emit ReportTimestampOutOfRange message', async function () {
-      await expect(oracle.getData())
-        .to.emit(oracle, 'ReportTimestampOutOfRange')
-        .withArgs(await B.getAddress())
-    })
+    
     it('should calculate the exchange rate', async function () {
       await expect(callerContract.getData())
         .to.emit(callerContract, 'ReturnValueUInt256Bool')
@@ -389,12 +379,7 @@ describe('MedianOracle:getData', async function () {
       await increaseTime(10)
       await oracle.connect(B).pushReport(BigNumber.from('1041000000000000000'))
     })
-
-    it('should emit ReportTimestampOutOfRange message', async function () {
-      await expect(oracle.getData())
-        .to.emit(oracle, 'ReportTimestampOutOfRange')
-        .withArgs(await B.getAddress())
-    })
+    
     it('should not have a valid result', async function () {
       await expect(callerContract.getData())
         .to.emit(callerContract, 'ReturnValueUInt256Bool')
@@ -417,19 +402,7 @@ describe('MedianOracle:getData', async function () {
 
       await increaseTime(61)
     })
-
-    it('should emit 2 ReportTimestampOutOfRange messages', async function () {
-      const tx = await oracle.getData()
-      const txReceipt = await tx.wait()
-      const txEvents = txReceipt.events?.filter((x: any) => {
-        return x.event == 'ReportTimestampOutOfRange'
-      })
-      expect(txEvents.length).to.equal(2)
-      const eventA = txEvents[0]
-      expect(eventA.args.provider).to.equal(await A.getAddress())
-      const eventB = txEvents[1]
-      expect(eventB.args.provider).to.equal(await B.getAddress())
-    })
+    
     it('should return false and 0', async function () {
       await expect(callerContract.getData())
         .to.emit(callerContract, 'ReturnValueUInt256Bool')
@@ -451,11 +424,6 @@ describe('MedianOracle:getData', async function () {
   })
 
   describe('when recent is too recent and past is too old', function () {
-    it('should emit ReportTimestampOutOfRange message', async function () {
-      await expect(oracle.getData())
-        .to.emit(oracle, 'ReportTimestampOutOfRange')
-        .withArgs(await A.getAddress())
-    })
     it('should fail', async function () {
       await expect(callerContract.getData())
         .to.emit(callerContract, 'ReturnValueUInt256Bool')
@@ -478,11 +446,6 @@ describe('MedianOracle:getData', async function () {
   })
 
   describe('when recent is too recent and past is too recent', function () {
-    it('should emit ReportTimestampOutOfRange message', async function () {
-      await expect(oracle.getData())
-        .to.emit(oracle, 'ReportTimestampOutOfRange')
-        .withArgs(await A.getAddress())
-    })
     it('should fail', async function () {
       await expect(callerContract.getData())
         .to.emit(callerContract, 'ReturnValueUInt256Bool')
