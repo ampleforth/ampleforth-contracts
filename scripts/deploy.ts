@@ -122,8 +122,8 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
     await waitFor(policy.setDeviationThreshold(DEVIATION_TRESHOLD))
     await waitFor(policy.setRebaseFunctionPositiveGrowth(POSITIVE_GROWTH))
     await waitFor(policy.setRebaseFunctionNegativeGrowth(NEGATIVE_GROWTH))
-    await waitFor(policy.setRebaseFunctionLowerPercentage(LOWER))
-    await waitFor(policy.setRebaseFunctionUpperPercentage(UPPER))
+    await waitFor(policy.setRebaseFunctionNegativePercentageLimit(LOWER))
+    await waitFor(policy.setRebaseFunctionPositivePercentageLimit(UPPER))
     await waitFor(
       policy.setRebaseTimingParameters(
         MIN_REBASE_INTERVAL,
