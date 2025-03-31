@@ -426,39 +426,39 @@ describe('UFragmentsPolicy:CurveParameters', async function () {
     })
   })
 
-  describe('when rebaseFunctionLowerPercentage is more than 0', async function () {
+  describe('when rebaseFunctionNegativePercentageLimit is less than 0', async function () {
+    it('should setRebaseFunctionNegativePercentageLimit', async function () {
+      await uFragmentsPolicy
+        .connect(deployer)
+        .setRebaseFunctionNegativePercentageLimit(-1)
+      expect(await uFragmentsPolicy.rebaseFunctionNegativePercentageLimit()).to.eq(-1)
+    })
+  })
+
+  describe('when rebaseFunctionNegativePercentageLimit is more than 0', async function () {
     it('should fail', async function () {
       await expect(
         uFragmentsPolicy
           .connect(deployer)
-          .setRebaseFunctionLowerPercentage(1000),
+          .setRebaseFunctionNegativePercentageLimit(1000),
       ).to.be.reverted
     })
   })
 
-  describe('when rebaseFunctionLowerPercentage is less than 0', async function () {
-    it('should setRebaseFunctionLowerPercentage', async function () {
-      await uFragmentsPolicy
-        .connect(deployer)
-        .setRebaseFunctionLowerPercentage(-1)
-      expect(await uFragmentsPolicy.rebaseFunctionLowerPercentage()).to.eq(-1)
-    })
-  })
-
-  describe('when rebaseFunctionUpperPercentage is less than 0', async function () {
+  describe('when rebaseFunctionPositivePercentageLimit is less than 0', async function () {
     it('should fail', async function () {
       await expect(
-        uFragmentsPolicy.connect(deployer).setRebaseFunctionUpperPercentage(-1),
+        uFragmentsPolicy.connect(deployer).setRebaseFunctionPositivePercentageLimit(-1),
       ).to.be.reverted
     })
   })
 
-  describe('when rebaseFunctionUpperPercentage is more than 0', async function () {
-    it('should setRebaseFunctionUpperPercentage', async function () {
+  describe('when rebaseFunctionPositivePercentageLimit is more than 0', async function () {
+    it('should setRebaseFunctionPositivePercentageLimit', async function () {
       await uFragmentsPolicy
         .connect(deployer)
-        .setRebaseFunctionUpperPercentage(1000)
-      expect(await uFragmentsPolicy.rebaseFunctionUpperPercentage()).to.eq(1000)
+        .setRebaseFunctionPositivePercentageLimit(1000)
+      expect(await uFragmentsPolicy.rebaseFunctionPositivePercentageLimit()).to.eq(1000)
     })
   })
 })
@@ -1039,7 +1039,7 @@ describe('UFragmentsPolicy:Rebase', async function () {
         .setRebaseFunctionPositiveGrowth('25' + '000000000000000000') // Positive growth
       await uFragmentsPolicy
         .connect(deployer)
-        .setRebaseFunctionUpperPercentage('10' + '0000000000000000')
+        .setRebaseFunctionPositivePercentageLimit('10' + '0000000000000000')
       await increaseTime(60)
     })
 
