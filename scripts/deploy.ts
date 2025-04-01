@@ -33,9 +33,10 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
 
     // Policy
     const DEVIATION_TRESHOLD = utils.parseUnits('0.002', 18) // 0.002% (ie) 0.05/24)
-    const LOWER = utils.parseUnits('-0.005', 18)
-    const UPPER = utils.parseUnits('0.005', 18)
-    const GROWTH = utils.parseUnits('3', 18)
+    const LOWER = utils.parseUnits('-0.005', 18) // rebaseFunctionNegativePercentageLimit
+    const UPPER = utils.parseUnits('0.005', 18) // rebaseFunctionPositivePercentageLimit
+    const POSITIVE_GROWTH = utils.parseUnits('31', 18) // rebaseFunctionPositiveGrowth;
+    const NEGATIVE_GROWTH = utils.parseUnits('41', 18) // rebaseFunctionNegativeGrowth;
     const MIN_REBASE_INTERVAL = 1200 // 20 mins
     const REBASE_WINDOW_OFFSET = 0
     const REBASE_WINDOW_LEN = 2400 // 40 mins
@@ -119,9 +120,10 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
 
     // configure parameters
     await waitFor(policy.setDeviationThreshold(DEVIATION_TRESHOLD))
-    await waitFor(policy.setRebaseFunctionGrowth(GROWTH))
-    await waitFor(policy.setRebaseFunctionLowerPercentage(LOWER))
-    await waitFor(policy.setRebaseFunctionUpperPercentage(UPPER))
+    await waitFor(policy.setRebaseFunctionPositiveGrowth(POSITIVE_GROWTH))
+    await waitFor(policy.setRebaseFunctionNegativeGrowth(NEGATIVE_GROWTH))
+    await waitFor(policy.setRebaseFunctionNegativePercentageLimit(LOWER))
+    await waitFor(policy.setRebaseFunctionPositivePercentageLimit(UPPER))
     await waitFor(
       policy.setRebaseTimingParameters(
         MIN_REBASE_INTERVAL,

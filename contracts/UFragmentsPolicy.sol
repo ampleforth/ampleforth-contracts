@@ -94,9 +94,13 @@ contract UFragmentsPolicy is Ownable {
 
     // DECIMALS decimal fixed point numbers.
     // Used in computation of  (Upper-Lower)/(1-(Upper/Lower)/2^(Growth*delta))) + Lower
-    int256 public rebaseFunctionLowerPercentage;
-    int256 public rebaseFunctionUpperPercentage;
-    int256 public rebaseFunctionGrowth;
+    /// @custom:oz-renamed-from rebaseFunctionLowerPercentage
+    int256 public rebaseFunctionNegativePercentageLimit;
+    /// @custom:oz-renamed-from rebaseFunctionUpperPercentage
+    int256 public rebaseFunctionPositivePercentageLimit;
+    /// @custom:oz-renamed-from rebaseFunctionGrowth
+    int256 public rebaseFunctionPositiveGrowth;
+    int256 public rebaseFunctionNegativeGrowth;
 
     int256 private constant ONE = int256(10**DECIMALS);
 
@@ -166,25 +170,30 @@ contract UFragmentsPolicy is Ownable {
         orchestrator = orchestrator_;
     }
 
-    function setRebaseFunctionGrowth(int256 rebaseFunctionGrowth_) external onlyOwner {
-        require(rebaseFunctionGrowth_ >= 0);
-        rebaseFunctionGrowth = rebaseFunctionGrowth_;
-    }
-
-    function setRebaseFunctionLowerPercentage(int256 rebaseFunctionLowerPercentage_)
+    function setRebaseFunctionNegativePercentageLimit(int256 rebaseFunctionNegativePercentageLimit_)
         external
         onlyOwner
     {
-        require(rebaseFunctionLowerPercentage_ <= 0);
-        rebaseFunctionLowerPercentage = rebaseFunctionLowerPercentage_;
+        require(rebaseFunctionNegativePercentageLimit_ <= 0);
+        rebaseFunctionNegativePercentageLimit = rebaseFunctionNegativePercentageLimit_;
     }
 
-    function setRebaseFunctionUpperPercentage(int256 rebaseFunctionUpperPercentage_)
+    function setRebaseFunctionPositivePercentageLimit(int256 rebaseFunctionPositivePercentageLimit_)
         external
         onlyOwner
     {
-        require(rebaseFunctionUpperPercentage_ >= 0);
-        rebaseFunctionUpperPercentage = rebaseFunctionUpperPercentage_;
+        require(rebaseFunctionPositivePercentageLimit_ >= 0);
+        rebaseFunctionPositivePercentageLimit = rebaseFunctionPositivePercentageLimit_;
+    }
+
+    function setRebaseFunctionPositiveGrowth(int256 rebaseFunctionPositiveGrowth_) external onlyOwner {
+        require(rebaseFunctionPositiveGrowth_ >= 0);
+        rebaseFunctionPositiveGrowth = rebaseFunctionPositiveGrowth_;
+    }
+
+    function setRebaseFunctionNegativeGrowth(int256 rebaseFunctionNegativeGrowth_) external onlyOwner {
+        require(rebaseFunctionNegativeGrowth_ >= 0);
+        rebaseFunctionNegativeGrowth = rebaseFunctionNegativeGrowth_;
     }
 
     /**
@@ -246,9 +255,10 @@ contract UFragmentsPolicy is Ownable {
         // deviationThreshold = 0.05e18 = 5e16
         deviationThreshold = 25 * 10**(DECIMALS - 3);
 
-        rebaseFunctionGrowth = int256(45 * (10**DECIMALS));
-        rebaseFunctionUpperPercentage = int256(5 * (10**(DECIMALS - 2))); // 0.05
-        rebaseFunctionLowerPercentage = int256((-77) * int256(10**(DECIMALS - 3))); // -0.077
+        rebaseFunctionPositiveGrowth = int256(45 * (10**DECIMALS)); // Positive growth
+        rebaseFunctionNegativeGrowth = int256(45 * (10**DECIMALS)); // Negative growth
+        rebaseFunctionPositivePercentageLimit = int256(5 * (10**(DECIMALS - 2))); // 0.05
+        rebaseFunctionNegativePercentageLimit = int256((-77) * int256(10**(DECIMALS - 3))); // -0.077
 
         minRebaseTimeIntervalSec = 1 days;
         rebaseWindowOffsetSec = 7200; // 2AM UTC
@@ -334,12 +344,25 @@ contract UFragmentsPolicy is Ownable {
         }
         int256 targetRateSigned = targetRate.toInt256Safe();
         int256 normalizedRate = rate.toInt256Safe().mul(ONE).div(targetRateSigned);
-        int256 rebasePercentage = computeRebasePercentage(
-            normalizedRate,
-            rebaseFunctionLowerPercentage,
-            rebaseFunctionUpperPercentage,
-            rebaseFunctionGrowth
-        );
+
+        // Determine growth and bounds based on positive or negative rebase
+        int256 rebasePercentage;
+        if (normalizedRate >= ONE) {
+            rebasePercentage = computeRebasePercentage(
+                normalizedRate,
+                -rebaseFunctionPositivePercentageLimit,
+                rebaseFunctionPositivePercentageLimit,
+                rebaseFunctionPositiveGrowth
+            );
+        } else {
+            rebasePercentage = computeRebasePercentage(
+                normalizedRate,
+                rebaseFunctionNegativePercentageLimit,
+                -rebaseFunctionNegativePercentageLimit,
+                rebaseFunctionNegativeGrowth
+            );
+        }
+
         return uFrags.totalSupply().toInt256Safe().mul(rebasePercentage).div(ONE);
     }
 
