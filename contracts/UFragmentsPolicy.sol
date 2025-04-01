@@ -94,8 +94,11 @@ contract UFragmentsPolicy is Ownable {
 
     // DECIMALS decimal fixed point numbers.
     // Used in computation of  (Upper-Lower)/(1-(Upper/Lower)/2^(Growth*delta))) + Lower
+    /// @custom:oz-renamed-from rebaseFunctionLowerPercentage
     int256 public rebaseFunctionNegativePercentageLimit;
+    /// @custom:oz-renamed-from rebaseFunctionUpperPercentage
     int256 public rebaseFunctionPositivePercentageLimit;
+    /// @custom:oz-renamed-from rebaseFunctionGrowth
     int256 public rebaseFunctionPositiveGrowth;
     int256 public rebaseFunctionNegativeGrowth;
 
