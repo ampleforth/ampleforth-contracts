@@ -22,6 +22,8 @@ contract Orchestrator is Ownable {
     // Stable ordering is not guaranteed.
     Transaction[] public transactions;
 
+    address[] private whitelist;
+
     IUFragmentsPolicy public policy;
 
     /**
@@ -42,7 +44,24 @@ contract Orchestrator is Ownable {
      */
     function rebase() external {
         require(msg.sender == tx.origin); // solhint-disable-line avoid-tx-origin
+        _rebase();
+    }
 
+    /**
+     * @notice Contract account entry point to initiate rebase operation.
+     * 		   The
+     */
+    function rebaseFromContract() external {
+        for (uint256 i = 0; i < whitelist.length; i++) {
+            if (whitelist[i] == msg.sender) {
+                _rebase();
+                return;
+            }
+        }
+        revert("rebaseFromContract called from non-whitelisted account");
+    }
+
+    function _rebase() private {
         policy.rebase();
 
         for (uint256 i = 0; i < transactions.length; i++) {
@@ -93,5 +112,33 @@ contract Orchestrator is Ownable {
      */
     function transactionsSize() external view returns (uint256) {
         return transactions.length;
+    }
+
+    /**
+     * @param account Address of contract to whitelist.
+     */
+    function whitelistAccount(address account) external onlyOwner {
+        for (uint256 i = 0; i < whitelist.length; i++) {
+            if (whitelist[i] == account) {
+                return;
+            }
+        }
+        whitelist.push(account);
+    }
+
+    /**
+     * @param account Address of contract to remove from whitelist.
+     */
+    function unlistAccount(address account) external onlyOwner {
+        for (uint256 i = whitelist.length; i > 0; i--) {
+            if (whitelist[i - 1] == account) {
+                whitelist[i - 1] = whitelist[whitelist.length - 1];
+                whitelist.pop();
+            }
+        }
+    }
+
+    function getWhitelist() external view returns (address[] memory) {
+        return whitelist;
     }
 }
