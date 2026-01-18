@@ -26,6 +26,7 @@ async function mockedOrchestrator() {
   )
     .connect(deployer)
     .deploy()
+  await orchestrator.connect(deployer).setRebaseCaller(await deployer.getAddress())
   return {
     deployer,
     user,
@@ -37,7 +38,7 @@ async function mockedOrchestrator() {
 
 describe('Orchestrator', function () {
   before('setup Orchestrator contract', async () => {
-    ;({ deployer, user, orchestrator, mockPolicy, mockDownstream } =
+    ; ({ deployer, user, orchestrator, mockPolicy, mockDownstream } =
       await waffle.loadFixture(mockedOrchestrator))
   })
 
@@ -48,8 +49,8 @@ describe('Orchestrator', function () {
     })
   })
 
-  describe('when rebase called by a contract', function () {
-    it('should fail', async function () {
+  describe('when rebase called by unauthorized address', function () {
+    it('should fail when called by a contract', async function () {
       const rebaseCallerContract = await (
         await ethers.getContractFactory('RebaseCallerContract')
       )
@@ -57,6 +58,12 @@ describe('Orchestrator', function () {
         .deploy()
       await expect(rebaseCallerContract.callRebase(orchestrator.address)).to.be
         .reverted
+    })
+
+    it('should fail when called by unauthorized user', async function () {
+      await expect(orchestrator.connect(user).rebase()).to.be.revertedWith(
+        'Unauthorized rebase caller',
+      )
     })
   })
 
@@ -341,6 +348,30 @@ describe('Orchestrator', function () {
         expect(await orchestrator.transactionsSize()).to.gt(0)
         await expect(orchestrator.connect(deployer).removeTransaction(0)).to.not
           .be.reverted
+      })
+    })
+
+    describe('setRebaseCaller', async function () {
+      it('should be callable by owner', async function () {
+        const newCaller = await user.getAddress()
+        await expect(
+          orchestrator.connect(deployer).setRebaseCaller(newCaller),
+        ).to.not.be.reverted
+        expect(await orchestrator.rebaseCaller()).to.eq(newCaller)
+      })
+
+      it('should not be callable by others', async function () {
+        const newCaller = await user.getAddress()
+        await expect(orchestrator.connect(user).setRebaseCaller(newCaller)).to
+          .be.reverted
+      })
+
+      it('should reject zero address', async function () {
+        await expect(
+          orchestrator
+            .connect(deployer)
+            .setRebaseCaller('0x0000000000000000000000000000000000000000'),
+        ).to.be.revertedWith('Invalid rebase caller')
       })
     })
 
