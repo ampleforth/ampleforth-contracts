@@ -24,10 +24,12 @@ contract Orchestrator is Ownable {
 
     IUFragmentsPolicy public policy;
 
+    address public rebaseCaller;
+
     /**
      * @param policy_ Address of the UFragments policy.
      */
-    constructor(address policy_) public {
+    constructor(address policy_) {
         Ownable.initialize(msg.sender);
         policy = IUFragmentsPolicy(policy_);
     }
@@ -35,13 +37,12 @@ contract Orchestrator is Ownable {
     /**
      * @notice Main entry point to initiate a rebase operation.
      *         The Orchestrator calls rebase on the policy and notifies downstream applications.
-     *         Contracts are guarded from calling, to avoid flash loan attacks on liquidity
-     *         providers.
+     *         Access is restricted to the authorized rebase caller to prevent unauthorized rebases.
      *         If a transaction in the transaction list fails, Orchestrator will stop execution
      *         and revert to prevent a gas underprice attack.
      */
     function rebase() external {
-        require(msg.sender == tx.origin); // solhint-disable-line avoid-tx-origin
+        require(msg.sender == rebaseCaller, "Unauthorized rebase caller");
 
         policy.rebase();
 
@@ -54,6 +55,15 @@ contract Orchestrator is Ownable {
                 }
             }
         }
+    }
+
+    /**
+     * @notice Sets the authorized rebase caller address.
+     * @param rebaseCaller_ Address authorized to call rebase.
+     */
+    function setRebaseCaller(address rebaseCaller_) external onlyOwner {
+        require(rebaseCaller_ != address(0), "Invalid rebase caller");
+        rebaseCaller = rebaseCaller_;
     }
 
     /**
