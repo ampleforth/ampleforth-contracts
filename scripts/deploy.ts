@@ -25,11 +25,13 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
     const RATE_REPORT_EXPIRATION_SEC = 86400 // 1 day
     const RATE_REPORT_DELAY_SEC = 0
     const RATE_MIN_PROVIDERS = 1
+    const RATE_ORACLE_SCALAR = utils.parseUnits('1', 18)
 
     // CPI oracle
     const CPI_REPORT_EXPIRATION_SEC = 7776000 // 90 days
     const CPI_REPORT_DELAY_SEC = 0
     const CPI_MIN_PROVIDERS = 1
+    const CPI_ORACLE_SCALAR = utils.parseUnits('1', 18)
 
     // Policy
     const DEVIATION_TRESHOLD = utils.parseUnits('0.002', 18) // 0.002% (ie) 0.05/24)
@@ -70,6 +72,7 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
       RATE_REPORT_EXPIRATION_SEC,
       RATE_REPORT_DELAY_SEC,
       RATE_MIN_PROVIDERS,
+      RATE_ORACLE_SCALAR,
     )
     console.log('Market oracle to:', marketOracle.address)
 
@@ -79,6 +82,7 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
       CPI_REPORT_EXPIRATION_SEC,
       CPI_REPORT_DELAY_SEC,
       CPI_MIN_PROVIDERS,
+      CPI_ORACLE_SCALAR,
     )
     console.log('CPI oracle to:', cpiOracle.address)
 
@@ -106,6 +110,10 @@ task('deploy:amplforce:testnet', 'Deploy ampleforth contract suite for testnet')
       orchestratorParams,
     )
     console.log('Orchestrator deployed to:', orchestrator.address)
+
+    // Set rebase caller
+    await waitFor(orchestrator.connect(deployer).setRebaseCaller(owner))
+    console.log('Rebase caller set to:', owner)
 
     // Set references
     await waitFor(ampl.connect(deployer).setMonetaryPolicy(policy.address))
