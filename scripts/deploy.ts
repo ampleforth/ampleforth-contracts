@@ -221,3 +221,119 @@ task('deploy:oracle', 'Deploy the median oracle contract')
     await oracle.deployTransaction.wait(5)
     await verify(hre, oracle.address, [])
   })
+
+task(
+  'deploy:dexoracle',
+  'Deploy the indirect AMPL/USDC 24h DEX TWAP oracle (AMPL/WETH x WETH/USDC)',
+)
+  .addParam('medianOracle', 'MedianOracle address the oracle reports to')
+  // Mainnet defaults (token orderings verified on-chain):
+  //   AMPL/WETH 0xc5be99... : token0=WETH, token1=AMPL -> price1 (WETH per AMPL)
+  //   USDC/WETH 0xb4e16d... : token0=USDC, token1=WETH -> price1 (USDC per WETH)
+  .addOptionalParam(
+    'pairLeg1',
+    'AMPL/WETH UniswapV2 pair',
+    '0xc5be99a02c6857f9eac67bbce58df5572498f40c',
+  )
+  .addOptionalParam('leg1UseToken1Price', 'Read price1 on leg1', 'true')
+  .addOptionalParam(
+    'pairLeg2',
+    'WETH/USDC UniswapV2 pair',
+    '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc',
+  )
+  .addOptionalParam('leg2UseToken1Price', 'Read price1 on leg2', 'true')
+  .addOptionalParam(
+    'orchestrator',
+    'Orchestrator to append update() to (owner only)',
+    '',
+  )
+  .addFlag(
+    'register',
+    'addProvider(dexOracle) on the MedianOracle (owner only)',
+  )
+  .addFlag('verify', 'Verify the contract on Etherscan')
+  .setAction(async (args, hre) => {
+    console.log(args)
+
+    const leg1UseToken1Price = args.leg1UseToken1Price === 'true'
+    const leg2UseToken1Price = args.leg2UseToken1Price === 'true'
+
+    // get signers
+    const deployer = (await hre.ethers.getSigners())[0]
+    console.log('Deployer', await deployer.getAddress())
+
+    // Reconfirm on-chain token ordering so the direction flags are correct.
+    // token0 is the lower address (Uniswap factory invariant); the page UIs
+    // mislabel base/quote, so always trust token0()/token1() here.
+    for (const [label, pair, useToken1Price] of [
+      ['leg1 (AMPL/WETH)', args.pairLeg1, leg1UseToken1Price],
+      ['leg2 (WETH/USDC)', args.pairLeg2, leg2UseToken1Price],
+    ] as [string, string, boolean][]) {
+      const p = await hre.ethers.getContractAt('IUniswapV2Pair', pair)
+      const token0 = await p.token0()
+      const token1 = await p.token1()
+      const base = useToken1Price ? token1 : token0
+      const quote = useToken1Price ? token0 : token1
+      console.log(
+        `${label} ${pair}\n  token0=${token0} token1=${token1}\n` +
+          `  useToken1Price=${useToken1Price} -> pricing base=${base} in quote=${quote}`,
+      )
+    }
+
+    // deploy contract
+    const params = [
+      args.medianOracle,
+      args.pairLeg1,
+      leg1UseToken1Price,
+      args.pairLeg2,
+      leg2UseToken1Price,
+    ]
+    const dexOracle = await deployContract(hre, 'DexOracle', deployer, params)
+    console.log('DexOracle deployed to:', dexOracle.address)
+    console.log(
+      '  decimalsFactorLeg1:',
+      (await dexOracle.decimalsFactorLeg1()).toString(),
+    )
+    console.log(
+      '  decimalsFactorLeg2:',
+      (await dexOracle.decimalsFactorLeg2()).toString(),
+    )
+
+    // Register as a MedianOracle provider (deployer must own the MedianOracle).
+    if (args.register) {
+      const medianOracle = await hre.ethers.getContractAt(
+        'MedianOracle',
+        args.medianOracle,
+      )
+      await waitFor(
+        medianOracle.connect(deployer).addProvider(dexOracle.address),
+      )
+      console.log('Registered as provider on MedianOracle:', args.medianOracle)
+    }
+
+    // Append update() to the Orchestrator so it fires right after each rebase.
+    // The encoded calldata is always printed so it can be proposed via multisig
+    // when the deployer is not the Orchestrator owner.
+    const updateData = dexOracle.interface.encodeFunctionData('update')
+    console.log('Orchestrator.addTransaction args:')
+    console.log('  destination:', dexOracle.address)
+    console.log('  data:', updateData)
+    if (args.orchestrator) {
+      const orchestrator = await hre.ethers.getContractAt(
+        'Orchestrator',
+        args.orchestrator,
+      )
+      await waitFor(
+        orchestrator
+          .connect(deployer)
+          .addTransaction(dexOracle.address, updateData),
+      )
+      console.log('Appended update() to Orchestrator:', args.orchestrator)
+    }
+
+    // wait and verify
+    if (args.verify) {
+      await dexOracle.deployTransaction.wait(5)
+      await verify(hre, dexOracle.address, params)
+    }
+  })
