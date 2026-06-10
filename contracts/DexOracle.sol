@@ -12,6 +12,8 @@ interface IERC20Decimals {
 
 interface IMedianOracle {
     function pushReport(uint256 payload) external;
+
+    function purgeReports() external;
 }
 
 /**
@@ -29,21 +31,26 @@ interface IMedianOracle {
  *         - leg2 prices the bridge asset (WETH) in the quote asset (USDC)
  *
  *         UniswapV2 maintains per-pair price accumulators as UQ112x112 fixed
- *         point numbers denominated in raw (smallest-unit) reserves. This
- *         contract bridges that representation into an OUTPUT_DECIMALS (18)
- *         fixed point decimal price, which is the format MedianOracle expects:
+ *         point numbers denominated in raw (smallest-unit) reserves. Following
+ *         the canonical fixed-window oracle, each leg's cumulative is bridged
+ *         into an OUTPUT_DECIMALS (18) fixed point decimal price-seconds value
+ *         and stored at `update()`; the TWAP is the difference of two such
+ *         snapshots divided by the elapsed time:
  *
- *             price_18 = (avgRatioUQ112x112 * decimalsFactor) >> 112
+ *             cumulative_18 = (cumulativeUQ112x112 * decimalsFactor) >> 112
  *             decimalsFactor = 10**(OUTPUT_DECIMALS + baseDecimals - quoteDecimals)
+ *             legPrice_18    = (cumulative_18_now - cumulative_18_last) / timeElapsed
  *
  *         Intended 24h rebase cadence:
  *         - `update()`     is called right after rebase (appended to the
  *                          Orchestrator's transaction list) to open a fresh
- *                          measurement window.
- *         - `pushReport()` is called ~2h before the next rebase to close the
- *                          window and report the TWAP. The report then ages
- *                          past the MedianOracle report-delay (security) window
- *                          before it is consumed at the following rebase.
+ *                          measurement window. It may only run once `period`
+ *                          has elapsed since the last `update()`.
+ *         - `pushReport()` is called ~2h before the next rebase to report the
+ *                          TWAP. The MedianOracle's report-delay (security)
+ *                          window then ages the report before it is consumed at
+ *                          the following rebase, so no timing gate is enforced
+ *                          here.
  */
 contract DexOracle is Ownable {
     using SafeMath for uint256;
@@ -69,22 +76,24 @@ contract DexOracle is Ownable {
     uint256 public immutable decimalsFactorLeg1;
     uint256 public immutable decimalsFactorLeg2;
 
-    /// @notice Raw UniswapV2 price cumulatives captured at the last `update()`.
+    /// @notice Decimal (OUTPUT_DECIMALS) price-seconds cumulatives captured at
+    ///         the last `update()`.
     uint256 public priceLeg1CumulativeLast;
     uint256 public priceLeg2CumulativeLast;
     /// @notice Timestamp (mod 2**32) of the last `update()`. Zero until the
     ///         first `update()`, which marks the oracle as uninitialized.
     uint32 public blockTimestampLast;
 
-    /// @notice Minimum measurement window length before a report can be pushed.
-    uint256 public minReportTimeIntervalSec = 22 hours;
+    /// @notice Minimum time that must elapse between successive `update()`s for
+    ///         callers other than the Orchestrator. Defaults to the rebase
+    ///         cadence minus the security delay (24h - 2h) so an open caller can
+    ///         only re-open the window once the previous one has fully matured.
+    uint256 public period = 22 hours;
 
-    /// @dev Daily cadence and the window (relative to the day) during which
-    ///      `update()` may open a new measurement window. Defaults mirror the
-    ///      policy's rebase window so updates land right after rebase.
-    uint256 public updateTimeIntervalSec = 1 days;
-    uint256 public updateWindowOffsetSec = 7200; // 2AM UTC, matches rebase
-    uint256 public updateWindowLengthSec = 20 minutes;
+    /// @notice The Orchestrator, which may call `update()` at any time (it runs
+    ///         right after each rebase). Any other caller is subject to
+    ///         `period`. Zero until set, in which case every caller is gated.
+    address public orchestrator;
 
     event LogPriceUpdate(
         uint256 priceLeg1Cumulative,
@@ -139,17 +148,27 @@ contract DexOracle is Ownable {
      * @notice Opens a fresh measurement window by snapshotting the current
      *         price cumulatives. Intended to be appended to the Orchestrator's
      *         transaction list so it runs immediately after each rebase.
-     * @dev Gated to the daily update window so the measurement window cannot be
-     *      reset off-schedule (which would shorten a subsequent report's TWAP).
+     * @dev The Orchestrator may call this at any time. Any other caller must
+     *      wait `period` since the last `update()`, which prevents the
+     *      measurement window from being reset off-schedule (e.g. right before a
+     *      report, which would collapse the TWAP toward a spot price).
      */
     function update() external {
-        require(inUpdateWindow(), "DexOracle: NOT_IN_UPDATE_WINDOW");
-
         (
             uint256 leg1Cumulative,
             uint256 leg2Cumulative,
             uint32 blockTimestamp
         ) = _currentCumulatives();
+
+        if (msg.sender != orchestrator && blockTimestampLast > 0) {
+            uint32 timeElapsed;
+            unchecked {
+                // Wraparound is desired; both timestamps are taken mod 2**32.
+                timeElapsed = blockTimestamp - blockTimestampLast;
+            }
+            require(timeElapsed >= period, "DexOracle: PERIOD_NOT_ELAPSED");
+        }
+
         priceLeg1CumulativeLast = leg1Cumulative;
         priceLeg2CumulativeLast = leg2Cumulative;
         blockTimestampLast = blockTimestamp;
@@ -158,7 +177,7 @@ contract DexOracle is Ownable {
     }
 
     /**
-     * @notice Closes the measurement window, computes the chained TWAP and
+     * @notice Computes the chained TWAP over the current measurement window and
      *         reports it to the MedianOracle. Intended to be called ~2h before
      *         the next rebase, leaving the report to age past the MedianOracle
      *         report-delay window before it is consumed.
@@ -166,70 +185,57 @@ contract DexOracle is Ownable {
      */
     function pushReport() external returns (uint256 price) {
         uint32 timeElapsed;
-        (price, timeElapsed) = _computePrice(minReportTimeIntervalSec);
+        (price, timeElapsed) = _computePrice();
 
         medianOracle.pushReport(price);
         emit LogReportPushed(price, timeElapsed);
     }
 
     /**
-     * @notice Computes the chained TWAP over the current measurement window
-     *         without reporting it.
+     * @notice Purges this provider's outstanding reports on the MedianOracle,
+     *         e.g. to retract a report pushed in error.
+     */
+    function purgeReports() external onlyOwner {
+        medianOracle.purgeReports();
+    }
+
+    /**
+     * @notice Reads the chained TWAP over the current measurement window
+     *         without reporting it. Unlike `update()` this never gates on the
+     *         period, so the live average can always be inspected.
      * @return price The AMPL/USDC price as an OUTPUT_DECIMALS number.
      */
-    function computePrice() external view returns (uint256 price) {
-        // Require at least one second of measurement so the average is defined.
-        (price, ) = _computePrice(1);
+    function consult() external view returns (uint256 price) {
+        (price, ) = _computePrice();
     }
 
     /**
-     * @return True if the current block falls within the daily update window.
+     * @notice Sets the minimum time between successive `update()`s for callers
+     *         other than the Orchestrator.
+     * @param period_ The new minimum interval in seconds.
      */
-    function inUpdateWindow() public view returns (bool) {
-        uint256 timeOfDay = block.timestamp.mod(updateTimeIntervalSec);
-        return (timeOfDay >= updateWindowOffsetSec &&
-            timeOfDay < updateWindowOffsetSec.add(updateWindowLengthSec));
+    function setPeriod(uint256 period_) external onlyOwner {
+        period = period_;
     }
 
     /**
-     * @notice Sets the minimum measurement window length before a report can be
-     *         pushed.
-     * @param minReportTimeIntervalSec_ The new minimum window length in seconds.
+     * @notice Sets the Orchestrator address allowed to call `update()` without
+     *         waiting for `period`.
+     * @param orchestrator_ The Orchestrator address (zero to disable the
+     *        bypass, gating every caller).
      */
-    function setMinReportTimeIntervalSec(uint256 minReportTimeIntervalSec_) external onlyOwner {
-        require(minReportTimeIntervalSec_ < updateTimeIntervalSec, "DexOracle: INTERVAL_TOO_LONG");
-        minReportTimeIntervalSec = minReportTimeIntervalSec_;
+    function setOrchestrator(address orchestrator_) external onlyOwner {
+        orchestrator = orchestrator_;
     }
 
     /**
-     * @notice Sets the daily update window parameters.
-     * @param updateTimeIntervalSec_ Length of a full cadence cycle in seconds.
-     * @param updateWindowOffsetSec_ Offset of the window from the cycle start.
-     * @param updateWindowLengthSec_ Length of the update window in seconds.
-     */
-    function setUpdateWindow(
-        uint256 updateTimeIntervalSec_,
-        uint256 updateWindowOffsetSec_,
-        uint256 updateWindowLengthSec_
-    ) external onlyOwner {
-        require(updateWindowOffsetSec_ < updateTimeIntervalSec_, "DexOracle: BAD_OFFSET");
-        require(updateWindowLengthSec_ <= updateTimeIntervalSec_, "DexOracle: BAD_LENGTH");
-        updateTimeIntervalSec = updateTimeIntervalSec_;
-        updateWindowOffsetSec = updateWindowOffsetSec_;
-        updateWindowLengthSec = updateWindowLengthSec_;
-    }
-
-    /**
-     * @dev Computes the chained TWAP, requiring at least `minElapsedSec` of
-     *      measurement since the last `update()`.
+     * @dev Computes the chained TWAP since the last `update()`. Requires the
+     *      oracle to be initialized and at least one second of measurement (to
+     *      avoid division by zero), but never gates on the full period.
      * @return price The chained price as an OUTPUT_DECIMALS number.
      * @return timeElapsed The length of the measurement window in seconds.
      */
-    function _computePrice(uint256 minElapsedSec)
-        private
-        view
-        returns (uint256 price, uint32 timeElapsed)
-    {
+    function _computePrice() private view returns (uint256 price, uint32 timeElapsed) {
         require(blockTimestampLast > 0, "DexOracle: UPDATE_NEVER_CALLED");
 
         (
@@ -241,26 +247,20 @@ contract DexOracle is Ownable {
             // Wraparound is desired; both timestamps are taken mod 2**32.
             timeElapsed = blockTimestamp - blockTimestampLast;
         }
-        require(timeElapsed >= minElapsedSec, "DexOracle: PERIOD_NOT_ELAPSED");
+        require(timeElapsed > 0, "DexOracle: NO_TIME_ELAPSED");
 
-        uint256 priceLeg1 = _legPrice(
-            leg1Cumulative,
-            priceLeg1CumulativeLast,
-            timeElapsed,
-            decimalsFactorLeg1
-        );
-        uint256 priceLeg2 = _legPrice(
-            leg2Cumulative,
-            priceLeg2CumulativeLast,
-            timeElapsed,
-            decimalsFactorLeg2
-        );
+        // The decimal cumulatives grow monotonically, so the windowed averages
+        // are plain differences divided by the elapsed time.
+        uint256 priceLeg1 = (leg1Cumulative - priceLeg1CumulativeLast) / timeElapsed;
+        uint256 priceLeg2 = (leg2Cumulative - priceLeg2CumulativeLast) / timeElapsed;
         price = priceLeg1.mul(priceLeg2).div(10**OUTPUT_DECIMALS);
     }
 
     /**
-     * @dev Reads the current raw price cumulatives for both legs, selecting the
-     *      configured direction. Both legs share the same block timestamp.
+     * @dev Reads the current price cumulatives for both legs, selecting the
+     *      configured direction and bridging each from a raw UQ112x112 reserve
+     *      ratio into an OUTPUT_DECIMALS price-seconds cumulative. Both legs
+     *      share the same block timestamp.
      */
     function _currentCumulatives()
         private
@@ -277,31 +277,10 @@ contract DexOracle is Ownable {
         (price0, price1, blockTimestamp) = UniswapV2OracleLibrary.currentCumulativePrices(
             address(pairLeg1)
         );
-        leg1Cumulative = leg1UseToken1Price ? price1 : price0;
+        leg1Cumulative = (leg1UseToken1Price ? price1 : price0).mul(decimalsFactorLeg1) >> 112;
 
         (price0, price1, ) = UniswapV2OracleLibrary.currentCumulativePrices(address(pairLeg2));
-        leg2Cumulative = leg2UseToken1Price ? price1 : price0;
-    }
-
-    /**
-     * @dev Converts the windowed difference of a raw UQ112x112 cumulative into
-     *      an OUTPUT_DECIMALS decimal price.
-     */
-    function _legPrice(
-        uint256 cumulativeNow,
-        uint256 cumulativeLast,
-        uint32 timeElapsed,
-        uint256 decimalsFactor
-    ) private pure returns (uint256) {
-        uint256 avgRatioUQ112x112;
-        unchecked {
-            // The UniswapV2 accumulators are designed to overflow; the windowed
-            // difference is well-defined modulo 2**256.
-            avgRatioUQ112x112 = (cumulativeNow - cumulativeLast) / timeElapsed;
-        }
-        // Bridge the UQ112x112 raw reserve ratio into a decimal price. The
-        // windowed average is bounded, so the scaling cannot overflow.
-        return avgRatioUQ112x112.mul(decimalsFactor) >> 112;
+        leg2Cumulative = (leg2UseToken1Price ? price1 : price0).mul(decimalsFactorLeg2) >> 112;
     }
 
     /**

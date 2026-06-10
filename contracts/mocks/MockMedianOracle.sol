@@ -9,12 +9,19 @@ pragma solidity 0.8.4;
 contract MockMedianOracle {
     uint256 public lastPayload;
     uint256 public reportCount;
+    uint256 public purgeCount;
 
     event ReportPushed(address provider, uint256 payload);
+    event ReportsPurged(address provider);
 
     function pushReport(uint256 payload) external {
         lastPayload = payload;
         reportCount += 1;
         emit ReportPushed(msg.sender, payload);
+    }
+
+    function purgeReports() external {
+        purgeCount += 1;
+        emit ReportsPurged(msg.sender);
     }
 }

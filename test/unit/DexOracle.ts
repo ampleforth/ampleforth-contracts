@@ -6,7 +6,7 @@ const { loadFixture } = waffle
 
 const BN = BigNumber.from
 const Q112 = BN(2).pow(112)
-const TWO256 = BN(2).pow(256)
+const TWO32 = 2 ** 32
 const E18 = BN(10).pow(18)
 
 // Token decimals on mainnet.
@@ -20,20 +20,19 @@ const USDC_DECIMALS = 6
 const DF1 = BN(10).pow(18 + AMPL_DECIMALS - WETH_DECIMALS)
 const DF2 = BN(10).pow(18 + WETH_DECIMALS - USDC_DECIMALS)
 
-const DAY = 86400
 const HOUR = 3600
-const PERIOD = 22 * HOUR // default minReportTimeIntervalSec
+const PERIOD = 22 * HOUR // default period (min interval between updates)
 
-// Mirror DexOracle's per-leg fixed point conversion exactly.
+// Mirror DexOracle's scale-then-diff fixed point math exactly: each raw
+// UQ112x112 cumulative is bridged to an 18-decimal price-seconds value
+// (uq * decimalsFactor >> 112) before the windowed difference is taken.
+const scaled = (uq: BigNumber, df: BigNumber) => uq.mul(df).shr(112)
 const legPrice = (
-  cumNow: BigNumber,
-  cumLast: BigNumber,
+  uqNow: BigNumber,
+  uqLast: BigNumber,
   dt: number,
   df: BigNumber,
-) => {
-  const avg = cumNow.sub(cumLast).mod(TWO256).div(dt) // unchecked diff, then /dt
-  return avg.mul(df).shr(112)
-}
+) => scaled(uqNow, df).sub(scaled(uqLast, df)).div(dt)
 const chainedPrice = (
   l1Now: BigNumber,
   l1Last: BigNumber,
@@ -94,33 +93,37 @@ async function fixture() {
   }
 }
 
-// Writes both pairs' price1 cumulatives and records their last-sync timestamp
-// as `ts` (mock data — the measuring call later runs at `ts`, so
-// currentCumulativePrices adds no counterfactual). price0 is set to a distinct
-// sentinel to prove the contract reads the configured direction.
+// Writes both pairs' raw price1 UQ112x112 cumulatives and records their
+// last-sync timestamp as `reservesTs` (mock data; when it equals the measuring
+// call's uint32 block timestamp the oracle library adds no counterfactual).
+// price0 is set to a sentinel to prove the contract reads the configured
+// direction.
 async function setPairState(
   pairLeg1: Contract,
   pairLeg2: Contract,
   l1Price1: BigNumber,
   l2Price1: BigNumber,
-  ts: number,
+  reservesTs: number,
 ) {
   const sentinel = BN('0xdead')
   const reserve = BN(10).pow(20)
   await pairLeg1.setCumulatives(sentinel, l1Price1)
   await pairLeg2.setCumulatives(sentinel, l2Price1)
-  await pairLeg1.setReserves(reserve, reserve, ts)
-  await pairLeg2.setReserves(reserve, reserve, ts)
+  await pairLeg1.setReserves(reserve, reserve, reservesTs)
+  await pairLeg2.setReserves(reserve, reserve, reservesTs)
 }
 
-// Returns an update time aligned to the daily update window (02:00 UTC) and the
-// matching report time exactly PERIOD later, both safely in the future.
+// Returns an update time and the matching report time exactly PERIOD later,
+// both safely in the future and below the uint32 boundary.
 async function windowTimes() {
   const now = await latestTime()
-  let tUpdate = Math.floor(now / DAY) * DAY + 7200
-  while (tUpdate <= now + 100) tUpdate += DAY
+  const tUpdate = now + 100
   return { tUpdate, tReport: tUpdate + PERIOD }
 }
+
+// Realistic averages: WETH-per-AMPL ~ 0.0004, USDC-per-WETH ~ 3000.
+const AVG1_UQ = BN('400000').mul(Q112) // -> legPrice1 = 4e14
+const AVG2_UQ = BN('3000000000000000000000').mul(Q112).div(DF2)
 
 describe('DexOracle', () => {
   describe('construction', () => {
@@ -129,6 +132,8 @@ describe('DexOracle', () => {
       expect(await oracle.decimalsFactorLeg1()).to.equal(DF1) // 1e9
       expect(await oracle.decimalsFactorLeg2()).to.equal(DF2) // 1e30
       expect(await oracle.OUTPUT_DECIMALS()).to.equal(18)
+      expect(await oracle.period()).to.equal(PERIOD)
+      expect(await oracle.orchestrator()).to.equal(ethers.constants.AddressZero)
     })
 
     it('logs the shared bridge token as matched', async () => {
@@ -145,9 +150,9 @@ describe('DexOracle', () => {
   })
 
   describe('before the first update', () => {
-    it('reverts computePrice with UPDATE_NEVER_CALLED', async () => {
+    it('reverts consult with UPDATE_NEVER_CALLED', async () => {
       const { oracle } = await loadFixture(fixture)
-      await expect(oracle.computePrice()).to.be.revertedWith(
+      await expect(oracle.consult()).to.be.revertedWith(
         'DexOracle: UPDATE_NEVER_CALLED',
       )
     })
@@ -161,7 +166,7 @@ describe('DexOracle', () => {
   })
 
   describe('update', () => {
-    it('snapshots the configured (token1) cumulatives in-window', async () => {
+    it('snapshots the configured (token1) decimal cumulatives', async () => {
       const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
       const { tUpdate } = await windowTimes()
       const l1 = BN('111').mul(Q112)
@@ -171,20 +176,57 @@ describe('DexOracle', () => {
       await setNextTime(tUpdate)
       await oracle.update()
 
-      expect(await oracle.priceLeg1CumulativeLast()).to.equal(l1)
-      expect(await oracle.priceLeg2CumulativeLast()).to.equal(l2)
+      expect(await oracle.priceLeg1CumulativeLast()).to.equal(scaled(l1, DF1))
+      expect(await oracle.priceLeg2CumulativeLast()).to.equal(scaled(l2, DF2))
       expect(await oracle.blockTimestampLast()).to.equal(tUpdate)
     })
 
-    it('reverts outside the update window', async () => {
+    it('rejects a re-update before the period elapses, allows it after', async () => {
       const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
       const { tUpdate } = await windowTimes()
-      const offWindow = tUpdate + 2 * HOUR // 04:00 UTC, outside [02:00, 02:20)
-      await setPairState(pairLeg1, pairLeg2, BN(1), BN(1), offWindow)
-      await setNextTime(offWindow)
+
+      await setPairState(pairLeg1, pairLeg2, BN(1), BN(1), tUpdate)
+      await setNextTime(tUpdate)
+      await oracle.update() // first update is always allowed
+
+      const tooSoon = tUpdate + PERIOD - 60
+      await setPairState(pairLeg1, pairLeg2, BN(2), BN(2), tooSoon)
+      await setNextTime(tooSoon)
       await expect(oracle.update()).to.be.revertedWith(
-        'DexOracle: NOT_IN_UPDATE_WINDOW',
+        'DexOracle: PERIOD_NOT_ELAPSED',
       )
+
+      const onTime = tUpdate + PERIOD
+      await setPairState(pairLeg1, pairLeg2, BN(3), BN(3), onTime)
+      await setNextTime(onTime)
+      await oracle.update()
+      expect(await oracle.blockTimestampLast()).to.equal(onTime)
+    })
+
+    it('lets the orchestrator update at any time, bypassing the period', async () => {
+      const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
+      const [, orchestrator] = await ethers.getSigners()
+      await oracle.setOrchestrator(await orchestrator.getAddress())
+      const { tUpdate } = await windowTimes()
+
+      await setPairState(pairLeg1, pairLeg2, BN(1), BN(1), tUpdate)
+      await setNextTime(tUpdate)
+      await oracle.connect(orchestrator).update()
+
+      // Far inside the period — a non-orchestrator caller would be rejected.
+      const soon = tUpdate + 60
+      await setPairState(pairLeg1, pairLeg2, BN(2), BN(2), soon)
+      await setNextTime(soon)
+      await oracle.connect(orchestrator).update()
+      expect(await oracle.blockTimestampLast()).to.equal(soon)
+    })
+
+    it('is restricted to the owner for setOrchestrator', async () => {
+      const { oracle } = await loadFixture(fixture)
+      const [, stranger] = await ethers.getSigners()
+      await expect(
+        oracle.connect(stranger).setOrchestrator(await stranger.getAddress()),
+      ).to.be.reverted
     })
   })
 
@@ -200,11 +242,8 @@ describe('DexOracle', () => {
       await setNextTime(tUpdate)
       await oracle.update()
 
-      // Choose realistic averages: WETH-per-AMPL ~ 0.0004, USDC-per-WETH ~ 3000.
-      const avg1 = BN('400000').mul(Q112) // legPrice1 = 4e14
-      const avg2 = BN('3000000000000000000000').mul(Q112).div(DF2)
-      const l1Report = avg1.mul(PERIOD)
-      const l2Report = avg2.mul(PERIOD)
+      const l1Report = AVG1_UQ.mul(PERIOD)
+      const l2Report = AVG2_UQ.mul(PERIOD)
       await setPairState(pairLeg1, pairLeg2, l1Report, l2Report, tReport)
 
       const expected = chainedPrice(l1Report, BN(0), l2Report, BN(0), PERIOD)
@@ -221,59 +260,76 @@ describe('DexOracle', () => {
       expect(expected.sub(target).abs()).to.be.lt(target.div(1000))
     })
 
-    it('reverts when the minimum period has not elapsed', async () => {
-      const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
+    it('does not gate on the period (reports even shortly after update)', async () => {
+      const { oracle, pairLeg1, pairLeg2, medianOracle } = await loadFixture(
+        fixture,
+      )
       const { tUpdate } = await windowTimes()
+
       await setPairState(pairLeg1, pairLeg2, BN(0), BN(0), tUpdate)
       await setNextTime(tUpdate)
       await oracle.update()
 
-      const tEarly = tUpdate + PERIOD - 60 // one minute short of 22h
-      await setPairState(
-        pairLeg1,
-        pairLeg2,
-        BN(10).mul(Q112),
-        BN(10).mul(Q112),
-        tEarly,
-      )
+      // Only one hour of measurement — well under `period` — must still report.
+      const tEarly = tUpdate + HOUR
+      const l1 = AVG1_UQ.mul(HOUR)
+      const l2 = AVG2_UQ.mul(HOUR)
+      await setPairState(pairLeg1, pairLeg2, l1, l2, tEarly)
       await setNextTime(tEarly)
-      await expect(oracle.pushReport()).to.be.revertedWith(
-        'DexOracle: PERIOD_NOT_ELAPSED',
-      )
+      await oracle.pushReport()
+
+      const expected = chainedPrice(l1, BN(0), l2, BN(0), HOUR)
+      expect(await medianOracle.lastPayload()).to.equal(expected)
     })
 
-    it('handles UniswapV2 accumulator wraparound', async () => {
+    it('is callable by anyone (fully open)', async () => {
       const { oracle, pairLeg1, pairLeg2, medianOracle } = await loadFixture(
         fixture,
       )
+      const [, stranger] = await ethers.getSigners()
       const { tUpdate, tReport } = await windowTimes()
 
-      const avg1 = BN('400000').mul(Q112)
-      const avg2 = BN('3000000000000000000000').mul(Q112).div(DF2)
-      const delta1 = avg1.mul(PERIOD)
-      const delta2 = avg2.mul(PERIOD)
-
-      // Start near the uint256 ceiling so the window straddles a wrap.
-      const start1 = TWO256.sub(100)
-      const start2 = TWO256.sub(7)
-      await setPairState(pairLeg1, pairLeg2, start1, start2, tUpdate)
+      await setPairState(pairLeg1, pairLeg2, BN(0), BN(0), tUpdate)
       await setNextTime(tUpdate)
       await oracle.update()
 
-      const end1 = start1.add(delta1).mod(TWO256)
-      const end2 = start2.add(delta2).mod(TWO256)
-      await setPairState(pairLeg1, pairLeg2, end1, end2, tReport)
-
-      // Wrapped diff must equal the non-wrapped result.
-      const expected = chainedPrice(delta1, BN(0), delta2, BN(0), PERIOD)
-
+      const l1 = AVG1_UQ.mul(PERIOD)
+      const l2 = AVG2_UQ.mul(PERIOD)
+      await setPairState(pairLeg1, pairLeg2, l1, l2, tReport)
       await setNextTime(tReport)
-      await oracle.pushReport()
+      await oracle.connect(stranger).pushReport()
+
+      const expected = chainedPrice(l1, BN(0), l2, BN(0), PERIOD)
+      expect(await medianOracle.lastPayload()).to.equal(expected)
+    })
+
+    it('handles the uint32 block-timestamp wraparound', async () => {
+      const { oracle, pairLeg1, pairLeg2, medianOracle } = await loadFixture(
+        fixture,
+      )
+
+      // Straddle the 2**32 boundary: update just before it, report just after.
+      const tUpdate = TWO32 - 100
+      const tReport = tUpdate + PERIOD // wraps mod 2**32
+
+      await setPairState(pairLeg1, pairLeg2, BN(0), BN(0), tUpdate % TWO32)
+      await setNextTime(tUpdate)
+      await oracle.update()
+
+      const l1 = AVG1_UQ.mul(PERIOD)
+      const l2 = AVG2_UQ.mul(PERIOD)
+      await setPairState(pairLeg1, pairLeg2, l1, l2, tReport % TWO32)
+
+      const expected = chainedPrice(l1, BN(0), l2, BN(0), PERIOD)
+      await setNextTime(tReport)
+      await expect(oracle.pushReport())
+        .to.emit(oracle, 'LogReportPushed')
+        .withArgs(expected, PERIOD) // elapsed still resolves to PERIOD
       expect(await medianOracle.lastPayload()).to.equal(expected)
     })
   })
 
-  describe('computePrice', () => {
+  describe('consult', () => {
     it('returns the chained TWAP without reporting', async () => {
       const { oracle, pairLeg1, pairLeg2, medianOracle } = await loadFixture(
         fixture,
@@ -287,7 +343,7 @@ describe('DexOracle', () => {
       const l1 = BN('123456').mul(Q112).mul(PERIOD)
       const l2 = BN('654321').mul(Q112).mul(PERIOD)
       await setPairState(pairLeg1, pairLeg2, l1, l2, tReport)
-      // computePrice() is a view (it never mines or writes). This mineAt is a
+      // consult() is a view (it never mines or writes). This mineAt is a
       // test-only device: an eth_call evaluates against the latest block's
       // timestamp, so we advance the local chain to tReport so the read sees
       // timeElapsed == PERIOD (and block.timestamp == reserves.blockTimestampLast,
@@ -296,9 +352,23 @@ describe('DexOracle', () => {
       await mineAt(tReport)
 
       const expected = chainedPrice(l1, BN(0), l2, BN(0), PERIOD)
-      expect(await oracle.computePrice()).to.equal(expected)
-      // computePrice must not push a report.
+      expect(await oracle.consult()).to.equal(expected)
+      // consult() must not push a report.
       expect(await medianOracle.reportCount()).to.equal(0)
+    })
+  })
+
+  describe('purgeReports', () => {
+    it('passes the purge through to the median oracle', async () => {
+      const { oracle, medianOracle } = await loadFixture(fixture)
+      await oracle.purgeReports()
+      expect(await medianOracle.purgeCount()).to.equal(1)
+    })
+
+    it('is restricted to the owner', async () => {
+      const { oracle } = await loadFixture(fixture)
+      const [, stranger] = await ethers.getSigners()
+      await expect(oracle.connect(stranger).purgeReports()).to.be.reverted
     })
   })
 

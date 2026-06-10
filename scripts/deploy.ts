@@ -311,14 +311,20 @@ task(
       console.log('Registered as provider on MedianOracle:', args.medianOracle)
     }
 
-    // Append update() to the Orchestrator so it fires right after each rebase.
-    // The encoded calldata is always printed so it can be proposed via multisig
-    // when the deployer is not the Orchestrator owner.
+    // Wire up the Orchestrator: authorize it to call update() at any time and
+    // append update() to its transaction list so it fires right after each
+    // rebase. The encoded calldata is always printed so it can be proposed via
+    // multisig when the deployer is not the Orchestrator owner.
     const updateData = dexOracle.interface.encodeFunctionData('update')
     console.log('Orchestrator.addTransaction args:')
     console.log('  destination:', dexOracle.address)
     console.log('  data:', updateData)
     if (args.orchestrator) {
+      await waitFor(
+        dexOracle.connect(deployer).setOrchestrator(args.orchestrator),
+      )
+      console.log('Authorized Orchestrator for update():', args.orchestrator)
+
       const orchestrator = await hre.ethers.getContractAt(
         'Orchestrator',
         args.orchestrator,
