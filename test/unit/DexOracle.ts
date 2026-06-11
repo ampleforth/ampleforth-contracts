@@ -75,6 +75,7 @@ async function fixture() {
     await ethers.getContractFactory('DexOracle')
   ).deploy(
     medianOracle.address,
+    ethers.constants.AddressZero, // orchestrator (set per-test where needed)
     pairLeg1.address,
     true, // leg1UseToken1Price -> WETH-per-AMPL
     pairLeg2.address,
@@ -132,8 +133,22 @@ describe('DexOracle', () => {
       expect(await oracle.decimalsFactorLeg1()).to.equal(DF1) // 1e9
       expect(await oracle.decimalsFactorLeg2()).to.equal(DF2) // 1e30
       expect(await oracle.OUTPUT_DECIMALS()).to.equal(18)
-      expect(await oracle.period()).to.equal(PERIOD)
       expect(await oracle.orchestrator()).to.equal(ethers.constants.AddressZero)
+    })
+
+    it('records the median oracle and exposes it as settable', async () => {
+      const { oracle, medianOracle } = await loadFixture(fixture)
+      expect(await oracle.medianOracle()).to.equal(medianOracle.address)
+
+      const other = await (
+        await ethers.getContractFactory('MockMedianOracle')
+      ).deploy()
+      await oracle.setMedianOracle(other.address)
+      expect(await oracle.medianOracle()).to.equal(other.address)
+
+      const [, stranger] = await ethers.getSigners()
+      await expect(oracle.connect(stranger).setMedianOracle(other.address)).to
+        .be.reverted
     })
 
     it('logs the shared bridge token as matched', async () => {
@@ -181,29 +196,23 @@ describe('DexOracle', () => {
       expect(await oracle.blockTimestampLast()).to.equal(tUpdate)
     })
 
-    it('rejects a re-update before the period elapses, allows it after', async () => {
+    it('lets the owner update at any time', async () => {
       const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
       const { tUpdate } = await windowTimes()
 
       await setPairState(pairLeg1, pairLeg2, BN(1), BN(1), tUpdate)
       await setNextTime(tUpdate)
-      await oracle.update() // first update is always allowed
+      await oracle.update() // deployer is owner
 
-      const tooSoon = tUpdate + PERIOD - 60
-      await setPairState(pairLeg1, pairLeg2, BN(2), BN(2), tooSoon)
-      await setNextTime(tooSoon)
-      await expect(oracle.update()).to.be.revertedWith(
-        'DexOracle: PERIOD_NOT_ELAPSED',
-      )
-
-      const onTime = tUpdate + PERIOD
-      await setPairState(pairLeg1, pairLeg2, BN(3), BN(3), onTime)
-      await setNextTime(onTime)
+      // Immediately again — no period gate for trusted callers.
+      const soon = tUpdate + 60
+      await setPairState(pairLeg1, pairLeg2, BN(2), BN(2), soon)
+      await setNextTime(soon)
       await oracle.update()
-      expect(await oracle.blockTimestampLast()).to.equal(onTime)
+      expect(await oracle.blockTimestampLast()).to.equal(soon)
     })
 
-    it('lets the orchestrator update at any time, bypassing the period', async () => {
+    it('lets the orchestrator update at any time', async () => {
       const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
       const [, orchestrator] = await ethers.getSigners()
       await oracle.setOrchestrator(await orchestrator.getAddress())
@@ -212,16 +221,21 @@ describe('DexOracle', () => {
       await setPairState(pairLeg1, pairLeg2, BN(1), BN(1), tUpdate)
       await setNextTime(tUpdate)
       await oracle.connect(orchestrator).update()
-
-      // Far inside the period — a non-orchestrator caller would be rejected.
-      const soon = tUpdate + 60
-      await setPairState(pairLeg1, pairLeg2, BN(2), BN(2), soon)
-      await setNextTime(soon)
-      await oracle.connect(orchestrator).update()
-      expect(await oracle.blockTimestampLast()).to.equal(soon)
+      expect(await oracle.blockTimestampLast()).to.equal(tUpdate)
     })
 
-    it('is restricted to the owner for setOrchestrator', async () => {
+    it('rejects update from a non-orchestrator, non-owner caller', async () => {
+      const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
+      const [, stranger] = await ethers.getSigners()
+      const { tUpdate } = await windowTimes()
+      await setPairState(pairLeg1, pairLeg2, BN(1), BN(1), tUpdate)
+      await setNextTime(tUpdate)
+      await expect(oracle.connect(stranger).update()).to.be.revertedWith(
+        'DexOracle: UNAUTHORIZED',
+      )
+    })
+
+    it('restricts setOrchestrator to the owner', async () => {
       const { oracle } = await loadFixture(fixture)
       const [, stranger] = await ethers.getSigners()
       await expect(
@@ -260,7 +274,7 @@ describe('DexOracle', () => {
       expect(expected.sub(target).abs()).to.be.lt(target.div(1000))
     })
 
-    it('does not gate on the period (reports even shortly after update)', async () => {
+    it('does not gate on elapsed time (reports even shortly after update)', async () => {
       const { oracle, pairLeg1, pairLeg2, medianOracle } = await loadFixture(
         fixture,
       )
@@ -390,6 +404,7 @@ describe('DexOracle', () => {
         .connect(deployer)
         .deploy(
           medianOracle.address,
+          ethers.constants.AddressZero,
           pairLeg1.address,
           false,
           pairLeg2.address,

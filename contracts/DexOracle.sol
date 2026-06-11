@@ -44,8 +44,8 @@ interface IMedianOracle {
  *         Intended 24h rebase cadence:
  *         - `update()`     is called right after rebase (appended to the
  *                          Orchestrator's transaction list) to open a fresh
- *                          measurement window. It may only run once `period`
- *                          has elapsed since the last `update()`.
+ *                          measurement window. Restricted to the Orchestrator
+ *                          and the owner.
  *         - `pushReport()` is called ~2h before the next rebase to report the
  *                          TWAP. The MedianOracle's report-delay (security)
  *                          window then ages the report before it is consumed at
@@ -59,7 +59,7 @@ contract DexOracle is Ownable {
     uint256 public constant OUTPUT_DECIMALS = 18;
 
     /// @notice MedianOracle this contract reports to as a registered provider.
-    IMedianOracle public immutable medianOracle;
+    IMedianOracle public medianOracle;
 
     /// @notice First leg market: prices the source asset in the bridge asset.
     IUniswapV2Pair public immutable pairLeg1;
@@ -84,15 +84,9 @@ contract DexOracle is Ownable {
     ///         first `update()`, which marks the oracle as uninitialized.
     uint32 public blockTimestampLast;
 
-    /// @notice Minimum time that must elapse between successive `update()`s for
-    ///         callers other than the Orchestrator. Defaults to the rebase
-    ///         cadence minus the security delay (24h - 2h) so an open caller can
-    ///         only re-open the window once the previous one has fully matured.
-    uint256 public period = 22 hours;
-
-    /// @notice The Orchestrator, which may call `update()` at any time (it runs
-    ///         right after each rebase). Any other caller is subject to
-    ///         `period`. Zero until set, in which case every caller is gated.
+    /// @notice The Orchestrator, which may call `update()` (it runs right after
+    ///         each rebase). The owner may also call `update()`; no other caller
+    ///         is authorized.
     address public orchestrator;
 
     event LogPriceUpdate(
@@ -110,6 +104,8 @@ contract DexOracle is Ownable {
 
     /**
      * @param medianOracle_ MedianOracle instance to report to.
+     * @param orchestrator_ Orchestrator allowed to call `update()` (alongside
+     *        the owner).
      * @param pairLeg1_ UniswapV2 pair for the first (source/bridge) leg.
      * @param leg1UseToken1Price_ True to read price1 on leg1, false for price0.
      * @param pairLeg2_ UniswapV2 pair for the second (bridge/quote) leg.
@@ -117,6 +113,7 @@ contract DexOracle is Ownable {
      */
     constructor(
         address medianOracle_,
+        address orchestrator_,
         address pairLeg1_,
         bool leg1UseToken1Price_,
         address pairLeg2_,
@@ -125,6 +122,7 @@ contract DexOracle is Ownable {
         Ownable.initialize(msg.sender);
 
         medianOracle = IMedianOracle(medianOracle_);
+        orchestrator = orchestrator_;
 
         pairLeg1 = IUniswapV2Pair(pairLeg1_);
         pairLeg2 = IUniswapV2Pair(pairLeg2_);
@@ -148,26 +146,17 @@ contract DexOracle is Ownable {
      * @notice Opens a fresh measurement window by snapshotting the current
      *         price cumulatives. Intended to be appended to the Orchestrator's
      *         transaction list so it runs immediately after each rebase.
-     * @dev The Orchestrator may call this at any time. Any other caller must
-     *      wait `period` since the last `update()`, which prevents the
-     *      measurement window from being reset off-schedule (e.g. right before a
-     *      report, which would collapse the TWAP toward a spot price).
+     * @dev Restricted to the Orchestrator and the owner, who are trusted to
+     *      open the window on schedule; both may call at any time.
      */
     function update() external {
+        require(msg.sender == orchestrator || isOwner(), "DexOracle: UNAUTHORIZED");
+
         (
             uint256 leg1Cumulative,
             uint256 leg2Cumulative,
             uint32 blockTimestamp
         ) = _currentCumulatives();
-
-        if (msg.sender != orchestrator && blockTimestampLast > 0) {
-            uint32 timeElapsed;
-            unchecked {
-                // Wraparound is desired; both timestamps are taken mod 2**32.
-                timeElapsed = blockTimestamp - blockTimestampLast;
-            }
-            require(timeElapsed >= period, "DexOracle: PERIOD_NOT_ELAPSED");
-        }
 
         priceLeg1CumulativeLast = leg1Cumulative;
         priceLeg2CumulativeLast = leg2Cumulative;
@@ -210,19 +199,17 @@ contract DexOracle is Ownable {
     }
 
     /**
-     * @notice Sets the minimum time between successive `update()`s for callers
-     *         other than the Orchestrator.
-     * @param period_ The new minimum interval in seconds.
+     * @notice Sets the MedianOracle this contract reports to.
+     * @param medianOracle_ The new MedianOracle address.
      */
-    function setPeriod(uint256 period_) external onlyOwner {
-        period = period_;
+    function setMedianOracle(address medianOracle_) external onlyOwner {
+        medianOracle = IMedianOracle(medianOracle_);
     }
 
     /**
-     * @notice Sets the Orchestrator address allowed to call `update()` without
-     *         waiting for `period`.
-     * @param orchestrator_ The Orchestrator address (zero to disable the
-     *        bypass, gating every caller).
+     * @notice Sets the Orchestrator address allowed to call `update()`.
+     * @param orchestrator_ The Orchestrator address (zero to allow only the
+     *        owner to call `update()`).
      */
     function setOrchestrator(address orchestrator_) external onlyOwner {
         orchestrator = orchestrator_;

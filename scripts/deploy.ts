@@ -244,7 +244,7 @@ task(
   .addOptionalParam('leg2UseToken1Price', 'Read price1 on leg2', 'true')
   .addOptionalParam(
     'orchestrator',
-    'Orchestrator to append update() to (owner only)',
+    'Orchestrator allowed to call update(), and to append update() to',
     '',
   )
   .addFlag(
@@ -257,6 +257,7 @@ task(
 
     const leg1UseToken1Price = args.leg1UseToken1Price === 'true'
     const leg2UseToken1Price = args.leg2UseToken1Price === 'true'
+    const orchestrator = args.orchestrator || constants.AddressZero
 
     // get signers
     const deployer = (await hre.ethers.getSigners())[0]
@@ -283,6 +284,7 @@ task(
     // deploy contract
     const params = [
       args.medianOracle,
+      orchestrator,
       args.pairLeg1,
       leg1UseToken1Price,
       args.pairLeg2,
@@ -311,26 +313,21 @@ task(
       console.log('Registered as provider on MedianOracle:', args.medianOracle)
     }
 
-    // Wire up the Orchestrator: authorize it to call update() at any time and
-    // append update() to its transaction list so it fires right after each
-    // rebase. The encoded calldata is always printed so it can be proposed via
-    // multisig when the deployer is not the Orchestrator owner.
+    // The Orchestrator is authorized for update() in the constructor. Append
+    // update() to its transaction list so it fires right after each rebase.
+    // The encoded calldata is always printed so it can be proposed via multisig
+    // when the deployer is not the Orchestrator owner.
     const updateData = dexOracle.interface.encodeFunctionData('update')
     console.log('Orchestrator.addTransaction args:')
     console.log('  destination:', dexOracle.address)
     console.log('  data:', updateData)
     if (args.orchestrator) {
-      await waitFor(
-        dexOracle.connect(deployer).setOrchestrator(args.orchestrator),
-      )
-      console.log('Authorized Orchestrator for update():', args.orchestrator)
-
-      const orchestrator = await hre.ethers.getContractAt(
+      const orchestratorContract = await hre.ethers.getContractAt(
         'Orchestrator',
         args.orchestrator,
       )
       await waitFor(
-        orchestrator
+        orchestratorContract
           .connect(deployer)
           .addTransaction(dexOracle.address, updateData),
       )
