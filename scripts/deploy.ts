@@ -247,6 +247,11 @@ task(
     'Orchestrator allowed to call update(), and to append update() to',
     '',
   )
+  .addOptionalParam(
+    'rebasePeriod',
+    'Seconds after which anyone may call update() (rebase period)',
+    '86400', // 24 hours
+  )
   .addFlag(
     'register',
     'addProvider(dexOracle) on the MedianOracle (owner only)',
@@ -289,6 +294,7 @@ task(
       leg1UseToken1Price,
       args.pairLeg2,
       leg2UseToken1Price,
+      args.rebasePeriod,
     ]
     const dexOracle = await deployContract(hre, 'DexOracle', deployer, params)
     console.log('DexOracle deployed to:', dexOracle.address)

@@ -44,8 +44,9 @@ interface IMedianOracle {
  *         Intended 24h rebase cadence:
  *         - `update()`     is called right after rebase (appended to the
  *                          Orchestrator's transaction list) to open a fresh
- *                          measurement window. Restricted to the Orchestrator
- *                          and the owner.
+ *                          measurement window. Callable by the Orchestrator or
+ *                          owner anytime, or by anyone once more than the rebase
+ *                          period has elapsed since the last update.
  *         - `pushReport()` is called ~2h before the next rebase to report the
  *                          TWAP. The MedianOracle's report-delay (security)
  *                          window then ages the report before it is consumed at
@@ -85,9 +86,13 @@ contract DexOracle is Ownable {
     uint32 public blockTimestampLast;
 
     /// @notice The Orchestrator, which may call `update()` (it runs right after
-    ///         each rebase). The owner may also call `update()`; no other caller
-    ///         is authorized.
+    ///         each rebase). The owner may also call `update()` at any time.
     address public orchestrator;
+
+    /// @notice The rebase period (e.g. 24h). Any address may call `update()`
+    ///         once more than this has elapsed since the last `update()`, a
+    ///         liveness fallback if the Orchestrator/owner stop updating.
+    uint256 public rebasePeriodSec;
 
     event LogPriceUpdate(
         uint256 priceLeg1Cumulative,
@@ -110,6 +115,8 @@ contract DexOracle is Ownable {
      * @param leg1UseToken1Price_ True to read price1 on leg1, false for price0.
      * @param pairLeg2_ UniswapV2 pair for the second (bridge/quote) leg.
      * @param leg2UseToken1Price_ True to read price1 on leg2, false for price0.
+     * @param rebasePeriodSec_ Rebase period after which any address may call
+     *        `update()` (the public liveness fallback).
      */
     constructor(
         address medianOracle_,
@@ -117,12 +124,14 @@ contract DexOracle is Ownable {
         address pairLeg1_,
         bool leg1UseToken1Price_,
         address pairLeg2_,
-        bool leg2UseToken1Price_
+        bool leg2UseToken1Price_,
+        uint256 rebasePeriodSec_
     ) {
         Ownable.initialize(msg.sender);
 
         medianOracle = IMedianOracle(medianOracle_);
         orchestrator = orchestrator_;
+        rebasePeriodSec = rebasePeriodSec_;
 
         pairLeg1 = IUniswapV2Pair(pairLeg1_);
         pairLeg2 = IUniswapV2Pair(pairLeg2_);
@@ -146,17 +155,29 @@ contract DexOracle is Ownable {
      * @notice Opens a fresh measurement window by snapshotting the current
      *         price cumulatives. Intended to be appended to the Orchestrator's
      *         transaction list so it runs immediately after each rebase.
-     * @dev Restricted to the Orchestrator and the owner, who are trusted to
-     *      open the window on schedule; both may call at any time.
+     * @dev The Orchestrator and the owner may call at any time. Any other
+     *      caller is allowed only once more than `rebasePeriodSec` has elapsed
+     *      since the last `update()`, a liveness fallback that cannot run before
+     *      the oracle has been initialized by a trusted caller.
      */
     function update() external {
-        require(msg.sender == orchestrator || isOwner(), "DexOracle: UNAUTHORIZED");
-
         (
             uint256 leg1Cumulative,
             uint256 leg2Cumulative,
             uint32 blockTimestamp
         ) = _currentCumulatives();
+
+        if (msg.sender != orchestrator && !isOwner()) {
+            require(blockTimestampLast > 0, "DexOracle: UNAUTHORIZED");
+            uint32 timeElapsed;
+            unchecked {
+                // unchecked because both timestamps are uint32 (mod 2**32) and
+                // the subtraction must wrap correctly across the year-2106
+                // boundary instead of reverting.
+                timeElapsed = blockTimestamp - blockTimestampLast;
+            }
+            require(timeElapsed > rebasePeriodSec, "DexOracle: TOO_SOON");
+        }
 
         priceLeg1CumulativeLast = leg1Cumulative;
         priceLeg2CumulativeLast = leg2Cumulative;
@@ -216,6 +237,14 @@ contract DexOracle is Ownable {
     }
 
     /**
+     * @notice Sets the rebase period gating the public `update()` fallback.
+     * @param rebasePeriodSec_ The new rebase period in seconds.
+     */
+    function setRebasePeriodSec(uint256 rebasePeriodSec_) external onlyOwner {
+        rebasePeriodSec = rebasePeriodSec_;
+    }
+
+    /**
      * @dev Computes the chained TWAP since the last `update()`. Requires the
      *      oracle to be initialized and at least one second of measurement (to
      *      avoid division by zero), but never gates on the full period.
@@ -230,8 +259,11 @@ contract DexOracle is Ownable {
             uint256 leg2Cumulative,
             uint32 blockTimestamp
         ) = _currentCumulatives();
+
         unchecked {
-            // Wraparound is desired; both timestamps are taken mod 2**32.
+            // unchecked because both timestamps are uint32 (mod 2**32) and the
+            // subtraction must wrap correctly across the year-2106 boundary
+            // instead of reverting.
             timeElapsed = blockTimestamp - blockTimestampLast;
         }
         require(timeElapsed > 0, "DexOracle: NO_TIME_ELAPSED");

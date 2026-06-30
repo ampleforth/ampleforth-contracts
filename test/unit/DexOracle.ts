@@ -21,7 +21,8 @@ const DF1 = BN(10).pow(18 + AMPL_DECIMALS - WETH_DECIMALS)
 const DF2 = BN(10).pow(18 + WETH_DECIMALS - USDC_DECIMALS)
 
 const HOUR = 3600
-const PERIOD = 22 * HOUR // default period (min interval between updates)
+const PERIOD = 22 * HOUR // measurement window length used in report tests
+const REBASE = 24 * HOUR // rebase period gating the public update() fallback
 
 // Mirror DexOracle's scale-then-diff fixed point math exactly: each raw
 // UQ112x112 cumulative is bridged to an 18-decimal price-seconds value
@@ -80,6 +81,7 @@ async function fixture() {
     true, // leg1UseToken1Price -> WETH-per-AMPL
     pairLeg2.address,
     true, // leg2UseToken1Price -> USDC-per-WETH
+    REBASE,
   )
 
   return {
@@ -134,6 +136,7 @@ describe('DexOracle', () => {
       expect(await oracle.decimalsFactorLeg2()).to.equal(DF2) // 1e30
       expect(await oracle.OUTPUT_DECIMALS()).to.equal(18)
       expect(await oracle.orchestrator()).to.equal(ethers.constants.AddressZero)
+      expect(await oracle.rebasePeriodSec()).to.equal(REBASE)
     })
 
     it('records the median oracle and exposes it as settable', async () => {
@@ -224,15 +227,42 @@ describe('DexOracle', () => {
       expect(await oracle.blockTimestampLast()).to.equal(tUpdate)
     })
 
-    it('rejects update from a non-orchestrator, non-owner caller', async () => {
+    it('rejects the first update from a non-orchestrator, non-owner caller', async () => {
       const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
       const [, stranger] = await ethers.getSigners()
       const { tUpdate } = await windowTimes()
       await setPairState(pairLeg1, pairLeg2, BN(1), BN(1), tUpdate)
       await setNextTime(tUpdate)
+      // Uninitialized: the public fallback cannot bootstrap the oracle.
       await expect(oracle.connect(stranger).update()).to.be.revertedWith(
         'DexOracle: UNAUTHORIZED',
       )
+    })
+
+    it('lets any caller update only after the rebase period lapses', async () => {
+      const { oracle, pairLeg1, pairLeg2 } = await loadFixture(fixture)
+      const [, stranger] = await ethers.getSigners()
+      const { tUpdate } = await windowTimes()
+
+      // Owner opens the window.
+      await setPairState(pairLeg1, pairLeg2, BN(1), BN(1), tUpdate)
+      await setNextTime(tUpdate)
+      await oracle.update()
+
+      // Still within the rebase period -> rejected.
+      const tooSoon = tUpdate + REBASE - 60
+      await setPairState(pairLeg1, pairLeg2, BN(2), BN(2), tooSoon)
+      await setNextTime(tooSoon)
+      await expect(oracle.connect(stranger).update()).to.be.revertedWith(
+        'DexOracle: TOO_SOON',
+      )
+
+      // More than the rebase period later -> allowed.
+      const stale = tUpdate + REBASE + 60
+      await setPairState(pairLeg1, pairLeg2, BN(3), BN(3), stale)
+      await setNextTime(stale)
+      await oracle.connect(stranger).update()
+      expect(await oracle.blockTimestampLast()).to.equal(stale)
     })
 
     it('restricts setOrchestrator to the owner', async () => {
@@ -409,6 +439,7 @@ describe('DexOracle', () => {
           false,
           pairLeg2.address,
           false,
+          REBASE,
         )
 
       // base USDC(6), quote WETH(18) -> 10**(18+6-18) = 1e6
