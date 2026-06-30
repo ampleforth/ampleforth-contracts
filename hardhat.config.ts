@@ -26,6 +26,19 @@ export default {
       accounts: {
         mnemonic: Wallet.createRandom().mnemonic.phrase,
       },
+      // Opt-in mainnet fork (set FORK_RPC_URL) so integration tests can run
+      // against the live UniswapV2 pools. Unset by default, so unit tests run
+      // on a fresh in-memory chain.
+      ...(process.env.FORK_RPC_URL
+        ? {
+            forking: {
+              url: process.env.FORK_RPC_URL,
+              ...(process.env.FORK_BLOCK
+                ? { blockNumber: Number(process.env.FORK_BLOCK) }
+                : {}),
+            },
+          }
+        : {}),
     },
     ganache: {
       url: 'http://127.0.0.1:8545',
